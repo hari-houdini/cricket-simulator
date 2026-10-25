@@ -1,0 +1,42 @@
+{
+  "name": "cricket-simulator",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "biome check",
+    "format": "biome format --write",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "dependencies": {
+    "next": "16.4.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.2",
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "babel-plugin-react-compiler": "1.0.0",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "storybook": "^10.6.3",
+    "@storybook/nextjs-vite": "^10.6.3",
+    "@chromatic-com/storybook": "latest",
+    "@storybook/addon-vitest": "^10.6.3",
+    "@storybook/addon-a11y": "^10.6.3",
+    "@storybook/addon-docs": "^10.6.3",
+    "@storybook/addon-mcp": "^10.6.3",
+    "vite": "latest",
+    "vitest": "^4",
+    "@vitest/browser-playwright": "^4",
+    "@vitest/coverage-v8": "^4",
+    "playwright": "latest"
+  },
+  "packageManager": "pnpm@12.15.0"
+}
