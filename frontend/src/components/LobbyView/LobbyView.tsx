@@ -10,6 +10,7 @@ import { Button } from "../Button/Button";
 import { ErrorBanner } from "../ErrorBanner/ErrorBanner";
 import { FranchiseGrid } from "../FranchiseGrid/FranchiseGrid";
 import { Input } from "../Input/Input";
+import { LeaguePanel } from "../LeaguePanel/LeaguePanel";
 import { SquadPanel } from "../SquadPanel/SquadPanel";
 import { styles } from "./LobbyView.styles";
 import type { LobbyViewProps } from "./LobbyView.types";
@@ -20,7 +21,9 @@ import type { LobbyViewProps } from "./LobbyView.types";
  * A guest who has not joined sees the join form instead of the grid, and a full
  * lobby says so rather than offering a form that would fail. Once the auction
  * has started, the auction panel takes the place of the grid and the form. Once
- * the auction has finished, an owner also sees the squad panel, to pick the XI.
+ * the auction has finished, an owner also sees the squad panel, to pick the XI,
+ * and every guest sees the league. The squad panel remounts when the round
+ * changes, so it shows the XI as locked once the first match has been played.
  *
  * @param props - The lobby, the viewing guest, the share link, and the actions.
  * @returns The lobby's sections inside the page's `<main>`.
@@ -34,6 +37,7 @@ export function LobbyView({
   onClaim,
   onJoin,
   onStart,
+  onRoundAdvanced,
 }: LobbyViewProps) {
   const [displayName, setDisplayName] = useState("");
   const isOwner = lobby.owners.some((owner) => owner.guestId === guestId);
@@ -159,7 +163,15 @@ export function LobbyView({
       )}
 
       {lobby.auctionStatus === "complete" && isOwner ? (
-        <SquadPanel code={lobby.code} />
+        <SquadPanel key={lobby.round} code={lobby.code} />
+      ) : null}
+
+      {lobby.auctionStatus === "complete" ? (
+        <LeaguePanel
+          code={lobby.code}
+          canAdvance={isOwner}
+          onRoundAdvanced={onRoundAdvanced}
+        />
       ) : null}
     </div>
   );

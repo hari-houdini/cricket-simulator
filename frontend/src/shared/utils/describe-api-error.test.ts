@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { lobbyCodeSchema } from "../types/lobby.schema";
 import {
+  describeAdvanceBlock,
   describeApiError,
   describeSubstitutionBlock,
   describeXiBlock,
@@ -13,6 +14,8 @@ import {
   FranchiseClaimClosedError,
   FranchiseNotFoundError,
   FranchiseTakenError,
+  LeagueAdvanceBlockedError,
+  LeagueNotStartedError,
   LobbyFullError,
   LobbyNotFoundError,
   NotAnOwnerError,
@@ -21,6 +24,7 @@ import {
   XiBlockedError,
   XiLockedError,
 } from "./game-api.errors";
+import type { AdvanceBlock } from "./league-rules";
 import type { SubstitutionBlock, XiBlock } from "./squad-rules";
 
 const XI_REASONS: readonly XiBlock[] = [
@@ -192,6 +196,39 @@ describe("describeSubstitutionBlock", () => {
   it("gives a message for every swap rule that is not an XI rule", () => {
     for (const reason of SUBSTITUTION_REASONS) {
       expect(describeSubstitutionBlock(reason)).not.toContain("illegal XI");
+    }
+  });
+});
+
+const ADVANCE_REASONS: readonly AdvanceBlock[] = [
+  "season-over",
+  "missing-starting-xi",
+];
+
+describe("describeAdvanceBlock", () => {
+  it("says the season is over once every league round has been played", () => {
+    expect(describeAdvanceBlock("season-over")).toContain("season is over");
+  });
+
+  it("asks every owner to save an XI before the first round", () => {
+    expect(describeAdvanceBlock("missing-starting-xi")).toContain(
+      "starting XI",
+    );
+  });
+});
+
+describe("describeApiError for the league", () => {
+  it("says the season has not started before the auction finishes", () => {
+    expect(describeApiError(new LeagueNotStartedError("ABC123"))).toContain(
+      "auction",
+    );
+  });
+
+  it("explains a refused round with the reason it was refused", () => {
+    for (const reason of ADVANCE_REASONS) {
+      expect(describeApiError(new LeagueAdvanceBlockedError(reason))).toBe(
+        describeAdvanceBlock(reason),
+      );
     }
   });
 });

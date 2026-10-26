@@ -12,3 +12,15 @@ export const LEAGUE_MATCHES = (FRANCHISE_COUNT * MATCHES_PER_FRANCHISE) / 2;
 
 /** Playoff matches: Qualifier 1, Eliminator, Qualifier 2 and the Final. */
 export const PLAYOFF_MATCHES = 4;
+
+/** Points for a league win (`docs/game-design.md` section 6). */
+export const POINTS_PER_WIN = 2;
+
+/** Points each side gets for a league tie. */
+export const POINTS_PER_TIE = 1;
+
+/** Points for a league loss. */
+export const POINTS_PER_LOSS = 0;
+
+/** Overs in each innings. Every league match is 20 overs, so net run rate divides by 20 per match. */
+export const OVERS_PER_INNINGS = 20;

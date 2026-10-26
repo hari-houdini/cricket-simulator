@@ -3,6 +3,7 @@ import type {
   PlaceBidInput,
   StartAuctionInput,
 } from "./auction.types";
+import type { AdvanceRoundInput, League } from "./league.types";
 import type {
   ClaimFranchiseInput,
   CreateLobbyInput,
@@ -69,4 +70,15 @@ export type GameApi = {
    * or when the swap would leave an illegal XI.
    */
   readonly substitute: (input: SubstituteInput) => Promise<Squad>;
+  /**
+   * Reads the league: every fixture in round order, the table, and the round
+   * reached. Rejects with `LeagueNotStartedError` until the auction has finished.
+   */
+  readonly getLeague: (code: string) => Promise<League>;
+  /**
+   * Plays the next league round and returns the league. Only an owner may play
+   * it. Rejects with `LeagueAdvanceBlockedError` when the season is over or an
+   * owner has no starting XI yet.
+   */
+  readonly advanceRound: (input: AdvanceRoundInput) => Promise<League>;
 };

@@ -173,6 +173,12 @@ export function LobbyScreen({ code }: LobbyScreenProps) {
       onStart={() =>
         void run(() => api.startAuction({ code: lobby.code, guestId }))
       }
+      onRoundAdvanced={() => {
+        api
+          .getLobby(lobby.code)
+          .then((next) => setState({ status: "ready", lobby: next }))
+          .catch(() => undefined);
+      }}
     />
   );
 }

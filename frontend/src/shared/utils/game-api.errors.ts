@@ -1,5 +1,6 @@
 import { MAX_OWNERS } from "../const/lobby.const";
 import type { BidBlock } from "./auction-rules";
+import type { AdvanceBlock } from "./league-rules";
 import type { SubstitutionBlock, XiBlock } from "./squad-rules";
 
 /**
@@ -194,5 +195,31 @@ export class SubstitutionBlockedError extends Error {
   constructor(readonly reason: SubstitutionBlock) {
     super(`The substitution was refused: ${reason}.`);
     this.name = "SubstitutionBlockedError";
+  }
+}
+
+/**
+ * Thrown when the league is read or played before the auction has finished.
+ */
+export class LeagueNotStartedError extends Error {
+  /**
+   * @param code - The code of the lobby whose season has not started.
+   */
+  constructor(code: string) {
+    super(`The season in lobby "${code}" has not started.`);
+    this.name = "LeagueNotStartedError";
+  }
+}
+
+/**
+ * Thrown when the next league round is refused, from {@link AdvanceBlock}.
+ */
+export class LeagueAdvanceBlockedError extends Error {
+  /**
+   * @param reason - Why the round cannot be played.
+   */
+  constructor(readonly reason: AdvanceBlock) {
+    super(`The round was not played: ${reason}.`);
+    this.name = "LeagueAdvanceBlockedError";
   }
 }

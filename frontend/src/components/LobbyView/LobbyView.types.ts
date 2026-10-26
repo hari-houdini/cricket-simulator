@@ -18,4 +18,6 @@ export type LobbyViewProps = {
   readonly onJoin: (displayName: string) => void;
   /** Called when an owner starts the auction. */
   readonly onStart: () => void;
+  /** Called after the league plays a round, so the lobby re-reads its round. */
+  readonly onRoundAdvanced: () => void;
 };

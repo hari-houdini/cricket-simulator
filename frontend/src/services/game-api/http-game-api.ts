@@ -26,5 +26,7 @@ export function createHttpGameApi(): GameApi {
     getSquad: notImplemented,
     setStartingXi: notImplemented,
     substitute: notImplemented,
+    getLeague: notImplemented,
+    advanceRound: notImplemented,
   };
 }

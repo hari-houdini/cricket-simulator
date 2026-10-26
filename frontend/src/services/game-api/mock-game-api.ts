@@ -1,3 +1,4 @@
+import { LEAGUE_ROUNDS } from "../../shared/const/league.const";
 import { LOBBY_CODE_LENGTH, MAX_OWNERS } from "../../shared/const/lobby.const";
 import { SEED_VERSION } from "../../shared/const/seed.const";
 import { TEAMS } from "../../shared/const/teams.const";
@@ -8,6 +9,11 @@ import {
 } from "../../shared/types/auction.schema";
 import type { Auction } from "../../shared/types/auction.types";
 import type { GameApi } from "../../shared/types/game-api.types";
+import {
+  advanceRoundInputSchema,
+  leagueSchema,
+} from "../../shared/types/league.schema";
+import type { League, MatchScore } from "../../shared/types/league.types";
 import {
   claimFranchiseInputSchema,
   createLobbyInputSchema,
@@ -35,6 +41,8 @@ import {
   FranchiseClaimClosedError,
   FranchiseNotFoundError,
   FranchiseTakenError,
+  LeagueAdvanceBlockedError,
+  LeagueNotStartedError,
   LobbyFullError,
   LobbyNotFoundError,
   NotAnOwnerError,
@@ -43,18 +51,23 @@ import {
   XiBlockedError,
   XiLockedError,
 } from "../../shared/utils/game-api.errors";
+import { advanceBlock } from "../../shared/utils/league-rules";
+import { strongestXi } from "../../shared/utils/match-simulator";
 import { createSeededRandom } from "../../shared/utils/seeded-random";
 import {
   isXiLocked,
   startingXiBlock,
   substitutionBlock,
 } from "../../shared/utils/squad-rules";
-import { auctionOrder } from "./auction-pool";
+import { buildStandings } from "../../shared/utils/standings";
+import { auctionOrder, currentPlayers } from "./auction-pool";
+import { leagueSchedule } from "./league-schedule";
 import {
   createMockAuction,
   recordBid,
   settleExpiredLots,
 } from "./mock-auction";
+import { playMatch, resultKey } from "./mock-league";
 
 const CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -132,6 +145,8 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
   const lobbiesByCode = new Map<string, Lobby>();
   const auctionsByCode = new Map<string, StoredAuction>();
   const squadChoices = new Map<string, StoredSquadChoices>();
+  /** Played league results, keyed by {@link resultKey}. */
+  const leagueResults = new Map<string, MatchScore>();
   let sequence = 0;
 
   /**
@@ -197,7 +212,77 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
     settleExpiredLots(stored.auction, stored.queue, now());
     const lobby = findLobby(code);
     lobby.auctionStatus = stored.auction.status;
+    if (stored.auction.status === "complete" && lobby.phase === "auction") {
+      lobby.phase = "league";
+    }
     return stored;
+  }
+
+  /**
+   * Checks that the season has started: the auction exists and has finished.
+   *
+   * @param code - A normalised lobby code.
+   * @throws {LeagueNotStartedError} When the auction has not finished.
+   */
+  function requireSeason(code: string): void {
+    if (
+      !auctionsByCode.has(code) ||
+      settledAuction(code).auction.status !== "complete"
+    ) {
+      throw new LeagueNotStartedError(code);
+    }
+  }
+
+  /**
+   * Builds the league view for a lobby: every fixture in round order with its
+   * result if it has been played, and the table from those results.
+   *
+   * @param code - A normalised lobby code.
+   * @returns The league, validated.
+   */
+  function leagueView(code: string): League {
+    const lobby = findLobby(code);
+    const fixtures = leagueSchedule().map((match) => ({
+      round: match.round,
+      homeFranchiseId: match.homeFranchiseId,
+      awayFranchiseId: match.awayFranchiseId,
+      result: leagueResults.get(resultKey(code, match)) ?? null,
+    }));
+    return leagueSchema.parse({
+      round: lobby.round,
+      fixtures,
+      standings: buildStandings(
+        TEAMS.map((team) => team.id),
+        fixtures,
+      ),
+      seasonComplete: lobby.round >= LEAGUE_ROUNDS,
+    });
+  }
+
+  /**
+   * The players who take the field for a franchise. An owned franchise plays
+   * the owner's starting XI from the squad. An unowned franchise is a system
+   * squad: its strongest current players from the seed.
+   *
+   * @param code - A normalised lobby code.
+   * @param franchiseId - The franchise.
+   * @returns The players on the field.
+   */
+  function fieldFor(code: string, franchiseId: string): Player[] {
+    const owner = findLobby(code).owners.find(
+      (item) => item.franchiseId === franchiseId,
+    );
+    if (!owner) {
+      return strongestXi(
+        currentPlayers().filter((player) => player.franchiseId === franchiseId),
+      );
+    }
+    const purse = auctionsByCode
+      .get(code)
+      ?.auction.purses.find((item) => item.guestId === owner.guestId);
+    // Every owner has a saved XI here: advanceRound checks that before it plays.
+    const xiIds = choicesFor(code, owner.guestId).startingXi?.playerIds ?? [];
+    return (purse?.squad ?? []).filter((player) => xiIds.includes(player.id));
   }
 
   /**
@@ -381,6 +466,52 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       auctionsByCode.set(input.code, { auction, queue });
       lobby.auctionStatus = auction.status;
       return lobbySchema.parse(lobby);
+    },
+
+    async getLeague(rawCode) {
+      const code = normalizeCode(rawCode);
+      requireSeason(code);
+      return leagueView(code);
+    },
+
+    async advanceRound(rawInput) {
+      const input = advanceRoundInputSchema.parse({
+        ...rawInput,
+        code: normalizeCode(rawInput.code),
+      });
+      requireSeason(input.code);
+      const lobby = findLobby(input.code);
+      if (!lobby.owners.some((owner) => owner.guestId === input.guestId)) {
+        throw new NotAnOwnerError(input.guestId);
+      }
+
+      const everyOwnerHasStartingXi = lobby.owners.every(
+        (owner) => choicesFor(input.code, owner.guestId).startingXi !== null,
+      );
+      const block = advanceBlock({
+        round: lobby.round,
+        everyOwnerHasStartingXi,
+      });
+      if (block !== null) {
+        throw new LeagueAdvanceBlockedError(block);
+      }
+
+      const round = lobby.round + 1;
+      for (const match of leagueSchedule()) {
+        if (match.round === round) {
+          leagueResults.set(
+            resultKey(input.code, match),
+            playMatch(
+              input.code,
+              match,
+              fieldFor(input.code, match.homeFranchiseId),
+              fieldFor(input.code, match.awayFranchiseId),
+            ),
+          );
+        }
+      }
+      lobby.round = round;
+      return leagueView(input.code);
     },
 
     async getAuction(rawCode) {

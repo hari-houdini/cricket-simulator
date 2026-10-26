@@ -10,6 +10,8 @@ import {
   FranchiseClaimClosedError,
   FranchiseNotFoundError,
   FranchiseTakenError,
+  LeagueAdvanceBlockedError,
+  LeagueNotStartedError,
   LobbyFullError,
   LobbyNotFoundError,
   NotAnOwnerError,
@@ -18,6 +20,7 @@ import {
   XiBlockedError,
   XiLockedError,
 } from "./game-api.errors";
+import type { AdvanceBlock } from "./league-rules";
 import type { SubstitutionBlock, XiBlock } from "./squad-rules";
 
 /** What to tell the guest for each reason a bid is refused. */
@@ -105,6 +108,23 @@ export function describeSubstitutionBlock(reason: SubstitutionBlock): string {
   return SUBSTITUTION_BLOCK_MESSAGES[reason];
 }
 
+/** What to tell the guest for each reason the next round is refused. */
+const ADVANCE_BLOCK_MESSAGES = {
+  "season-over": "The league season is over. The playoffs come next.",
+  "missing-starting-xi":
+    "Every owner must save a starting XI before the first round is played.",
+} as const satisfies Record<AdvanceBlock, string>;
+
+/**
+ * Says why the next league round cannot be played.
+ *
+ * @param reason - The reason from the league rules.
+ * @returns A short sentence.
+ */
+export function describeAdvanceBlock(reason: AdvanceBlock): string {
+  return ADVANCE_BLOCK_MESSAGES[reason];
+}
+
 /**
  * Turns an error from the game API into a sentence the guest can act on. The
  * raw error text is for developers, so it is never shown.
@@ -156,6 +176,12 @@ export function describeApiError(error: unknown): string {
   }
   if (error instanceof SubstitutionBlockedError) {
     return describeSubstitutionBlock(error.reason);
+  }
+  if (error instanceof LeagueNotStartedError) {
+    return "The season starts once the auction has finished.";
+  }
+  if (error instanceof LeagueAdvanceBlockedError) {
+    return describeAdvanceBlock(error.reason);
   }
   if (error instanceof ZodError) {
     return "Check what you entered and try again.";
