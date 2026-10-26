@@ -1,20 +1,10 @@
 import * as stylex from "@stylexjs/stylex";
-import { type KeyboardEvent, useEffect, useId, useRef } from "react";
+import { type KeyboardEvent, useId, useRef } from "react";
 
-import { nextFocusIndex } from "../../shared/utils/focus-cycle";
+import { cycleFocusWithin, useModalFocus } from "./Modal.focus";
 import { modalSchema } from "./Modal.schema";
 import { styles } from "./Modal.styles";
 import type { ModalProps } from "./Modal.types";
-
-/** Elements a Tab press can land on inside the dialog. Disabled controls are skipped. */
-const FOCUSABLE_SELECTOR = [
-  "a[href]",
-  "button:not([disabled])",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  '[tabindex]:not([tabindex="-1"])',
-].join(",");
 
 /**
  * A dialog that interrupts the page for a decision, such as confirming a squad.
@@ -35,20 +25,8 @@ export function Modal({ title, open, onClose, children }: ModalProps) {
   const parsed = modalSchema.parse({ title, open });
   const isOpen = parsed.open;
 
-  // Hooks run before the early return so their order never changes. Focus is
-  // remembered on open and restored on close, including when the parent unmounts.
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-    const returnTo = document.activeElement;
-    dialogRef.current?.focus();
-    return () => {
-      if (returnTo instanceof HTMLElement) {
-        returnTo.focus();
-      }
-    };
-  }, [isOpen]);
+  // Hooks run before the early return so their order never changes.
+  useModalFocus(dialogRef, isOpen);
 
   if (!isOpen) {
     return null;
@@ -62,13 +40,11 @@ export function Modal({ title, open, onClose, children }: ModalProps) {
     if (event.key !== "Tab" || !dialogRef.current) {
       return;
     }
-    const items = Array.from(
-      dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-    );
-    const current = items.indexOf(document.activeElement as HTMLElement);
-    const next = nextFocusIndex(current, items.length, event.shiftKey);
     event.preventDefault();
-    items[next]?.focus();
+    cycleFocusWithin(
+      dialogRef.current,
+      event.shiftKey ? "backward" : "forward",
+    );
   }
 
   return (

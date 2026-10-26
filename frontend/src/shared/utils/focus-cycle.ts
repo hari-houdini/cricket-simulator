@@ -4,19 +4,20 @@
  *
  * @param current - Index of the focused item, or `-1` when focus is outside the list.
  * @param count - How many focusable items there are.
- * @param backwards - `true` for Shift+Tab, which moves towards the start.
+ * @param direction - `"forward"` for Tab, `"backward"` for Shift+Tab.
  * @returns The index to focus next, or `-1` when there are no items.
  */
 export function nextFocusIndex(
   current: number,
   count: number,
-  backwards: boolean,
+  direction: "forward" | "backward",
 ): number {
   if (count === 0) {
     return -1;
   }
+  const backward = direction === "backward";
   if (current < 0) {
-    return backwards ? count - 1 : 0;
+    return backward ? count - 1 : 0;
   }
-  return backwards ? (current - 1 + count) % count : (current + 1) % count;
+  return backward ? (current - 1 + count) % count : (current + 1) % count;
 }
