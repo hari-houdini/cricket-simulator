@@ -4,8 +4,22 @@ import { tokens } from "../../shared/const/tokens.stylex";
 
 /** StyleX rules for {@link LeagueTable}. */
 export const styles = stylex.create({
+  /**
+   * The wrapper is the only scroll container, so the page never scrolls sideways
+   * for the table. It takes focus so keyboard users can scroll to the columns
+   * that sit off-screen.
+   */
   scroll: {
     overflowX: "auto",
+  },
+  focusRing: {
+    outlineColor: tokens.colorGoldPrimary,
+    outlineOffset: tokens.offsetFocusRing,
+    outlineStyle: {
+      default: "none",
+      ":focus-visible": "solid",
+    },
+    outlineWidth: tokens.widthFocusRing,
   },
   table: {
     width: "100%",
