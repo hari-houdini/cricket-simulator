@@ -8,7 +8,7 @@ export type LobbyViewProps = {
   readonly guestId: string;
   /** The absolute link other guests open to join this lobby. */
   readonly shareUrl: string;
-  /** True while a join or claim is in flight. */
+  /** True while a join, claim or start is in flight. */
   readonly pending: boolean;
   /** A message for the last failed action, or `null`. */
   readonly error: string | null;
@@ -16,4 +16,6 @@ export type LobbyViewProps = {
   readonly onClaim: (franchiseId: string) => void;
   /** Called with the display name the guest typed to join. */
   readonly onJoin: (displayName: string) => void;
+  /** Called when an owner starts the auction. */
+  readonly onStart: () => void;
 };

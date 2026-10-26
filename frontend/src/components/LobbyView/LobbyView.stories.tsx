@@ -13,6 +13,7 @@ const meta = {
     error: null,
     onClaim: fn(),
     onJoin: fn(),
+    onStart: fn(),
   },
 } satisfies Meta<typeof LobbyView>;
 

@@ -137,6 +137,9 @@ export function LobbyScreen({ code }: LobbyScreenProps) {
           api.joinLobby({ code: lobby.code, guestId, displayName }),
         )
       }
+      onStart={() =>
+        void run(() => api.startAuction({ code: lobby.code, guestId }))
+      }
     />
   );
 }

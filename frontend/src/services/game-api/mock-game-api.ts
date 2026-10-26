@@ -1,6 +1,12 @@
 import { LOBBY_CODE_LENGTH, MAX_OWNERS } from "../../shared/const/lobby.const";
 import { SEED_VERSION } from "../../shared/const/seed.const";
 import { TEAMS } from "../../shared/const/teams.const";
+import {
+  auctionSchema,
+  placeBidInputSchema,
+  startAuctionInputSchema,
+} from "../../shared/types/auction.schema";
+import type { Auction } from "../../shared/types/auction.types";
 import type { GameApi } from "../../shared/types/game-api.types";
 import {
   claimFranchiseInputSchema,
@@ -10,8 +16,14 @@ import {
   lobbySchema,
 } from "../../shared/types/lobby.schema";
 import type { Lobby, Owner } from "../../shared/types/lobby.types";
+import type { Player } from "../../shared/types/player.types";
+import { bidBlockReason } from "../../shared/utils/auction-rules";
 import { franchiseClaimBlock } from "../../shared/utils/franchise-claim";
 import {
+  AuctionAlreadyStartedError,
+  AuctionNotStartedError,
+  AuctionStartBlockedError,
+  BidBlockedError,
   FranchiseClaimClosedError,
   FranchiseNotFoundError,
   FranchiseTakenError,
@@ -20,6 +32,12 @@ import {
   NotAnOwnerError,
 } from "../../shared/utils/game-api.errors";
 import { createSeededRandom } from "../../shared/utils/seeded-random";
+import { auctionOrder } from "./auction-pool";
+import {
+  createMockAuction,
+  recordBid,
+  settleExpiredLots,
+} from "./mock-auction";
 
 const CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -33,6 +51,11 @@ export type MockGameApiOptions = {
    * fresh seed is drawn, so codes differ between page loads.
    */
   readonly seed?: string;
+  /**
+   * The clock, in epoch milliseconds. Tests pass a fake clock so bid timers
+   * are deterministic. Defaults to `Date.now`.
+   */
+  readonly now?: () => number;
 };
 
 /**
@@ -45,14 +68,23 @@ function freshSeed(): string {
 }
 
 /**
+ * A lobby's auction as the mock keeps it: the public state, plus the players
+ * not yet on a lot, which the public state only counts.
+ */
+type StoredAuction = {
+  readonly auction: Auction;
+  readonly queue: Player[];
+};
+
+/**
  * Builds the in-memory mock of the game API. It keeps lobbies for as long as
  * the returned object lives, so each page load starts with an empty set, as
  * `docs/specs/mock-api-mvp.md` accepts.
  *
- * Every result is a fresh copy parsed through {@link lobbySchema}, so callers
- * cannot mutate the mock's state by accident.
+ * Every result is a fresh copy parsed through the schemas, so callers cannot
+ * mutate the mock's state by accident.
  *
- * @param options - Optional seed for lobby codes.
+ * @param options - Optional seed for lobby codes, and an optional clock.
  * @returns A {@link GameApi} backed by memory.
  */
 export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
@@ -69,7 +101,10 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
     random ??= createSeededRandom(options.seed ?? freshSeed());
     return random();
   }
+
+  const now = options.now ?? Date.now;
   const lobbiesByCode = new Map<string, Lobby>();
+  const auctionsByCode = new Map<string, StoredAuction>();
   let sequence = 0;
 
   /**
@@ -94,7 +129,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
   /**
    * Normalises a code the guest typed, then validates it. Guests may type
    * lowercase or pad the code with spaces. Every entry point goes through here,
-   * so `getLobby` and `joinLobby` accept the same inputs.
+   * so every method accepts the same inputs.
    *
    * @param code - The raw code from the caller.
    * @returns The uppercase, trimmed code.
@@ -119,6 +154,25 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
     return lobby;
   }
 
+  /**
+   * Looks up a lobby's auction, settles any lot whose timer has run out, and
+   * keeps the lobby's `auctionStatus` in step with the auction.
+   *
+   * @param code - A normalised lobby code.
+   * @returns The stored auction, settled to the current time.
+   * @throws {AuctionNotStartedError} When the auction has not started.
+   */
+  function settledAuction(code: string): StoredAuction {
+    const stored = auctionsByCode.get(code);
+    if (!stored) {
+      throw new AuctionNotStartedError(code);
+    }
+    settleExpiredLots(stored.auction, stored.queue, now());
+    const lobby = findLobby(code);
+    lobby.auctionStatus = stored.auction.status;
+    return stored;
+  }
+
   return {
     async createLobby(rawInput) {
       const input = createLobbyInputSchema.parse(rawInput);
@@ -134,6 +188,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         code,
         name: input.name,
         phase: "auction",
+        auctionStatus: "waiting",
         round: 0,
         owners: [owner],
         seedVersion: SEED_VERSION,
@@ -159,6 +214,9 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       );
       if (alreadyOwner) {
         return lobbySchema.parse(lobby);
+      }
+      if (lobby.auctionStatus !== "waiting") {
+        throw new AuctionAlreadyStartedError(input.code);
       }
       if (lobby.owners.length >= MAX_OWNERS) {
         throw new LobbyFullError(input.code);
@@ -203,6 +261,59 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         owner.franchiseId = input.franchiseId;
       }
       return lobbySchema.parse(lobby);
+    },
+
+    async startAuction(rawInput) {
+      const input = startAuctionInputSchema.parse({
+        ...rawInput,
+        code: normalizeCode(rawInput.code),
+      });
+      const lobby = findLobby(input.code);
+
+      if (lobby.auctionStatus !== "waiting") {
+        throw new AuctionAlreadyStartedError(input.code);
+      }
+      if (!lobby.owners.some((owner) => owner.guestId === input.guestId)) {
+        throw new NotAnOwnerError(input.guestId);
+      }
+      if (lobby.owners.length === 0) {
+        throw new AuctionStartBlockedError("no-owners");
+      }
+      if (lobby.owners.some((owner) => owner.franchiseId === null)) {
+        throw new AuctionStartBlockedError("unclaimed-franchise");
+      }
+
+      const queue = auctionOrder(input.code);
+      const auction = createMockAuction(input.code, lobby.owners, queue, now());
+      auctionsByCode.set(input.code, { auction, queue });
+      lobby.auctionStatus = auction.status;
+      return lobbySchema.parse(lobby);
+    },
+
+    async getAuction(rawCode) {
+      const code = normalizeCode(rawCode);
+      return auctionSchema.parse(settledAuction(code).auction);
+    },
+
+    async placeBid(rawInput) {
+      const input = placeBidInputSchema.parse({
+        ...rawInput,
+        code: normalizeCode(rawInput.code),
+      });
+      const stored = settledAuction(input.code);
+      const clock = now();
+
+      const reason = bidBlockReason(
+        stored.auction,
+        input.guestId,
+        input.amountLakhs,
+        clock,
+      );
+      if (reason !== null) {
+        throw new BidBlockedError(reason);
+      }
+      recordBid(stored.auction, input.guestId, input.amountLakhs, clock);
+      return auctionSchema.parse(stored.auction);
     },
   };
 }

@@ -5,6 +5,7 @@ import { type FormEvent, useState } from "react";
 
 import { LOBBY_PHASE_LABELS, MAX_OWNERS } from "../../shared/const/lobby.const";
 import { TEAMS } from "../../shared/const/teams.const";
+import { AuctionPanel } from "../AuctionPanel/AuctionPanel";
 import { Button } from "../Button/Button";
 import { ErrorBanner } from "../ErrorBanner/ErrorBanner";
 import { FranchiseGrid } from "../FranchiseGrid/FranchiseGrid";
@@ -13,9 +14,11 @@ import { styles } from "./LobbyView.styles";
 import type { LobbyViewProps } from "./LobbyView.types";
 
 /**
- * Shows one lobby: its name, phase and code, the share link, who is in it, and
- * the franchise grid. A guest who has not joined sees a join form instead of the
- * grid, and a full lobby says so rather than offering a form that would fail.
+ * Shows one lobby. Before the auction starts it shows the name, phase, code,
+ * share link, owners, and the franchise grid, with a start control for owners.
+ * A guest who has not joined sees the join form instead of the grid, and a full
+ * lobby says so rather than offering a form that would fail. Once the auction
+ * has started, the auction panel takes the place of the grid and the form.
  *
  * @param props - The lobby, the viewing guest, the share link, and the actions.
  * @returns The lobby's sections inside the page's `<main>`.
@@ -28,10 +31,15 @@ export function LobbyView({
   error,
   onClaim,
   onJoin,
+  onStart,
 }: LobbyViewProps) {
   const [displayName, setDisplayName] = useState("");
   const isOwner = lobby.owners.some((owner) => owner.guestId === guestId);
   const isFull = lobby.owners.length >= MAX_OWNERS;
+  const everyOwnerHasFranchise = lobby.owners.every(
+    (owner) => owner.franchiseId !== null,
+  );
+  const auctionStarted = lobby.auctionStatus !== "waiting";
 
   /**
    * @param event - The join form's submit event.
@@ -81,22 +89,46 @@ export function LobbyView({
         </ul>
       </section>
 
-      {isOwner ? (
-        <section aria-labelledby="franchises-heading">
-          <h2 id="franchises-heading" {...stylex.props(styles.subheading)}>
-            Pick your franchise
-          </h2>
-          <p {...stylex.props(styles.note)}>
-            Franchises no owner claims are run by a system squad, so every
-            season has all ten teams.
-          </p>
-          <FranchiseGrid
-            lobby={lobby}
-            guestId={guestId}
-            pending={pending}
-            onClaim={onClaim}
-          />
-        </section>
+      {auctionStarted ? (
+        <AuctionPanel code={lobby.code} />
+      ) : isOwner ? (
+        <>
+          <section aria-labelledby="franchises-heading">
+            <h2 id="franchises-heading" {...stylex.props(styles.subheading)}>
+              Pick your franchise
+            </h2>
+            <p {...stylex.props(styles.note)}>
+              Franchises no owner claims are run by a system squad, so every
+              season has all ten teams.
+            </p>
+            <FranchiseGrid
+              lobby={lobby}
+              guestId={guestId}
+              pending={pending}
+              onClaim={onClaim}
+            />
+          </section>
+
+          <section
+            aria-labelledby="start-heading"
+            {...stylex.props(styles.joinForm)}
+          >
+            <h2 id="start-heading" {...stylex.props(styles.subheading)}>
+              Start the auction
+            </h2>
+            <p {...stylex.props(styles.note)}>
+              {everyOwnerHasFranchise
+                ? "Once it starts, no one can join or change franchise. Bidding opens on the first player."
+                : "Every owner must pick a franchise before the auction can start."}
+            </p>
+            <Button
+              disabled={pending || !everyOwnerHasFranchise}
+              onClick={onStart}
+            >
+              Start auction
+            </Button>
+          </section>
+        </>
       ) : isFull ? (
         <p {...stylex.props(styles.note)}>
           This lobby is full. Every franchise already has an owner.

@@ -1,4 +1,9 @@
 import type {
+  Auction,
+  PlaceBidInput,
+  StartAuctionInput,
+} from "./auction.types";
+import type {
   ClaimFranchiseInput,
   CreateLobbyInput,
   JoinLobbyInput,
@@ -26,4 +31,19 @@ export type GameApi = {
    * already hold is a no-op. Switching to another free franchise replaces it.
    */
   readonly claimFranchise: (input: ClaimFranchiseInput) => Promise<Lobby>;
+  /**
+   * Starts the auction. Any owner may start it, once every owner has a franchise.
+   * Joining and claiming close when it starts.
+   */
+  readonly startAuction: (input: StartAuctionInput) => Promise<Lobby>;
+  /**
+   * Reads the auction state. Rejects with `AuctionNotStartedError` before the
+   * auction starts. Reading also settles any lot whose timer has run out.
+   */
+  readonly getAuction: (code: string) => Promise<Auction>;
+  /**
+   * Places a bid on the current lot. The amount must be the lot's minimum next
+   * bid. Rejects with `BidBlockedError` when the bid is refused.
+   */
+  readonly placeBid: (input: PlaceBidInput) => Promise<Auction>;
 };

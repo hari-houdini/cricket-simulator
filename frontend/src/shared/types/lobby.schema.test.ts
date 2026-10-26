@@ -13,6 +13,7 @@ const validLobby = {
   code: "ABC123",
   name: "Sunday League",
   phase: "auction",
+  auctionStatus: "waiting",
   round: 0,
   owners: [owner],
   seedVersion: "1.0.0",

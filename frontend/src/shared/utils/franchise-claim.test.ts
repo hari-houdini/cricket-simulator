@@ -8,6 +8,7 @@ const lobby: Lobby = {
   code: "ABC123",
   name: "Sunday League",
   phase: "auction",
+  auctionStatus: "waiting",
   round: 0,
   seedVersion: "1.1.0",
   owners: [

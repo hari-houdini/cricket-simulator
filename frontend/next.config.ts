@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import type { NextConfig } from "next";
 
 /**
@@ -41,6 +43,11 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,
+  // The player seed lives in `data/seeds/` at the repo root, outside this app,
+  // and the mock reads it at runtime. Turbopack must be able to see that folder.
+  turbopack: {
+    root: path.join(import.meta.dirname, ".."),
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

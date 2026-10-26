@@ -20,5 +20,8 @@ export function createHttpGameApi(): GameApi {
     getLobby: notImplemented,
     joinLobby: notImplemented,
     claimFranchise: notImplemented,
+    startAuction: notImplemented,
+    getAuction: notImplemented,
+    placeBid: notImplemented,
   };
 }

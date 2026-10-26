@@ -4,7 +4,7 @@ import type { Lobby, Owner } from "../types/lobby.types";
  * Why a franchise claim is refused. `null` from {@link franchiseClaimBlock}
  * means the claim is allowed.
  *
- * - `closed`: the lobby is past the auction phase.
+ * - `closed`: the auction has started, or the lobby has left the auction phase.
  * - `not-an-owner`: the guest has not joined the lobby.
  * - `taken`: another owner already holds the franchise.
  */
@@ -34,7 +34,7 @@ export function franchiseClaimBlock(
   guestId: string,
   franchiseId: string,
 ): FranchiseClaimBlock | null {
-  if (lobby.phase !== "auction") {
+  if (lobby.phase !== "auction" || lobby.auctionStatus !== "waiting") {
     return "closed";
   }
   if (!lobby.owners.some((owner) => owner.guestId === guestId)) {

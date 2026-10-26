@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { lobbyCodeSchema } from "../types/lobby.schema";
 import { describeApiError } from "./describe-api-error";
 import {
+  AuctionAlreadyStartedError,
+  AuctionNotStartedError,
+  AuctionStartBlockedError,
+  BidBlockedError,
   FranchiseClaimClosedError,
   FranchiseNotFoundError,
   FranchiseTakenError,
@@ -54,6 +58,51 @@ describe("describeApiError", () => {
 
     expect(describeApiError(zodError.error)).toBe(
       "Check what you entered and try again.",
+    );
+  });
+
+  it("tells an owner the auction has not started", () => {
+    expect(describeApiError(new AuctionNotStartedError("ABC123"))).toBe(
+      "The auction has not started yet.",
+    );
+  });
+
+  it("says the lobby is closed once the auction has started", () => {
+    expect(
+      describeApiError(new AuctionAlreadyStartedError("ABC123")),
+    ).toContain("lobby is closed");
+  });
+
+  it("says who must act before the auction can start", () => {
+    expect(
+      describeApiError(new AuctionStartBlockedError("no-owners")),
+    ).toContain("Add an owner");
+    expect(
+      describeApiError(new AuctionStartBlockedError("unclaimed-franchise")),
+    ).toContain("pick a franchise");
+  });
+
+  it("gives a specific reason for every refused bid", () => {
+    expect(describeApiError(new BidBlockedError("lot-closed"))).toContain(
+      "just been sold",
+    );
+    expect(describeApiError(new BidBlockedError("not-an-owner"))).toContain(
+      "Join the lobby",
+    );
+    expect(describeApiError(new BidBlockedError("squad-full"))).toContain(
+      "squad is full",
+    );
+    expect(
+      describeApiError(new BidBlockedError("already-high-bidder")),
+    ).toContain("highest bid");
+    expect(describeApiError(new BidBlockedError("not-next-step"))).toContain(
+      "moved on",
+    );
+    expect(describeApiError(new BidBlockedError("over-purse"))).toContain(
+      "purse",
+    );
+    expect(describeApiError(new BidBlockedError("no-open-lot"))).toContain(
+      "no player",
     );
   });
 

@@ -65,6 +65,12 @@ export const lobbySchema = object({
   code: lobbyCodeSchema,
   name: string().trim().min(1).max(40),
   phase: lobbyPhaseSchema,
+  /**
+   * Where the auction is. `waiting` lets owners claim franchises and join;
+   * `running` and `complete` close both. The auction state itself is read
+   * through `getAuction`.
+   */
+  auctionStatus: zodEnum(["waiting", "running", "complete"]),
   round: number().int().min(0).max(LAST_ROUND),
   owners: array(ownerSchema).max(MAX_OWNERS),
   /**
