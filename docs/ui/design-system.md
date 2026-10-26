@@ -259,8 +259,8 @@ Layout on mobile: Card fills screen, bid buttons scroll below.
 │ Man of the Match Award      │
 │ Kohli (6 awards)            │
 │                             │
-│ Most Runs: Kohli (892)      │
-│ Most Wickets: Bumrah (18)   │
+│ Orange Cap: Kohli (892)      │
+│ Purple Cap: Bumrah (18)   │
 │ Best Average: [Player]      │
 │ Emerging Player: [Player]   │
 │ Fair Play: [Team]           │
@@ -667,7 +667,7 @@ Use illustration + message + retry button.
 5. **Animations**: Verify `prefers-reduced-motion` is respected
 6. **Offline**: Test connection drop during auction; verify graceful pause and recovery
 7. **Real-time Auction**: Test simultaneous bids, outbid notifications, state updates
-8. **Match Simulation**: Verify 1–2 second animation with key moments
+8. **Match Simulation**: Verify 1–2 second league display, and a playoff key-moment view within 5 seconds
 9. **Accessibility Audit**: WCAG 2.1 AA compliance check (contrast, labels, keyboard nav)
 
 ---

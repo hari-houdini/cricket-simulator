@@ -492,13 +492,13 @@ All mobile screens are single-column layouts with bottom navigation.
 │ └──────────────────────────┘ │
 │                              │
 │ ┌──────────────────────────┐ │
-│ │ 🏏 Most Runs             │ │
+│ │ 🏏 Orange Cap             │ │
 │ │ Award                    │ │
 │ │ Kohli (892 runs)         │ │
 │ └──────────────────────────┘ │
 │                              │
 │ ┌──────────────────────────┐ │
-│ │ ⚾ Most Wickets          │ │
+│ │ ⚾ Purple Cap          │ │
 │ │ Award                    │ │
 │ │ Bumrah (18 wickets)      │ │
 │ └──────────────────────────┘ │

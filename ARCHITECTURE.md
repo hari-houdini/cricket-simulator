@@ -40,7 +40,7 @@
 - **Styling**: StyleX (Meta's CSS-in-JS) + Dark Theme
 - **Hosting**: Vercel (automatic deployments, edge functions)
 - **Responsive Design**: Mobile-first (320px - 1920px+)
-- **PWA**: manifest.json + Service Worker for offline support
+- **PWA**: post-MVP (see `docs/game-design.md` section 13)
 - **Analytics**: Vercel Analytics (built-in, free tier)
 
 ### Responsive Breakpoints
@@ -59,7 +59,7 @@
    - Draft squad selections (before submission)
    - Cached match results (for quick replay)
    - User preferences (theme, notification settings)
-   - **Persistence**: Session-based, cleared on browser close
+   - **Persistence**: UI state is session-based. The guest ID is kept in localStorage so a refresh keeps the franchise.
 
 2. **Cloudflare Durable Objects** (Server-side, persistent):
    - Lobby state (created lobbies, active users)
@@ -89,7 +89,7 @@ app/
     └── globals.tsx       # StyleX global styles
 ```
 
-### PWA Features
+### PWA Features (post-MVP)
 - **manifest.json**: App name, icons, theme colors
 - **Service Worker**: Cache-first strategy for assets
 - **Offline Support**: 
@@ -119,9 +119,9 @@ app/
 
 **Algorithm**:
 1. Player ratings determine ball probabilities
-2. Weighted random outcomes (runs, boundaries, wickets)
+2. Probability-weighted outcomes (runs, boundaries, wickets) drawn from a seeded RNG
 3. Match context (powerplay, death overs) modifies probabilities
-4. Deterministic seeding (same input = same result)
+4. Seed = lobby ID + match ID, so the same input always gives the same result ([ADR 0003](docs/adr/0003-seeded-deterministic-simulation.md))
 
 **Performance**: <50ms for full 20-over match
 
@@ -141,7 +141,7 @@ app/
 2. Schedule double round-robin (14 matches per team)
 3. After each match, update standings
 4. After league, determine top 4 for playoffs
-5. Run semi-finals and final
+5. Run the IPL playoff format: Qualifier 1, Eliminator, Qualifier 2, Final (rounds 15-18)
 6. Calculate season awards
 
 #### Lobby Manager (`lobby.rs`)
@@ -149,30 +149,32 @@ app/
 
 **Key Functions**:
 - `create_lobby(name, creator_id) -> Lobby`
-- `join_lobby(lobby_id, user_id, squad) -> Lobby`
+- `claim_franchise(lobby_id, guest_id, franchise) -> Lobby`
+- `run_auction(lobby_id)`: runs the seeded auction, see `docs/game-design.md` section 3
 - `broadcast_match_update(lobby_id, event)`
 - `get_lobby_state(lobby_id) -> LobbyState`
 
 **State Persistence**: Cloudflare Durable Objects
-- Lobby metadata (users, current round)
+- Lobby metadata (owners, phase, current round)
 - Match results (for all 10 teams)
 - Standings (updated per match)
-- Awards (accumulated per user)
+- Awards (computed from season stats)
 
 #### Squad Builder (`squad.rs`)
-**Purpose**: Validate and manage team squads
+**Purpose**: Validate the 15-player squad and the 11-player starting XI
 
 **Key Functions**:
 - `validate_squad(squad) -> Result<()>`
-- `check_budget(squad) -> remaining_budget`
+- `check_purse(squad) -> purse_remaining`
 - `assign_captain(squad, captain_id)`
 - `get_player_stats(player_id, season) -> Stats`
 
 **Constraints**:
-- 11 players exactly
-- Total salary ≤ ₹100cr
-- 1 wicket-keeper minimum
-- Valid roles for each position
+- 15 drafted players; 11 in the starting XI
+- Purse ₹100cr per owner, no carry-over; total spent ≤ ₹100cr
+- Starting XI: exactly 1 wicket-keeper
+- Starting XI: at least 4 bowling options (bowlers and bowling all-rounders)
+- Starting XI locks after the first match; one free substitution per season
 
 #### Awards Calculator (`awards.rs`)
 **Purpose**: Track and calculate season awards
@@ -183,14 +185,15 @@ app/
 - `calculate_season_awards(season_stats) -> Awards`
 - `get_award_winner(award_type, stats) -> Player`
 
-**Award Types**:
-- Most Runs
-- Most Wickets
-- Best Batting Average
-- Best Bowling Average
-- Emerging Player
+**Award Types** (see `docs/game-design.md` section 8):
+- Orange Cap (most runs)
+- Purple Cap (most wickets)
+- Most Valuable Player (highest season fantasy points)
 - Man of the Match (per match)
-- Fair Play
+- Emerging Player
+- Fair Play (franchise season standing, see `docs/game-design.md` section 9)
+
+Batting and bowling averages are stats on award screens, not awards.
 
 ### 2. Data Models (`models.rs`)
 
@@ -200,8 +203,9 @@ struct Player {
     id: String,
     name: String,
     ipl_team: String,
-    role: Role,  // Batsman, Bowler, AllRounder, WicketKeeper
-    price: u32,  // ₹ salary
+    role: Role,  // Batter, Bowler, AllRounder, WicketKeeper
+    base_price: u32,  // ₹ base price for the auction
+    trouble_rating: u8,  // 0-10, seeded; base value 2 if unseeded (game-design section 9)
     ratings: PlayerRatings,
 }
 
@@ -218,7 +222,8 @@ struct Squad {
     id: String,
     lobby_id: String,
     user_id: String,
-    players: Vec<Player>,  // 11 players
+    players: Vec<Player>,  // 15 drafted players
+    starting_xi: Vec<String>,  // 11 player IDs from players
     captain_id: String,
     vice_captain_id: String,
     total_spent: u32,  // ₹
@@ -421,7 +426,7 @@ const styles = stylex.create({
 ```typescript
 useWebSocket(lobbyId)         // Real-time match updates via WebSocket
 useLobbyState(lobbyId)        // Lobby state + standings
-useSquadBuilder(budget)       // Squad selection with validation
+useAuction(lobbyId)           // Live auction: current player, bids, timer
 useLocalStorage(key)          // Sync UI state to localStorage
 useMatchSimulation(matchId)   // Live match state
 useAwards(lobbyId)            // Award calculations
@@ -435,15 +440,19 @@ usePWA()                      // PWA installation & offline status
   - Displays active lobbies
   - Create/Join lobby forms
   
-<SquadBuilder>
-  - Player browser with filters
-  - Budget tracker (₹100cr)
-  - Drag-drop squad builder (mobile: swipe)
-  
+<AuctionView>
+  - Auction card with countdown timer and increment buttons
+  - Bid log and purse remaining
+  - Squad count (of 15)
+
+<StartingXI>
+  - Pick 11 of 15, with captain and vice-captain
+  - Locks after first match
+
 <MatchViewer>
-  - League: Fast score-only display (1-2s)
-  - Playoff: Over-by-over animations (30s+)
-  - Skip button for animations
+  - League: score-only display (1-2s)
+  - Playoff: key moments within 5s
+  - Skip button to reach the result
   
 <SeasonTable>
   - League standings with sorting
@@ -458,6 +467,7 @@ usePWA()                      // PWA installation & offline status
 
 **Keys Stored**:
 - `lobby:{id}` → Lobby metadata
+- `players:{id}` → Player seed copy, including trouble ratings
 - `standings:{id}` → Current standings
 - `matches:{id}:{round}` → Match results
 - `awards:{id}` → Award tracking
@@ -494,7 +504,7 @@ LobbyObject instances → Global replication
 | Metric | Target |
 |--------|--------|
 | Match simulation | <2 seconds (league) |
-| Playoff match | 30+ seconds (with animations) |
+| Playoff match | ≤5 seconds (key moments) |
 | API response | <100ms |
 | WebSocket latency | <500ms |
 | Page load | <2 seconds |

@@ -4,7 +4,7 @@ Rules for AI agents and contributors working in this repository. Read this befor
 
 ## Project
 
-IPL cricket fantasy simulator. Players build budget-constrained squads (₹100cr, 11 players), then play a 10-team league (double round-robin, 14 matches per team) and a 4-team playoff.
+IPL cricket fantasy simulator. Guests own IPL franchises. Owners bid for 15 players in a live auction (₹100cr purse) and name an 11-player starting XI. The lobby then plays a 10-team league (double round-robin, 14 matches per team) and the IPL playoff format. Vocabulary is in `GLOSSARY.md`.
 
 - Game rules: `README.md`, `docs/game-design.md`
 - System design: `ARCHITECTURE.md`
@@ -16,6 +16,8 @@ IPL cricket fantasy simulator. Players build budget-constrained squads (₹100cr
 - `frontend/`: Next.js 16 + React 19 app using the App Router (`src/app/`). Package manager: pnpm.
 - `backend/`: Rust service targeting Cloudflare Workers (see `ARCHITECTURE.md`). Currently empty.
 - `docs/`, `research/`: design documents and analysis.
+- `docs/adr/`: accepted architecture decisions. Check them before reversing a design choice.
+- `GLOSSARY.md`: the project's domain vocabulary. Use its terms in code, comments and UI copy, and avoid the synonyms it lists.
 
 ## Commands
 
@@ -147,11 +149,13 @@ Use Conventional Commits: `type(scope): subject`. Common types are `feat`, `fix`
 
 ## Domain glossary
 
+`GLOSSARY.md` holds the full definitions and banned synonyms. This section is a summary.
+
 - **Lobby:** a multiplayer room. Guests join a lobby to play a season together.
-- **Squad:** 11 players chosen within a ₹100cr budget. Roles are Batsman, Bowler, All-rounder, and Wicket-keeper. A squad names a captain and a vice-captain.
+- **Squad:** 15 players drafted at auction with a ₹100cr purse. The starting XI is 11 of them. Roles are Batter, Bowler, All-rounder, and Wicket-keeper.
 - **League:** 10 IPL franchises in a double round-robin, 14 matches per team. Win is 2 points, a tie is 1 point each, a loss is 0.
-- **Playoffs:** the top 4 teams. Two semi-finals, then the final.
-- **Awards:** Man of the Match (per match), Most Runs, Most Wickets, Best Batting and Bowling Averages (minimum 10 balls), Emerging Player, and Fair Play.
+- **Playoffs:** IPL format: Qualifier 1, Eliminator, Qualifier 2, Final (rounds 15–18).
+- **Awards:** Man of the Match (per match), Orange Cap, Purple Cap, Most Valuable Player, Emerging Player, and Fair Play. Definitions are in `docs/game-design.md` section 8.
 
 ## Quick reference: what not to do
 

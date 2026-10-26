@@ -1,6 +1,6 @@
 # IPL Cricket Simulator
 
-A real-time multiplayer fantasy cricket game where users build IPL teams with budget constraints (₹100cr) and compete through a full season with league matches and playoffs.
+A real-time multiplayer fantasy cricket game where guests each own an IPL franchise, bid for players in a live auction (₹100cr purse), and compete through a full season with league matches and the IPL playoff format. Vocabulary is in [GLOSSARY.md](GLOSSARY.md); rules are in [docs/game-design.md](docs/game-design.md).
 
 ## Game Overview
 
@@ -8,14 +8,14 @@ A real-time multiplayer fantasy cricket game where users build IPL teams with bu
 - **Players**: Guest-based, lobby-based multiplayer
 - **Season Structure**: 10-team league + 4-team playoffs
 - **Match Speed**: League matches simulate in 1-2 seconds; playoff matches show over-by-over detail
-- **Awards**: Full IPL award system (MVP, Most Runs, Most Wickets, Best Averages, Emerging Player)
+- **Awards**: IPL-style awards (Orange Cap, Purple Cap, Most Valuable Player, Emerging Player, Fair Play)
 
 ## Architecture
 
 ### Tech Stack
 - **Frontend**: React on Vercel (free tier)
 - **Backend**: Cloudflare Workers + Rust/Go (free tier)
-- **Database**: Cloudflare Durable Objects or Upstash Redis (free tier)
+- **Database**: Cloudflare Durable Objects (free tier), see [ADR 0002](docs/adr/0002-durable-objects-as-only-store.md)
 - **Realtime**: WebSocket for live match broadcasting
 - **Repository**: Public GitHub (open source)
 
@@ -84,10 +84,10 @@ wrangler publish
 ## Game Rules
 
 ### Squad Building
-- 11 players total
-- Budget: ₹100cr
-- Roles: Batsman, Bowler, All-rounder, Wicket-keeper
-- Select captain and vice-captain
+- Live auction: draft 15 players with a ₹100cr purse
+- Starting XI: 11 of the 15, with exactly one wicket-keeper and at least 4 bowling options
+- Roles: Batter, Bowler, All-rounder, Wicket-keeper
+- Captain (1.5x) and vice-captain (1.25x)
 
 ### League Phase
 - 10 teams (IPL franchises)
@@ -97,18 +97,17 @@ wrangler publish
 
 ### Playoffs
 - Top 4 teams advance
-- Semi-finals + Final
-- Detailed over-by-over simulation with animations
+- IPL format: Qualifier 1, Eliminator, Qualifier 2, Final (rounds 15-18)
+- Key moments only, within 5 seconds per match
 - Skippable to final score
 
 ### Awards
 - Man of the Match (per match)
-- Most Runs (season)
-- Most Wickets (season)
-- Best Batting Average (min 10 balls)
-- Best Bowling Average (min 10 balls)
-- Emerging Player (lowest-rated with best impact)
-- Fair Play Award
+- Orange Cap (most runs, season)
+- Purple Cap (most wickets, season)
+- Most Valuable Player (highest season fantasy points)
+- Emerging Player (IPL-style eligibility, see `docs/game-design.md`)
+- Fair Play (franchise season standing, see `docs/game-design.md`)
 
 ## API Overview
 
