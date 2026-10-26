@@ -8,8 +8,8 @@ import { tokens } from "../shared/const/tokens.stylex";
 export const styles = stylex.create({
   heading: {
     fontFamily: tokens.fontSerif,
-    fontSize: "2rem",
-    fontWeight: 700,
+    fontSize: tokens.fontSizeHeading,
+    fontWeight: tokens.fontWeightBold,
     marginBlock: `0 ${tokens.spaceLg}`,
   },
 });

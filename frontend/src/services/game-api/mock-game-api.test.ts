@@ -74,6 +74,20 @@ describe("createMockGameApi", () => {
     ]);
   });
 
+  it("accepts a join code typed in lowercase, as getLobby does", async () => {
+    const api = createMockGameApi();
+    const created = await api.createLobby({ name: "Typed", ...creator });
+
+    const joined = await api.joinLobby({
+      code: ` ${created.code.toLowerCase()} `,
+      guestId: "guest-3",
+      displayName: "Meera",
+    });
+
+    expect(joined.code).toBe(created.code);
+    expect(joined.owners).toHaveLength(2);
+  });
+
   it("treats joining again with the same guest ID as a no-op", async () => {
     const api = createMockGameApi();
     const created = await api.createLobby({ name: "Refresh", ...creator });

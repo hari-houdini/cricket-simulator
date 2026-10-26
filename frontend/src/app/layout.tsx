@@ -16,6 +16,10 @@ const dmSans = DM_Sans({
   subsets: ["latin"],
 });
 
+/**
+ * Document head metadata: the title and description used by the browser tab,
+ * search results and link previews.
+ */
 export const metadata: Metadata = {
   title: "IPL Cricket Simulator",
   description:
@@ -50,13 +54,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
         <header {...stylex.props(styles.header)}>
-          <Link href="/" {...stylex.props(styles.brandLink)}>
+          <Link href="/" {...stylex.props(styles.brandLink, styles.focusRing)}>
             <span {...stylex.props(styles.brand)}>IPL Cricket Simulator</span>
           </Link>
           <nav aria-label="Primary">
             <ul {...stylex.props(styles.navList)}>
               <li>
-                <Link href="/" {...stylex.props(styles.navLink)}>
+                <Link
+                  href="/"
+                  {...stylex.props(styles.navLink, styles.focusRing)}
+                >
                   Home
                 </Link>
               </li>

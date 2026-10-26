@@ -1,3 +1,4 @@
+import { LOBBY_CODE_LENGTH, MAX_OWNERS } from "../../shared/const/lobby.const";
 import {
   createLobbyInputSchema,
   joinLobbyInputSchema,
@@ -10,9 +11,6 @@ import { LobbyFullError, LobbyNotFoundError } from "./game-api.errors";
 import type { GameApi } from "./game-api.types";
 
 const CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-const CODE_LENGTH = 6;
-const MAX_OWNERS = 10;
-const DEFAULT_SEED = "cricket-simulator";
 
 /**
  * Options for the mock game API.
@@ -20,10 +18,20 @@ const DEFAULT_SEED = "cricket-simulator";
 export type MockGameApiOptions = {
   /**
    * Seed for lobby codes. The same seed and the same sequence of creates give
-   * the same codes, so tests and Storybook can assert on them.
+   * the same codes, so tests and Storybook can assert on them. When omitted, a
+   * fresh seed is drawn, so codes differ between page loads.
    */
   readonly seed?: string;
 };
+
+/**
+ * Draws a fresh seed for a mock that was not given one.
+ *
+ * @returns A short random string.
+ */
+function freshSeed(): string {
+  return Math.random().toString(36).slice(2);
+}
 
 /**
  * Builds the in-memory mock of the game API. It keeps lobbies for as long as
@@ -37,7 +45,7 @@ export type MockGameApiOptions = {
  * @returns A {@link GameApi} backed by memory.
  */
 export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
-  const random = createSeededRandom(options.seed ?? DEFAULT_SEED);
+  const random = createSeededRandom(options.seed ?? freshSeed());
   const lobbiesByCode = new Map<string, Lobby>();
   let sequence = 0;
 
@@ -45,13 +53,13 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
    * Draws a code that no existing lobby uses. Retries on collision, which is
    * rare with 36^6 codes but cheap to handle.
    *
-   * @returns A six-character code.
+   * @returns A code of {@link LOBBY_CODE_LENGTH} characters.
    */
   function drawUnusedCode(): string {
     let code: string;
     do {
       code = "";
-      for (let index = 0; index < CODE_LENGTH; index += 1) {
+      for (let index = 0; index < LOBBY_CODE_LENGTH; index += 1) {
         code += CODE_ALPHABET.charAt(
           Math.floor(random() * CODE_ALPHABET.length),
         );
@@ -62,11 +70,12 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
 
   /**
    * Normalises a code the guest typed, then validates it. Guests may type
-   * lowercase or pad the code with spaces.
+   * lowercase or pad the code with spaces. Every entry point goes through here,
+   * so `getLobby` and `joinLobby` accept the same inputs.
    *
    * @param code - The raw code from the caller.
    * @returns The uppercase, trimmed code.
-   * @throws {ZodError} When the code is not six letters or digits.
+   * @throws {ZodError} When the code is not a valid lobby code.
    */
   function normalizeCode(code: string): string {
     return lobbyCodeSchema.parse(code.trim().toUpperCase());
@@ -114,7 +123,10 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
     },
 
     async joinLobby(rawInput) {
-      const input = joinLobbyInputSchema.parse(rawInput);
+      const input = joinLobbyInputSchema.parse({
+        ...rawInput,
+        code: normalizeCode(rawInput.code),
+      });
       const lobby = findLobby(input.code);
 
       const alreadyOwner = lobby.owners.some(

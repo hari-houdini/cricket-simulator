@@ -25,7 +25,8 @@ export const styles = stylex.create({
   },
   /**
    * Off-screen until it receives keyboard focus, then slides into view. Using
-   * `transform` keeps the motion to a property the animation rules allow.
+   * `transform` keeps the motion to a property the animation rules allow. Users
+   * who ask for reduced motion get an instant jump.
    */
   skipLink: {
     position: "absolute",
@@ -35,21 +36,34 @@ export const styles = stylex.create({
     borderRadius: tokens.radiusSm,
     backgroundColor: tokens.colorGoldPrimary,
     color: tokens.colorBase,
-    fontWeight: 600,
+    fontWeight: tokens.fontWeightSemibold,
     transform: {
       default: "translateY(-200%)",
       ":focus-visible": "translateY(0)",
     },
     transitionProperty: "transform",
-    transitionDuration: tokens.durationMicro,
+    transitionDuration: {
+      default: tokens.durationMicro,
+      "@media (prefers-reduced-motion: reduce)": "0ms",
+    },
     transitionTimingFunction: tokens.easingOut,
     zIndex: 1,
+  },
+  /** Shared keyboard focus ring for links in the header. */
+  focusRing: {
+    outlineColor: tokens.colorGoldPrimary,
+    outlineOffset: tokens.offsetFocusRing,
+    outlineStyle: {
+      default: "none",
+      ":focus-visible": "solid",
+    },
+    outlineWidth: tokens.widthFocusRing,
   },
   header: {
     alignItems: "center",
     borderBottomColor: tokens.colorMid,
     borderBottomStyle: "solid",
-    borderBottomWidth: "1px",
+    borderBottomWidth: tokens.borderWidthHairline,
     display: "flex",
     flexWrap: "wrap",
     gap: tokens.spaceSm,
@@ -59,8 +73,8 @@ export const styles = stylex.create({
   brand: {
     color: tokens.colorText,
     fontFamily: tokens.fontSerif,
-    fontSize: "1.25rem",
-    fontWeight: 700,
+    fontSize: tokens.fontSizeBrand,
+    fontWeight: tokens.fontWeightBold,
     textDecoration: "none",
   },
   navList: {
@@ -74,31 +88,17 @@ export const styles = stylex.create({
     color: tokens.colorText,
     textDecoration: "none",
     paddingBlock: tokens.spaceXs,
-    outlineColor: tokens.colorGoldPrimary,
-    outlineOffset: "2px",
-    outlineStyle: {
-      default: "none",
-      ":focus-visible": "solid",
-    },
-    outlineWidth: "2px",
   },
   brandLink: {
     color: tokens.colorText,
     textDecoration: "none",
-    outlineColor: tokens.colorGoldPrimary,
-    outlineOffset: "2px",
-    outlineStyle: {
-      default: "none",
-      ":focus-visible": "solid",
-    },
-    outlineWidth: "2px",
   },
   main: {
     display: "flex",
     flexDirection: "column",
     flex: 1,
     width: "100%",
-    maxWidth: "1024px",
+    maxWidth: tokens.widthShell,
     marginInline: "auto",
     paddingInline: tokens.spaceMd,
     paddingBlock: tokens.spaceXl,

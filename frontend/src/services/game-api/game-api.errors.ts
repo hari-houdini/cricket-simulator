@@ -12,16 +12,18 @@ export class LobbyNotFoundError extends Error {
   }
 }
 
+import { MAX_OWNERS } from "../../shared/const/lobby.const";
+
 /**
- * Thrown when a new guest tries to join a lobby that already has 10 owners,
- * one for each franchise.
+ * Thrown when a new guest tries to join a lobby that already has
+ * {@link MAX_OWNERS} owners, one for each franchise.
  */
 export class LobbyFullError extends Error {
   /**
    * @param code - The code of the full lobby.
    */
   constructor(code: string) {
-    super(`Lobby "${code}" already has 10 owners.`);
+    super(`Lobby "${code}" already has ${MAX_OWNERS} owners.`);
     this.name = "LobbyFullError";
   }
 }
