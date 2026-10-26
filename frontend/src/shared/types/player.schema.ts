@@ -28,9 +28,12 @@ export const troubleRatingSchema = number().int().min(0).max(10);
  * A player in the master pool. Money is in lakhs, so the schema holds only
  * integers and no floats.
  *
- * Two rules are enforced beyond the field types. A player is retired exactly
- * when it has no franchise, and the base price must match the category, so the
- * seed cannot give a marquee player a capped player's price.
+ * Two rules are enforced beyond the field types. A current player must have a
+ * franchise. A retired player keeps the franchise it last represented, so the
+ * franchise is a last-known value, not proof of a current squad place. Retired
+ * players are excluded from auctions through `retired`, not `franchiseId`. The
+ * base price must also match the category, so the seed cannot give a marquee
+ * player a capped player's price.
  */
 export const playerSchema = object({
   id: playerIdSchema,
@@ -45,9 +48,9 @@ export const playerSchema = object({
   basePrice: number().int().positive(),
   troubleRating: troubleRatingSchema.optional(),
 })
-  .refine((player) => player.retired === (player.franchiseId === null), {
-    message: "A retired player has no franchise, and a current player has one.",
-    path: ["retired"],
+  .refine((player) => player.retired || player.franchiseId !== null, {
+    message: "A current player must have a franchise.",
+    path: ["franchiseId"],
   })
   .refine(
     (player) =>

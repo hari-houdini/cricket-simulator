@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "seedVersion": "1.0.0",
+  "seedVersion": "1.1.0",
   "dataAsOf": "2026-10-26",
   "source": "Franchise ids, names and colours mirror shared/const/teams.const.ts. Colours marked UNVERIFIED there are still unconfirmed.",
   "franchises": [

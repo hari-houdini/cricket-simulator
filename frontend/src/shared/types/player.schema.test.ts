@@ -24,8 +24,10 @@ describe("playerSchema", () => {
     expect(playerSchema.parse(kohli).troubleRating).toBeUndefined();
   });
 
-  it("rejects a retired player who still has a franchise", () => {
-    expect(() => playerSchema.parse({ ...kohli, retired: true })).toThrow();
+  it("accepts a retired player with the franchise they last represented", () => {
+    expect(playerSchema.parse({ ...kohli, retired: true }).franchiseId).toBe(
+      "rcb",
+    );
   });
 
   it("rejects a current player with no franchise", () => {

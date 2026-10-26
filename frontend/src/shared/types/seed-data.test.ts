@@ -93,7 +93,7 @@ describe("player seed", () => {
   it("gives every franchise a squad-capable current pool", () => {
     for (const franchise of franchises) {
       const current = players.filter(
-        (player) => player.franchiseId === franchise.id,
+        (player) => !player.retired && player.franchiseId === franchise.id,
       );
       const bowlingOptions = current.filter(
         (player) => player.role === "bowler" || player.role === "all-rounder",

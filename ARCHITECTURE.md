@@ -202,7 +202,7 @@ Batting and bowling averages are stats on award screens, not awards.
 struct Player {
     id: String,
     name: String,
-    franchise_id: Option<String>,  // None when retired
+    franchise_id: Option<String>,  // current franchise, or last IPL franchise when retired; None only for a retired player with no IPL history
     role: Role,  // Batter, Bowler, AllRounder, WicketKeeper
     category: Category,  // Marquee, Capped, Uncapped
     retired: bool,

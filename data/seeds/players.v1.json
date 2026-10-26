@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "seedVersion": "1.0.0",
+  "seedVersion": "1.1.0",
   "dataAsOf": "2026-10-26",
-  "source": "Players are real IPL names recalled from memory, not checked against 2026-27 squad or auction records. Roles, franchises and categories must be verified before release. Category counts follow the approved split (125 marquee, 100 capped, 75 uncapped). Ratings are fantasy estimates from category and role plus a deterministic per-name offset, not career statistics. No troubleRating is set, so every player uses the base value of 2 until the owner adds reviewed entries.",
+  "source": "Players are real IPL names recalled from memory, not checked against 2026-27 squad or auction records. Current players carry their franchise as of the last recorded season. Retired players carry the franchise they last represented in the IPL; defunct franchises map to their closest current successor. Franchises and roles, including last-franchise assignments, must be verified before release. Category counts follow the approved split (125 marquee, 100 capped, 75 uncapped). Ratings are fantasy estimates from category and role plus a deterministic per-name offset, not career statistics. No troubleRating is set, so every player uses the base value of 2 until the owner adds reviewed entries.",
   "players": [
     {
       "id": "ruturaj-gaikwad",
@@ -2527,7 +2527,7 @@
     {
       "id": "chris-gayle",
       "name": "Chris Gayle",
-      "franchiseId": null,
+      "franchiseId": "pbks",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2539,7 +2539,7 @@
     {
       "id": "ab-de-villiers",
       "name": "AB de Villiers",
-      "franchiseId": null,
+      "franchiseId": "rcb",
       "role": "wicket-keeper",
       "category": "marquee",
       "retired": true,
@@ -2551,7 +2551,7 @@
     {
       "id": "lasith-malinga",
       "name": "Lasith Malinga",
-      "franchiseId": null,
+      "franchiseId": "mi",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -2563,7 +2563,7 @@
     {
       "id": "kieron-pollard",
       "name": "Kieron Pollard",
-      "franchiseId": null,
+      "franchiseId": "mi",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -2575,7 +2575,7 @@
     {
       "id": "dwayne-bravo",
       "name": "Dwayne Bravo",
-      "franchiseId": null,
+      "franchiseId": "csk",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -2587,7 +2587,7 @@
     {
       "id": "suresh-raina",
       "name": "Suresh Raina",
-      "franchiseId": null,
+      "franchiseId": "csk",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2599,7 +2599,7 @@
     {
       "id": "harbhajan-singh",
       "name": "Harbhajan Singh",
-      "franchiseId": null,
+      "franchiseId": "csk",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -2611,7 +2611,7 @@
     {
       "id": "yuvraj-singh",
       "name": "Yuvraj Singh",
-      "franchiseId": null,
+      "franchiseId": "mi",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -2623,7 +2623,7 @@
     {
       "id": "virender-sehwag",
       "name": "Virender Sehwag",
-      "franchiseId": null,
+      "franchiseId": "dc",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2635,7 +2635,7 @@
     {
       "id": "shane-watson",
       "name": "Shane Watson",
-      "franchiseId": null,
+      "franchiseId": "csk",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -2647,7 +2647,7 @@
     {
       "id": "ambati-rayudu",
       "name": "Ambati Rayudu",
-      "franchiseId": null,
+      "franchiseId": "csk",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2659,7 +2659,7 @@
     {
       "id": "dale-steyn",
       "name": "Dale Steyn",
-      "franchiseId": null,
+      "franchiseId": "srh",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -2671,7 +2671,7 @@
     {
       "id": "brendon-mccullum",
       "name": "Brendon McCullum",
-      "franchiseId": null,
+      "franchiseId": "rcb",
       "role": "wicket-keeper",
       "category": "marquee",
       "retired": true,
@@ -2683,7 +2683,7 @@
     {
       "id": "adam-gilchrist",
       "name": "Adam Gilchrist",
-      "franchiseId": null,
+      "franchiseId": "pbks",
       "role": "wicket-keeper",
       "category": "marquee",
       "retired": true,
@@ -2695,7 +2695,7 @@
     {
       "id": "matthew-hayden",
       "name": "Matthew Hayden",
-      "franchiseId": null,
+      "franchiseId": "csk",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2707,7 +2707,7 @@
     {
       "id": "michael-hussey",
       "name": "Michael Hussey",
-      "franchiseId": null,
+      "franchiseId": "csk",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2719,7 +2719,7 @@
     {
       "id": "kevin-pietersen",
       "name": "Kevin Pietersen",
-      "franchiseId": null,
+      "franchiseId": "dc",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2731,7 +2731,7 @@
     {
       "id": "shikhar-dhawan",
       "name": "Shikhar Dhawan",
-      "franchiseId": null,
+      "franchiseId": "pbks",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2743,7 +2743,7 @@
     {
       "id": "ross-taylor",
       "name": "Ross Taylor",
-      "franchiseId": null,
+      "franchiseId": "rcb",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2755,7 +2755,7 @@
     {
       "id": "murali-vijay",
       "name": "Murali Vijay",
-      "franchiseId": null,
+      "franchiseId": "csk",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2767,7 +2767,7 @@
     {
       "id": "shaun-marsh",
       "name": "Shaun Marsh",
-      "franchiseId": null,
+      "franchiseId": "pbks",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2779,7 +2779,7 @@
     {
       "id": "chris-lynn",
       "name": "Chris Lynn",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2791,7 +2791,7 @@
     {
       "id": "dinesh-karthik",
       "name": "Dinesh Karthik",
-      "franchiseId": null,
+      "franchiseId": "rcb",
       "role": "wicket-keeper",
       "category": "marquee",
       "retired": true,
@@ -2803,7 +2803,7 @@
     {
       "id": "jacques-kallis",
       "name": "Jacques Kallis",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -2815,7 +2815,7 @@
     {
       "id": "andrew-symonds",
       "name": "Andrew Symonds",
-      "franchiseId": null,
+      "franchiseId": "srh",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -2827,7 +2827,7 @@
     {
       "id": "irfan-pathan",
       "name": "Irfan Pathan",
-      "franchiseId": null,
+      "franchiseId": "rr",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -2839,7 +2839,7 @@
     {
       "id": "yusuf-pathan",
       "name": "Yusuf Pathan",
-      "franchiseId": null,
+      "franchiseId": "rr",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -2851,7 +2851,7 @@
     {
       "id": "morne-morkel",
       "name": "Morne Morkel",
-      "franchiseId": null,
+      "franchiseId": "dc",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -2863,7 +2863,7 @@
     {
       "id": "piyush-chawla",
       "name": "Piyush Chawla",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -2875,7 +2875,7 @@
     {
       "id": "amit-mishra",
       "name": "Amit Mishra",
-      "franchiseId": null,
+      "franchiseId": "dc",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -2887,7 +2887,7 @@
     {
       "id": "pravin-tambe",
       "name": "Pravin Tambe",
-      "franchiseId": null,
+      "franchiseId": "rr",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -2899,7 +2899,7 @@
     {
       "id": "umesh-yadav",
       "name": "Umesh Yadav",
-      "franchiseId": null,
+      "franchiseId": "dc",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -2911,7 +2911,7 @@
     {
       "id": "mohit-sharma",
       "name": "Mohit Sharma",
-      "franchiseId": null,
+      "franchiseId": "gt",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -2923,7 +2923,7 @@
     {
       "id": "wriddhiman-saha",
       "name": "Wriddhiman Saha",
-      "franchiseId": null,
+      "franchiseId": "gt",
       "role": "wicket-keeper",
       "category": "marquee",
       "retired": true,
@@ -2935,7 +2935,7 @@
     {
       "id": "parthiv-patel",
       "name": "Parthiv Patel",
-      "franchiseId": null,
+      "franchiseId": "mi",
       "role": "wicket-keeper",
       "category": "marquee",
       "retired": true,
@@ -2947,7 +2947,7 @@
     {
       "id": "naman-ojha",
       "name": "Naman Ojha",
-      "franchiseId": null,
+      "franchiseId": "rcb",
       "role": "wicket-keeper",
       "category": "marquee",
       "retired": true,
@@ -2959,7 +2959,7 @@
     {
       "id": "robin-uthappa",
       "name": "Robin Uthappa",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2971,7 +2971,7 @@
     {
       "id": "sachin-tendulkar",
       "name": "Sachin Tendulkar",
-      "franchiseId": null,
+      "franchiseId": "mi",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2983,7 +2983,7 @@
     {
       "id": "gautam-gambhir",
       "name": "Gautam Gambhir",
-      "franchiseId": null,
+      "franchiseId": "dc",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -2995,7 +2995,7 @@
     {
       "id": "rahul-dravid",
       "name": "Rahul Dravid",
-      "franchiseId": null,
+      "franchiseId": "rr",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -3007,7 +3007,7 @@
     {
       "id": "mahela-jayawardene",
       "name": "Mahela Jayawardene",
-      "franchiseId": null,
+      "franchiseId": "mi",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -3019,7 +3019,7 @@
     {
       "id": "kumar-sangakkara",
       "name": "Kumar Sangakkara",
-      "franchiseId": null,
+      "franchiseId": "rr",
       "role": "wicket-keeper",
       "category": "marquee",
       "retired": true,
@@ -3031,7 +3031,7 @@
     {
       "id": "mitchell-johnson",
       "name": "Mitchell Johnson",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3043,7 +3043,7 @@
     {
       "id": "zaheer-khan",
       "name": "Zaheer Khan",
-      "franchiseId": null,
+      "franchiseId": "dc",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3055,7 +3055,7 @@
     {
       "id": "brett-lee",
       "name": "Brett Lee",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3067,7 +3067,7 @@
     {
       "id": "shaun-pollock",
       "name": "Shaun Pollock",
-      "franchiseId": null,
+      "franchiseId": "csk",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -3079,7 +3079,7 @@
     {
       "id": "andrew-flintoff",
       "name": "Andrew Flintoff",
-      "franchiseId": null,
+      "franchiseId": "csk",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -3091,7 +3091,7 @@
     {
       "id": "shakib-al-hasan",
       "name": "Shakib Al Hasan",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -3103,7 +3103,7 @@
     {
       "id": "tim-southee",
       "name": "Tim Southee",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3115,7 +3115,7 @@
     {
       "id": "chris-morris",
       "name": "Chris Morris",
-      "franchiseId": null,
+      "franchiseId": "rr",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -3127,7 +3127,7 @@
     {
       "id": "angelo-mathews",
       "name": "Angelo Mathews",
-      "franchiseId": null,
+      "franchiseId": "dc",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -3139,7 +3139,7 @@
     {
       "id": "tillakaratne-dilshan",
       "name": "Tillakaratne Dilshan",
-      "franchiseId": null,
+      "franchiseId": "dc",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -3151,7 +3151,7 @@
     {
       "id": "mohammad-hafeez",
       "name": "Mohammad Hafeez",
-      "franchiseId": null,
+      "franchiseId": "rr",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -3163,7 +3163,7 @@
     {
       "id": "michael-clarke",
       "name": "Michael Clarke",
-      "franchiseId": null,
+      "franchiseId": "rcb",
       "role": "batter",
       "category": "marquee",
       "retired": true,
@@ -3175,7 +3175,7 @@
     {
       "id": "imran-tahir",
       "name": "Imran Tahir",
-      "franchiseId": null,
+      "franchiseId": "csk",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3187,7 +3187,7 @@
     {
       "id": "ashish-nehra",
       "name": "Ashish Nehra",
-      "franchiseId": null,
+      "franchiseId": "gt",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3199,7 +3199,7 @@
     {
       "id": "ajit-agarkar",
       "name": "Ajit Agarkar",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3211,7 +3211,7 @@
     {
       "id": "sreesanth",
       "name": "Sreesanth",
-      "franchiseId": null,
+      "franchiseId": "rr",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3223,7 +3223,7 @@
     {
       "id": "praveen-kumar",
       "name": "Praveen Kumar",
-      "franchiseId": null,
+      "franchiseId": "rcb",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3235,7 +3235,7 @@
     {
       "id": "munaf-patel",
       "name": "Munaf Patel",
-      "franchiseId": null,
+      "franchiseId": "gt",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3247,7 +3247,7 @@
     {
       "id": "ravi-rampaul",
       "name": "Ravi Rampaul",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3259,7 +3259,7 @@
     {
       "id": "doug-bollinger",
       "name": "Doug Bollinger",
-      "franchiseId": null,
+      "franchiseId": "csk",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3271,7 +3271,7 @@
     {
       "id": "nathan-coulter-nile",
       "name": "Nathan Coulter-Nile",
-      "franchiseId": null,
+      "franchiseId": "rcb",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3283,7 +3283,7 @@
     {
       "id": "dirk-nannes",
       "name": "Dirk Nannes",
-      "franchiseId": null,
+      "franchiseId": "srh",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3295,7 +3295,7 @@
     {
       "id": "shane-bond",
       "name": "Shane Bond",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3307,7 +3307,7 @@
     {
       "id": "ashok-dinda",
       "name": "Ashok Dinda",
-      "franchiseId": null,
+      "franchiseId": "rcb",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3319,7 +3319,7 @@
     {
       "id": "pragyan-ojha",
       "name": "Pragyan Ojha",
-      "franchiseId": null,
+      "franchiseId": "srh",
       "role": "bowler",
       "category": "marquee",
       "retired": true,
@@ -3331,7 +3331,7 @@
     {
       "id": "moises-henriques",
       "name": "Moises Henriques",
-      "franchiseId": null,
+      "franchiseId": "rr",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -3343,7 +3343,7 @@
     {
       "id": "thisara-perera",
       "name": "Thisara Perera",
-      "franchiseId": null,
+      "franchiseId": "rr",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -3355,7 +3355,7 @@
     {
       "id": "stuart-binny",
       "name": "Stuart Binny",
-      "franchiseId": null,
+      "franchiseId": "rcb",
       "role": "all-rounder",
       "category": "marquee",
       "retired": true,
@@ -3367,7 +3367,7 @@
     {
       "id": "abhishek-nayar",
       "name": "Abhishek Nayar",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "all-rounder",
       "category": "capped",
       "retired": true,
@@ -3379,7 +3379,7 @@
     {
       "id": "parvez-rasool",
       "name": "Parvez Rasool",
-      "franchiseId": null,
+      "franchiseId": "dc",
       "role": "all-rounder",
       "category": "capped",
       "retired": true,
@@ -3391,7 +3391,7 @@
     {
       "id": "azhar-mahmood",
       "name": "Azhar Mahmood",
-      "franchiseId": null,
+      "franchiseId": "pbks",
       "role": "all-rounder",
       "category": "capped",
       "retired": true,
@@ -3403,7 +3403,7 @@
     {
       "id": "dan-christian",
       "name": "Dan Christian",
-      "franchiseId": null,
+      "franchiseId": "pbks",
       "role": "all-rounder",
       "category": "capped",
       "retired": true,
@@ -3415,7 +3415,7 @@
     {
       "id": "ben-cutting",
       "name": "Ben Cutting",
-      "franchiseId": null,
+      "franchiseId": "mi",
       "role": "all-rounder",
       "category": "capped",
       "retired": true,
@@ -3427,7 +3427,7 @@
     {
       "id": "ryan-ten-doeschate",
       "name": "Ryan ten Doeschate",
-      "franchiseId": null,
+      "franchiseId": "rcb",
       "role": "all-rounder",
       "category": "capped",
       "retired": true,
@@ -3439,7 +3439,7 @@
     {
       "id": "james-faulkner",
       "name": "James Faulkner",
-      "franchiseId": null,
+      "franchiseId": "rr",
       "role": "all-rounder",
       "category": "capped",
       "retired": true,
@@ -3451,7 +3451,7 @@
     {
       "id": "brad-hodge",
       "name": "Brad Hodge",
-      "franchiseId": null,
+      "franchiseId": "pbks",
       "role": "batter",
       "category": "capped",
       "retired": true,
@@ -3463,7 +3463,7 @@
     {
       "id": "dwayne-smith",
       "name": "Dwayne Smith",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "batter",
       "category": "capped",
       "retired": true,
@@ -3475,7 +3475,7 @@
     {
       "id": "michael-lumb",
       "name": "Michael Lumb",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "batter",
       "category": "capped",
       "retired": true,
@@ -3487,7 +3487,7 @@
     {
       "id": "colin-munro",
       "name": "Colin Munro",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "batter",
       "category": "capped",
       "retired": true,
@@ -3499,7 +3499,7 @@
     {
       "id": "dinesh-mongia",
       "name": "Dinesh Mongia",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "batter",
       "category": "capped",
       "retired": true,
@@ -3511,7 +3511,7 @@
     {
       "id": "paul-valthaty",
       "name": "Paul Valthaty",
-      "franchiseId": null,
+      "franchiseId": "pbks",
       "role": "batter",
       "category": "capped",
       "retired": true,
@@ -3523,7 +3523,7 @@
     {
       "id": "tim-paine",
       "name": "Tim Paine",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "wicket-keeper",
       "category": "capped",
       "retired": true,
@@ -3535,7 +3535,7 @@
     {
       "id": "sunil-joshi",
       "name": "Sunil Joshi",
-      "franchiseId": null,
+      "franchiseId": "rr",
       "role": "bowler",
       "category": "capped",
       "retired": true,
@@ -3547,7 +3547,7 @@
     {
       "id": "suraj-randiv",
       "name": "Suraj Randiv",
-      "franchiseId": null,
+      "franchiseId": "dc",
       "role": "bowler",
       "category": "capped",
       "retired": true,
@@ -3559,7 +3559,7 @@
     {
       "id": "robin-peterson",
       "name": "Robin Peterson",
-      "franchiseId": null,
+      "franchiseId": "dc",
       "role": "bowler",
       "category": "capped",
       "retired": true,
@@ -3571,7 +3571,7 @@
     {
       "id": "dhawal-kulkarni",
       "name": "Dhawal Kulkarni",
-      "franchiseId": null,
+      "franchiseId": "mi",
       "role": "bowler",
       "category": "capped",
       "retired": true,
@@ -3583,7 +3583,7 @@
     {
       "id": "jerome-taylor",
       "name": "Jerome Taylor",
-      "franchiseId": null,
+      "franchiseId": "rcb",
       "role": "bowler",
       "category": "capped",
       "retired": true,
@@ -3595,7 +3595,7 @@
     {
       "id": "ravi-bopara",
       "name": "Ravi Bopara",
-      "franchiseId": null,
+      "franchiseId": "kkr",
       "role": "all-rounder",
       "category": "capped",
       "retired": true,

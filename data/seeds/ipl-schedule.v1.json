@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "seedVersion": "1.0.0",
+  "seedVersion": "1.1.0",
   "dataAsOf": "2026-10-26",
   "source": "League template: 14 rounds of 5 matches, 70 matches. Each pair meets once or twice; each team plays 14 matches and hosts 7. Playoff slots follow game-design.md section 5.",
   "league": [
