@@ -105,6 +105,8 @@ export const tokens = stylex.defineVars({
   fontSizeBrand: "1.25rem",
   /** Page heading size. */
   fontSizeHeading: "2rem",
+  /** Small text, such as the footer disclaimer. */
+  fontSizeSmall: "14px",
   /** Bold weight for headings and the wordmark. */
   fontWeightBold: "700",
   /** Semibold weight for the skip link. */

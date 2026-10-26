@@ -12,15 +12,6 @@ export const styles = stylex.create({
   scroll: {
     overflowX: "auto",
   },
-  focusRing: {
-    outlineColor: tokens.colorGoldPrimary,
-    outlineOffset: tokens.offsetFocusRing,
-    outlineStyle: {
-      default: "none",
-      ":focus-visible": "solid",
-    },
-    outlineWidth: tokens.widthFocusRing,
-  },
   table: {
     width: "100%",
     borderCollapse: "collapse",

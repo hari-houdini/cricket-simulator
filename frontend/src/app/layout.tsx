@@ -4,6 +4,7 @@ import { Bodoni_Moda, DM_Sans } from "next/font/google";
 import Link from "next/link";
 
 import "./globals.css";
+import { focusRing } from "../shared/const/focus-ring.styles";
 import { AppProviders } from "./AppProviders";
 import { styles } from "./layout.styles";
 
@@ -56,10 +57,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             Skip to content
           </a>
           <header {...stylex.props(styles.header)}>
-            <Link
-              href="/"
-              {...stylex.props(styles.brandLink, styles.focusRing)}
-            >
+            <Link href="/" {...stylex.props(styles.brandLink, focusRing.ring)}>
               <span {...stylex.props(styles.brand)}>IPL Cricket Simulator</span>
             </Link>
             <nav aria-label="Primary">
@@ -67,7 +65,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 <li>
                   <Link
                     href="/"
-                    {...stylex.props(styles.navLink, styles.focusRing)}
+                    {...stylex.props(styles.navLink, focusRing.ring)}
                   >
                     Home
                   </Link>

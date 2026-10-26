@@ -49,16 +49,6 @@ export const styles = stylex.create({
     transitionTimingFunction: tokens.easingOut,
     zIndex: 1,
   },
-  /** Shared keyboard focus ring for links in the header. */
-  focusRing: {
-    outlineColor: tokens.colorGoldPrimary,
-    outlineOffset: tokens.offsetFocusRing,
-    outlineStyle: {
-      default: "none",
-      ":focus-visible": "solid",
-    },
-    outlineWidth: tokens.widthFocusRing,
-  },
   header: {
     alignItems: "center",
     borderBottomColor: tokens.colorMid,
@@ -93,12 +83,15 @@ export const styles = stylex.create({
     color: tokens.colorText,
     textDecoration: "none",
   },
-  /** Closing landmark under `<main>`, with the disclaimer in the muted text colour. */
+  /**
+   * Closing landmark under `<main>`. A hairline rule separates it from the
+   * page, and the disclaimer is centred in the body text colour and size.
+   */
   footer: {
     borderTopColor: tokens.colorMid,
     borderTopStyle: "solid",
     borderTopWidth: tokens.borderWidthHairline,
-    fontSize: "14px",
+    fontSize: tokens.fontSizeSmall,
     padding: tokens.spaceMd,
     textAlign: "center",
   },
