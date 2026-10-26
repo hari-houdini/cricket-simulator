@@ -90,6 +90,18 @@ describe("player seed", () => {
     }
   });
 
+  it("gives each trouble rating that is set as an integer from 0 to 10", () => {
+    // An unrated player takes DEFAULT_TROUBLE_RATING. Writing 0 for a player
+    // whose record was never verified would make that player look clean.
+    for (const player of players) {
+      if (player.troubleRating !== undefined) {
+        expect(Number.isInteger(player.troubleRating)).toBe(true);
+        expect(player.troubleRating).toBeGreaterThanOrEqual(0);
+        expect(player.troubleRating).toBeLessThanOrEqual(10);
+      }
+    }
+  });
+
   it("gives every franchise a squad-capable current pool", () => {
     for (const franchise of franchises) {
       const current = players.filter(

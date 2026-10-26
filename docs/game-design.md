@@ -105,7 +105,7 @@ The rule that a previous winner is ineligible is not applied in this game.
 
 This is a **fantasy mechanic**, not a factual claim about any player. It is labelled that way in the UI.
 
-- **Trouble rating**: each player has a value from 0 to 10. Values come from publicly documented on-field incidents and from widely held public opinion, and no source is recorded for each entry. The owner reviews every non-default entry before publication. Players without an entry use a base of **2**.
+- **Trouble rating**: an integer from 0 to 10. It scores documented on-field sanctions and incidents only, by governing body or reputable reporting. Public opinion is not used. The rubric is applied the same way to every player: **0** no documented on-field sanction or incident; **1–2** one minor documented breach, such as a warning or small fine; **3–4** one notable sanction, such as a fine or short ban; **5–6** several sanctions; **7–8** a serious or repeated ban; **9–10** the most serious documented record in the pool. Off-field matters do not count, and an allegation that was never upheld does not count. Sources are not recorded in the seed. A player whose record has not been verified has no entry and uses a base of **2**, so an unverified player is never treated as clean.
 - **Player match score** = 10 minus (trouble rating × a seeded random factor between 0.5 and 1.5), clamped to 0–10.
 - **Team match rating** = average of the starting XI's player match scores.
 - **Season fair-play standing** = average of the team's match ratings.

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "seedVersion": "1.1.0",
   "dataAsOf": "2026-10-26",
-  "source": "Players are real IPL names recalled from memory, not checked against 2026-27 squad or auction records. Current players carry their franchise as of the last recorded season. Retired players carry the franchise they last represented in the IPL; defunct franchises map to their closest current successor. Franchises and roles, including last-franchise assignments, must be verified before release. Category counts follow the approved split (125 marquee, 100 capped, 75 uncapped). Ratings are fantasy estimates from category and role plus a deterministic per-name offset, not career statistics. No troubleRating is set, so every player uses the base value of 2 until the owner adds reviewed entries.",
+  "source": "Players are real IPL names recalled from memory, not checked against 2026-27 squad or auction records. Current players carry their franchise as of the last recorded season. Retired players carry the franchise they last represented in the IPL; defunct franchises map to their closest current successor. Franchises and roles, including last-franchise assignments, must be verified before release. Category counts follow the approved split (125 marquee, 100 capped, 75 uncapped). Ratings are fantasy estimates from category and role plus a deterministic per-name offset, not career statistics. Trouble ratings (0-10) score documented on-field sanctions and incidents only, using the rubric in game-design.md section 9: 0 no documented record, 1-2 one minor breach, 3-4 one notable sanction, 5-6 several sanctions, 7-8 serious or repeated bans, 9-10 the most serious record in the pool. Sources are not recorded in this file. A player without a troubleRating field has not been verified yet and uses the base value of 2.",
   "players": [
     {
       "id": "ruturaj-gaikwad",
@@ -14,7 +14,8 @@
       "batting": 90,
       "bowling": 20,
       "fielding": 78,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "ms-dhoni",
@@ -26,7 +27,8 @@
       "batting": 83,
       "bowling": 9,
       "fielding": 93,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "ravindra-jadeja",
@@ -38,7 +40,8 @@
       "batting": 82,
       "bowling": 80,
       "fielding": 84,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 7
     },
     {
       "id": "shivam-dube",
@@ -50,7 +53,8 @@
       "batting": 81,
       "bowling": 79,
       "fielding": 83,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "rachin-ravindra",
@@ -62,7 +66,8 @@
       "batting": 85,
       "bowling": 83,
       "fielding": 87,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "matheesha-pathirana",
@@ -74,7 +79,8 @@
       "batting": 42,
       "bowling": 90,
       "fielding": 74,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "sam-curran",
@@ -86,7 +92,8 @@
       "batting": 78,
       "bowling": 76,
       "fielding": 80,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "noor-ahmad",
@@ -98,7 +105,8 @@
       "batting": 30,
       "bowling": 78,
       "fielding": 62,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 1
     },
     {
       "id": "khaleel-ahmed",
@@ -110,7 +118,8 @@
       "batting": 38,
       "bowling": 86,
       "fielding": 70,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 1
     },
     {
       "id": "deepak-chahar",
@@ -122,7 +131,8 @@
       "batting": 30,
       "bowling": 78,
       "fielding": 62,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "vijay-shankar",
@@ -134,7 +144,8 @@
       "batting": 69,
       "bowling": 67,
       "fielding": 71,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "dewald-brevis",
@@ -146,7 +157,8 @@
       "batting": 80,
       "bowling": 20,
       "fielding": 68,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 1
     },
     {
       "id": "mukesh-choudhary",
@@ -158,7 +170,8 @@
       "batting": 38,
       "bowling": 86,
       "fielding": 70,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "jamie-overton",
@@ -170,7 +183,8 @@
       "batting": 68,
       "bowling": 66,
       "fielding": 70,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "sarfaraz-khan",
@@ -182,7 +196,8 @@
       "batting": 77,
       "bowling": 17,
       "fielding": 65,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "ayush-mhatre",
@@ -194,7 +209,8 @@
       "batting": 66,
       "bowling": 16,
       "fielding": 54,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "shaik-rasheed",
@@ -206,7 +222,8 @@
       "batting": 72,
       "bowling": 22,
       "fielding": 60,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "urvil-patel",
@@ -218,7 +235,8 @@
       "batting": 61,
       "bowling": 7,
       "fielding": 71,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "anshul-kamboj",
@@ -230,7 +248,8 @@
       "batting": 22,
       "bowling": 70,
       "fielding": 54,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "ramakrishna-ghosh",
@@ -242,7 +261,8 @@
       "batting": 61,
       "bowling": 59,
       "fielding": 63,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "kartik-sharma",
@@ -254,7 +274,8 @@
       "batting": 68,
       "bowling": 18,
       "fielding": 56,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "rohit-sharma",
@@ -266,7 +287,8 @@
       "batting": 87,
       "bowling": 17,
       "fielding": 75,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "hardik-pandya",
@@ -278,7 +300,8 @@
       "batting": 85,
       "bowling": 83,
       "fielding": 87,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 6
     },
     {
       "id": "jasprit-bumrah",
@@ -290,7 +313,8 @@
       "batting": 42,
       "bowling": 90,
       "fielding": 74,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "suryakumar-yadav",
@@ -302,7 +326,8 @@
       "batting": 89,
       "bowling": 19,
       "fielding": 77,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "trent-boult",
@@ -314,7 +339,8 @@
       "batting": 45,
       "bowling": 93,
       "fielding": 77,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 2
     },
     {
       "id": "tilak-varma",
@@ -326,7 +352,8 @@
       "batting": 77,
       "bowling": 17,
       "fielding": 65,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 1
     },
     {
       "id": "ryan-rickelton",
@@ -338,7 +365,8 @@
       "batting": 76,
       "bowling": 12,
       "fielding": 86,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "will-jacks",
@@ -350,7 +378,8 @@
       "batting": 73,
       "bowling": 71,
       "fielding": 75,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "mitchell-santner",
@@ -362,7 +391,8 @@
       "batting": 73,
       "bowling": 71,
       "fielding": 75,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 1
     },
     {
       "id": "corbin-bosch",
@@ -374,7 +404,8 @@
       "batting": 71,
       "bowling": 69,
       "fielding": 73,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 1
     },
     {
       "id": "mujeeb-ur-rahman",
@@ -386,7 +417,8 @@
       "batting": 34,
       "bowling": 82,
       "fielding": 66,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 3
     },
     {
       "id": "akash-madhwal",
@@ -398,7 +430,8 @@
       "batting": 32,
       "bowling": 80,
       "fielding": 64,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "naman-dhir",
@@ -410,7 +443,8 @@
       "batting": 60,
       "bowling": 58,
       "fielding": 62,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "raj-bawa",
@@ -422,7 +456,8 @@
       "batting": 64,
       "bowling": 62,
       "fielding": 66,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "robin-minz",
@@ -434,7 +469,8 @@
       "batting": 65,
       "bowling": 11,
       "fielding": 75,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "ashwani-kumar",
@@ -446,7 +482,8 @@
       "batting": 22,
       "bowling": 70,
       "fielding": 54,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "allah-ghazanfar",
@@ -458,7 +495,8 @@
       "batting": 22,
       "bowling": 70,
       "fielding": 54,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "bevon-jacobs",
@@ -470,7 +508,8 @@
       "batting": 71,
       "bowling": 21,
       "fielding": 59,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "satyanarayana-raju",
@@ -482,7 +521,8 @@
       "batting": 28,
       "bowling": 76,
       "fielding": 60,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "kumar-kartikeya",
@@ -494,7 +534,8 @@
       "batting": 27,
       "bowling": 75,
       "fielding": 59,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "vignesh-puthur",
@@ -506,7 +547,8 @@
       "batting": 27,
       "bowling": 75,
       "fielding": 59,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "virat-kohli",
@@ -518,7 +560,8 @@
       "batting": 87,
       "bowling": 17,
       "fielding": 75,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "rajat-patidar",
@@ -530,7 +573,8 @@
       "batting": 90,
       "bowling": 20,
       "fielding": 78,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "phil-salt",
@@ -542,7 +586,8 @@
       "batting": 86,
       "bowling": 12,
       "fielding": 96,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "krunal-pandya",
@@ -554,7 +599,8 @@
       "batting": 79,
       "bowling": 77,
       "fielding": 81,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "josh-hazlewood",
@@ -566,7 +612,8 @@
       "batting": 40,
       "bowling": 88,
       "fielding": 72,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "bhuvneshwar-kumar",
@@ -578,7 +625,8 @@
       "batting": 42,
       "bowling": 90,
       "fielding": 74,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "liam-livingstone",
@@ -590,7 +638,8 @@
       "batting": 80,
       "bowling": 78,
       "fielding": 82,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 2
     },
     {
       "id": "jitesh-sharma",
@@ -602,7 +651,8 @@
       "batting": 77,
       "bowling": 13,
       "fielding": 87,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "devdutt-padikkal",
@@ -614,7 +664,8 @@
       "batting": 78,
       "bowling": 18,
       "fielding": 66,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "yash-dayal",
@@ -626,7 +677,8 @@
       "batting": 31,
       "bowling": 79,
       "fielding": 63,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "tim-david",
@@ -638,7 +690,8 @@
       "batting": 76,
       "bowling": 74,
       "fielding": 78,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 5
     },
     {
       "id": "romario-shepherd",
@@ -650,7 +703,8 @@
       "batting": 74,
       "bowling": 72,
       "fielding": 76,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "venkatesh-iyer",
@@ -662,7 +716,8 @@
       "batting": 71,
       "bowling": 69,
       "fielding": 73,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "mayank-agarwal",
@@ -674,7 +729,8 @@
       "batting": 79,
       "bowling": 19,
       "fielding": 67,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "kanishk-chouhan",
@@ -686,7 +742,8 @@
       "batting": 24,
       "bowling": 72,
       "fielding": 56,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "jacob-bethell",
@@ -698,7 +755,8 @@
       "batting": 63,
       "bowling": 61,
       "fielding": 65,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "suyash-sharma",
@@ -710,7 +768,8 @@
       "batting": 26,
       "bowling": 74,
       "fielding": 58,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "rasikh-dar",
@@ -722,7 +781,8 @@
       "batting": 25,
       "bowling": 73,
       "fielding": 57,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "mangesh-yadav",
@@ -734,7 +794,8 @@
       "batting": 23,
       "bowling": 71,
       "fielding": 55,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "swapnil-singh",
@@ -746,7 +807,8 @@
       "batting": 64,
       "bowling": 62,
       "fielding": 66,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "vicky-ostwal",
@@ -758,7 +820,8 @@
       "batting": 20,
       "bowling": 68,
       "fielding": 52,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "sunil-narine",
@@ -770,7 +833,8 @@
       "batting": 84,
       "bowling": 82,
       "fielding": 86,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "varun-chakravarthy",
@@ -782,7 +846,8 @@
       "batting": 46,
       "bowling": 94,
       "fielding": 78,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "quinton-de-kock",
@@ -794,7 +859,8 @@
       "batting": 88,
       "bowling": 14,
       "fielding": 98,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "rinku-singh",
@@ -806,7 +872,8 @@
       "batting": 93,
       "bowling": 23,
       "fielding": 81,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "andre-russell",
@@ -818,7 +885,8 @@
       "batting": 85,
       "bowling": 83,
       "fielding": 87,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 2
     },
     {
       "id": "anrich-nortje",
@@ -830,7 +898,8 @@
       "batting": 45,
       "bowling": 93,
       "fielding": 77,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "ajinkya-rahane",
@@ -842,7 +911,8 @@
       "batting": 79,
       "bowling": 19,
       "fielding": 67,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 2
     },
     {
       "id": "harshit-rana",
@@ -854,7 +924,8 @@
       "batting": 38,
       "bowling": 86,
       "fielding": 70,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 5
     },
     {
       "id": "vaibhav-arora",
@@ -866,7 +937,8 @@
       "batting": 36,
       "bowling": 84,
       "fielding": 68,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "moeen-ali",
@@ -878,7 +950,8 @@
       "batting": 71,
       "bowling": 69,
       "fielding": 73,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 3
     },
     {
       "id": "manish-pandey",
@@ -890,7 +963,8 @@
       "batting": 78,
       "bowling": 18,
       "fielding": 66,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "rovman-powell",
@@ -902,7 +976,8 @@
       "batting": 69,
       "bowling": 67,
       "fielding": 71,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 1
     },
     {
       "id": "spencer-johnson",
@@ -914,7 +989,8 @@
       "batting": 30,
       "bowling": 78,
       "fielding": 62,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "rahul-tripathi",
@@ -926,7 +1002,8 @@
       "batting": 81,
       "bowling": 21,
       "fielding": 69,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 1
     },
     {
       "id": "mayank-markande",
@@ -938,7 +1015,8 @@
       "batting": 33,
       "bowling": 81,
       "fielding": 65,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "tim-seifert",
@@ -950,7 +1028,8 @@
       "batting": 78,
       "bowling": 14,
       "fielding": 88,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "ramandeep-singh",
@@ -962,7 +1041,8 @@
       "batting": 66,
       "bowling": 64,
       "fielding": 68,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 3
     },
     {
       "id": "angkrish-raghuvanshi",
@@ -974,7 +1054,8 @@
       "batting": 71,
       "bowling": 21,
       "fielding": 59,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 3
     },
     {
       "id": "anukul-roy",
@@ -986,7 +1067,8 @@
       "batting": 63,
       "bowling": 61,
       "fielding": 65,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "chetan-sakariya",
@@ -998,7 +1080,8 @@
       "batting": 22,
       "bowling": 70,
       "fielding": 54,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "prashant-solanki",
@@ -1010,7 +1093,8 @@
       "batting": 69,
       "bowling": 19,
       "fielding": 57,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "axar-patel",
@@ -1022,7 +1106,8 @@
       "batting": 84,
       "bowling": 82,
       "fielding": 86,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "kl-rahul",
@@ -1034,7 +1119,8 @@
       "batting": 83,
       "bowling": 9,
       "fielding": 93,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "kuldeep-yadav",
@@ -1046,7 +1132,8 @@
       "batting": 40,
       "bowling": 88,
       "fielding": 72,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "mitchell-starc",
@@ -1058,7 +1145,8 @@
       "batting": 42,
       "bowling": 90,
       "fielding": 74,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "faf-du-plessis",
@@ -1070,7 +1158,8 @@
       "batting": 86,
       "bowling": 16,
       "fielding": 74,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "tristan-stubbs",
@@ -1082,7 +1171,8 @@
       "batting": 78,
       "bowling": 18,
       "fielding": 66,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "abishek-porel",
@@ -1094,7 +1184,8 @@
       "batting": 72,
       "bowling": 8,
       "fielding": 82,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "t-natarajan",
@@ -1106,7 +1197,8 @@
       "batting": 38,
       "bowling": 86,
       "fielding": 70,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "mukesh-kumar",
@@ -1118,7 +1210,8 @@
       "batting": 35,
       "bowling": 83,
       "fielding": 67,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 2
     },
     {
       "id": "ashutosh-sharma",
@@ -1130,7 +1223,8 @@
       "batting": 78,
       "bowling": 18,
       "fielding": 66,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "nitish-rana",
@@ -1142,7 +1236,8 @@
       "batting": 79,
       "bowling": 19,
       "fielding": 67,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 4
     },
     {
       "id": "karun-nair",
@@ -1154,7 +1249,8 @@
       "batting": 76,
       "bowling": 16,
       "fielding": 64,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "lungi-ngidi",
@@ -1178,7 +1274,8 @@
       "batting": 34,
       "bowling": 82,
       "fielding": 66,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "prithvi-shaw",
@@ -1190,7 +1287,8 @@
       "batting": 84,
       "bowling": 24,
       "fielding": 72,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 2
     },
     {
       "id": "sameer-rizvi",
@@ -1214,7 +1312,8 @@
       "batting": 62,
       "bowling": 60,
       "fielding": 64,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "donovan-ferreira",
@@ -1226,7 +1325,8 @@
       "batting": 74,
       "bowling": 24,
       "fielding": 62,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "sumit-kumar",
@@ -1262,7 +1362,8 @@
       "batting": 27,
       "bowling": 75,
       "fielding": 59,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 2
     },
     {
       "id": "sanju-samson",
@@ -1274,7 +1375,8 @@
       "batting": 88,
       "bowling": 14,
       "fielding": 98,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "yashasvi-jaiswal",
@@ -1286,7 +1388,8 @@
       "batting": 94,
       "bowling": 24,
       "fielding": 82,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "riyan-parag",
@@ -1298,7 +1401,8 @@
       "batting": 82,
       "bowling": 80,
       "fielding": 84,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 2
     },
     {
       "id": "jofra-archer",
@@ -1310,7 +1414,8 @@
       "batting": 40,
       "bowling": 88,
       "fielding": 72,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 1
     },
     {
       "id": "wanindu-hasaranga",
@@ -1322,7 +1427,8 @@
       "batting": 85,
       "bowling": 83,
       "fielding": 87,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 7
     },
     {
       "id": "shimron-hetmyer",
@@ -1334,7 +1440,8 @@
       "batting": 84,
       "bowling": 24,
       "fielding": 72,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 1
     },
     {
       "id": "dhruv-jurel",
@@ -1346,7 +1453,8 @@
       "batting": 78,
       "bowling": 14,
       "fielding": 88,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "sandeep-sharma",
@@ -1358,7 +1466,8 @@
       "batting": 38,
       "bowling": 86,
       "fielding": 70,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 3
     },
     {
       "id": "tushar-deshpande",
@@ -1370,7 +1479,8 @@
       "batting": 30,
       "bowling": 78,
       "fielding": 62,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "maheesh-theekshana",
@@ -1382,7 +1492,8 @@
       "batting": 36,
       "bowling": 84,
       "fielding": 68,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "ravi-bishnoi",
@@ -1394,7 +1505,8 @@
       "batting": 38,
       "bowling": 86,
       "fielding": 70,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 4
     },
     {
       "id": "dasun-shanaka",
@@ -1406,7 +1518,8 @@
       "batting": 71,
       "bowling": 69,
       "fielding": 73,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 5
     },
     {
       "id": "vaibhav-suryavanshi",
@@ -1430,7 +1543,8 @@
       "batting": 60,
       "bowling": 58,
       "fielding": 62,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "kunal-rathore",
@@ -1442,7 +1556,8 @@
       "batting": 67,
       "bowling": 13,
       "fielding": 77,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "sushant-mishra",
@@ -1454,7 +1569,8 @@
       "batting": 20,
       "bowling": 68,
       "fielding": 52,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "ashok-sharma",
@@ -1466,7 +1582,8 @@
       "batting": 20,
       "bowling": 68,
       "fielding": 52,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "kwena-maphaka",
@@ -1478,7 +1595,8 @@
       "batting": 27,
       "bowling": 75,
       "fielding": 59,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "aman-khan",
@@ -1490,7 +1608,8 @@
       "batting": 59,
       "bowling": 57,
       "fielding": 61,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "shubham-dubey",
@@ -1502,7 +1621,8 @@
       "batting": 67,
       "bowling": 17,
       "fielding": 55,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "sarthak-ranjan",
@@ -1514,7 +1634,8 @@
       "batting": 67,
       "bowling": 17,
       "fielding": 55,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "pat-cummins",
@@ -1526,7 +1647,8 @@
       "batting": 82,
       "bowling": 80,
       "fielding": 84,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "travis-head",
@@ -1538,7 +1660,8 @@
       "batting": 90,
       "bowling": 20,
       "fielding": 78,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 1
     },
     {
       "id": "abhishek-sharma",
@@ -1550,7 +1673,8 @@
       "batting": 84,
       "bowling": 82,
       "fielding": 86,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "ishan-kishan",
@@ -1562,7 +1686,8 @@
       "batting": 83,
       "bowling": 9,
       "fielding": 93,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 1
     },
     {
       "id": "heinrich-klaasen",
@@ -1574,7 +1699,8 @@
       "batting": 87,
       "bowling": 13,
       "fielding": 97,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 2
     },
     {
       "id": "mohammed-shami",
@@ -1586,7 +1712,8 @@
       "batting": 43,
       "bowling": 91,
       "fielding": 75,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "nitish-kumar-reddy",
@@ -1598,7 +1725,8 @@
       "batting": 69,
       "bowling": 67,
       "fielding": 71,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "harshal-patel",
@@ -1610,7 +1738,8 @@
       "batting": 33,
       "bowling": 81,
       "fielding": 65,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 1
     },
     {
       "id": "kamindu-mendis",
@@ -1622,7 +1751,8 @@
       "batting": 71,
       "bowling": 69,
       "fielding": 73,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "jaydev-unadkat",
@@ -1634,7 +1764,8 @@
       "batting": 34,
       "bowling": 82,
       "fielding": 66,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "simarjeet-singh",
@@ -1646,7 +1777,8 @@
       "batting": 35,
       "bowling": 83,
       "fielding": 67,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "adam-zampa",
@@ -1658,7 +1790,8 @@
       "batting": 35,
       "bowling": 83,
       "fielding": 67,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 5
     },
     {
       "id": "brydon-carse",
@@ -1670,7 +1803,8 @@
       "batting": 36,
       "bowling": 84,
       "fielding": 68,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "zeeshan-ansari",
@@ -1682,7 +1816,8 @@
       "batting": 20,
       "bowling": 68,
       "fielding": 52,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "aniket-verma",
@@ -1694,7 +1829,8 @@
       "batting": 69,
       "bowling": 19,
       "fielding": 57,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "salil-arora",
@@ -1706,7 +1842,8 @@
       "batting": 69,
       "bowling": 19,
       "fielding": 57,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "harsh-dubey",
@@ -1718,7 +1855,8 @@
       "batting": 59,
       "bowling": 57,
       "fielding": 61,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "eshan-malinga",
@@ -1730,7 +1868,8 @@
       "batting": 25,
       "bowling": 73,
       "fielding": 57,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "atharva-taide",
@@ -1742,7 +1881,8 @@
       "batting": 70,
       "bowling": 20,
       "fielding": 58,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "smaran-ravichandran",
@@ -1754,7 +1894,8 @@
       "batting": 67,
       "bowling": 17,
       "fielding": 55,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "abhinav-manohar",
@@ -1766,7 +1907,8 @@
       "batting": 68,
       "bowling": 18,
       "fielding": 56,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "rishabh-pant",
@@ -1778,7 +1920,8 @@
       "batting": 84,
       "bowling": 10,
       "fielding": 94,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "nicholas-pooran",
@@ -1790,7 +1933,8 @@
       "batting": 85,
       "bowling": 11,
       "fielding": 95,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "mitchell-marsh",
@@ -1802,7 +1946,8 @@
       "batting": 84,
       "bowling": 82,
       "fielding": 86,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 2
     },
     {
       "id": "aiden-markram",
@@ -1814,7 +1959,8 @@
       "batting": 85,
       "bowling": 83,
       "fielding": 87,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 1
     },
     {
       "id": "shardul-thakur",
@@ -1826,7 +1972,8 @@
       "batting": 75,
       "bowling": 73,
       "fielding": 77,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 3
     },
     {
       "id": "ayush-badoni",
@@ -1838,7 +1985,8 @@
       "batting": 80,
       "bowling": 20,
       "fielding": 68,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "abdul-samad",
@@ -1850,7 +1998,8 @@
       "batting": 71,
       "bowling": 69,
       "fielding": 73,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "avesh-khan",
@@ -1862,7 +2011,8 @@
       "batting": 32,
       "bowling": 80,
       "fielding": 64,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 2
     },
     {
       "id": "mohsin-khan",
@@ -1874,7 +2024,8 @@
       "batting": 32,
       "bowling": 80,
       "fielding": 64,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "akash-deep",
@@ -1886,7 +2037,8 @@
       "batting": 30,
       "bowling": 78,
       "fielding": 62,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "matthew-breetzke",
@@ -1898,7 +2050,8 @@
       "batting": 79,
       "bowling": 19,
       "fielding": 67,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 1
     },
     {
       "id": "shahbaz-ahmed",
@@ -1910,7 +2063,8 @@
       "batting": 69,
       "bowling": 67,
       "fielding": 71,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "digvesh-rathi",
@@ -1922,7 +2076,8 @@
       "batting": 21,
       "bowling": 69,
       "fielding": 53,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 5
     },
     {
       "id": "mayank-yadav",
@@ -1934,7 +2089,8 @@
       "batting": 23,
       "bowling": 71,
       "fielding": 55,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "prince-yadav",
@@ -1946,7 +2102,8 @@
       "batting": 65,
       "bowling": 63,
       "fielding": 67,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "himmat-singh",
@@ -1958,7 +2115,8 @@
       "batting": 73,
       "bowling": 23,
       "fielding": 61,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "mukul-choudhary",
@@ -1970,7 +2128,8 @@
       "batting": 65,
       "bowling": 11,
       "fielding": 75,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "arshin-kulkarni",
@@ -1982,7 +2141,8 @@
       "batting": 59,
       "bowling": 57,
       "fielding": 61,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "manimaran-siddharth",
@@ -1994,7 +2154,8 @@
       "batting": 27,
       "bowling": 75,
       "fielding": 59,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "shamar-joseph",
@@ -2006,7 +2167,8 @@
       "batting": 28,
       "bowling": 76,
       "fielding": 60,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "akshat-raghuwanshi",
@@ -2018,7 +2180,8 @@
       "batting": 70,
       "bowling": 20,
       "fielding": 58,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "shubman-gill",
@@ -2030,7 +2193,8 @@
       "batting": 94,
       "bowling": 24,
       "fielding": 82,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "jos-buttler",
@@ -2042,7 +2206,8 @@
       "batting": 84,
       "bowling": 10,
       "fielding": 94,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "sai-sudharsan",
@@ -2054,7 +2219,8 @@
       "batting": 94,
       "bowling": 24,
       "fielding": 82,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "rashid-khan",
@@ -2066,7 +2232,8 @@
       "batting": 43,
       "bowling": 91,
       "fielding": 75,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "mohammed-siraj",
@@ -2078,7 +2245,8 @@
       "batting": 44,
       "bowling": 92,
       "fielding": 76,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "kagiso-rabada",
@@ -2090,7 +2258,8 @@
       "batting": 47,
       "bowling": 95,
       "fielding": 79,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 7
     },
     {
       "id": "prasidh-krishna",
@@ -2102,7 +2271,8 @@
       "batting": 37,
       "bowling": 85,
       "fielding": 69,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "washington-sundar",
@@ -2114,7 +2284,8 @@
       "batting": 75,
       "bowling": 73,
       "fielding": 77,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "shahrukh-khan",
@@ -2126,7 +2297,8 @@
       "batting": 71,
       "bowling": 69,
       "fielding": 73,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "rahul-tewatia",
@@ -2138,7 +2310,8 @@
       "batting": 69,
       "bowling": 67,
       "fielding": 71,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "gerald-coetzee",
@@ -2150,7 +2323,8 @@
       "batting": 33,
       "bowling": 81,
       "fielding": 65,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 3
     },
     {
       "id": "sherfane-rutherford",
@@ -2162,7 +2336,8 @@
       "batting": 74,
       "bowling": 72,
       "fielding": 76,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 5
     },
     {
       "id": "jayant-yadav",
@@ -2174,7 +2349,8 @@
       "batting": 72,
       "bowling": 70,
       "fielding": 74,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "glenn-phillips",
@@ -2186,7 +2362,8 @@
       "batting": 83,
       "bowling": 23,
       "fielding": 71,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "sai-kishore",
@@ -2198,7 +2375,8 @@
       "batting": 37,
       "bowling": 85,
       "fielding": 69,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "kumar-kushagra",
@@ -2210,7 +2388,8 @@
       "batting": 65,
       "bowling": 11,
       "fielding": 75,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "manav-suthar",
@@ -2222,7 +2401,8 @@
       "batting": 22,
       "bowling": 70,
       "fielding": 54,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "nishant-sindhu",
@@ -2234,7 +2414,8 @@
       "batting": 58,
       "bowling": 56,
       "fielding": 60,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "anuj-rawat",
@@ -2246,7 +2427,8 @@
       "batting": 64,
       "bowling": 10,
       "fielding": 74,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "arshad-khan",
@@ -2258,7 +2440,8 @@
       "batting": 58,
       "bowling": 56,
       "fielding": 60,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "gurnoor-brar",
@@ -2270,7 +2453,8 @@
       "batting": 26,
       "bowling": 74,
       "fielding": 58,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 1
     },
     {
       "id": "shreyas-iyer",
@@ -2282,7 +2466,8 @@
       "batting": 88,
       "bowling": 18,
       "fielding": 76,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "arshdeep-singh",
@@ -2294,7 +2479,8 @@
       "batting": 44,
       "bowling": 92,
       "fielding": 76,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "yuzvendra-chahal",
@@ -2306,7 +2492,8 @@
       "batting": 41,
       "bowling": 89,
       "fielding": 73,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "marcus-stoinis",
@@ -2318,7 +2505,8 @@
       "batting": 81,
       "bowling": 79,
       "fielding": 83,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 1
     },
     {
       "id": "prabhsimran-singh",
@@ -2330,7 +2518,8 @@
       "batting": 77,
       "bowling": 13,
       "fielding": 87,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "nehal-wadhera",
@@ -2342,7 +2531,8 @@
       "batting": 77,
       "bowling": 17,
       "fielding": 65,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "shashank-singh",
@@ -2354,7 +2544,8 @@
       "batting": 83,
       "bowling": 23,
       "fielding": 71,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "marco-jansen",
@@ -2366,7 +2557,8 @@
       "batting": 73,
       "bowling": 71,
       "fielding": 75,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "azmatullah-omarzai",
@@ -2378,7 +2570,8 @@
       "batting": 73,
       "bowling": 71,
       "fielding": 75,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 3
     },
     {
       "id": "lockie-ferguson",
@@ -2390,7 +2583,8 @@
       "batting": 34,
       "bowling": 82,
       "fielding": 66,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 1
     },
     {
       "id": "xavier-bartlett",
@@ -2402,7 +2596,8 @@
       "batting": 38,
       "bowling": 86,
       "fielding": 70,
-      "basePrice": 100
+      "basePrice": 100,
+      "troubleRating": 0
     },
     {
       "id": "vishnu-vinod",
@@ -2414,7 +2609,8 @@
       "batting": 65,
       "bowling": 11,
       "fielding": 75,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "yash-thakur",
@@ -2426,7 +2622,8 @@
       "batting": 21,
       "bowling": 69,
       "fielding": 53,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "mitchell-owen",
@@ -2438,7 +2635,8 @@
       "batting": 58,
       "bowling": 56,
       "fielding": 60,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "vyshak-vijaykumar",
@@ -2450,7 +2648,8 @@
       "batting": 20,
       "bowling": 68,
       "fielding": 52,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "priyansh-arya",
@@ -2462,7 +2661,8 @@
       "batting": 73,
       "bowling": 23,
       "fielding": 61,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 1
     },
     {
       "id": "suryansh-shedge",
@@ -2474,7 +2674,8 @@
       "batting": 74,
       "bowling": 24,
       "fielding": 62,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "musheer-khan",
@@ -2486,7 +2687,8 @@
       "batting": 62,
       "bowling": 60,
       "fielding": 64,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "cooper-connolly",
@@ -2498,7 +2700,8 @@
       "batting": 59,
       "bowling": 57,
       "fielding": 61,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "pyla-avinash",
@@ -2510,7 +2713,8 @@
       "batting": 68,
       "bowling": 18,
       "fielding": 56,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "harnoor-pannu",
@@ -2522,7 +2726,8 @@
       "batting": 68,
       "bowling": 18,
       "fielding": 56,
-      "basePrice": 30
+      "basePrice": 30,
+      "troubleRating": 0
     },
     {
       "id": "chris-gayle",
@@ -2534,7 +2739,8 @@
       "batting": 93,
       "bowling": 23,
       "fielding": 81,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 6
     },
     {
       "id": "ab-de-villiers",
@@ -2546,7 +2752,8 @@
       "batting": 84,
       "bowling": 10,
       "fielding": 94,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "lasith-malinga",
@@ -2558,7 +2765,8 @@
       "batting": 46,
       "bowling": 94,
       "fielding": 78,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "kieron-pollard",
@@ -2570,7 +2778,8 @@
       "batting": 82,
       "bowling": 80,
       "fielding": 84,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "dwayne-bravo",
@@ -2582,7 +2791,8 @@
       "batting": 81,
       "bowling": 79,
       "fielding": 83,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 6
     },
     {
       "id": "suresh-raina",
@@ -2594,7 +2804,8 @@
       "batting": 86,
       "bowling": 16,
       "fielding": 74,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "harbhajan-singh",
@@ -2606,7 +2817,8 @@
       "batting": 44,
       "bowling": 92,
       "fielding": 76,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 7
     },
     {
       "id": "yuvraj-singh",
@@ -2618,7 +2830,8 @@
       "batting": 84,
       "bowling": 82,
       "fielding": 86,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "virender-sehwag",
@@ -2630,7 +2843,8 @@
       "batting": 89,
       "bowling": 19,
       "fielding": 77,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 6
     },
     {
       "id": "shane-watson",
@@ -2642,7 +2856,8 @@
       "batting": 86,
       "bowling": 84,
       "fielding": 88,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "ambati-rayudu",
@@ -2654,7 +2869,8 @@
       "batting": 87,
       "bowling": 17,
       "fielding": 75,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "dale-steyn",
@@ -2666,7 +2882,8 @@
       "batting": 44,
       "bowling": 92,
       "fielding": 76,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "brendon-mccullum",
@@ -2678,7 +2895,8 @@
       "batting": 86,
       "bowling": 12,
       "fielding": 96,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "adam-gilchrist",
@@ -2690,7 +2908,8 @@
       "batting": 86,
       "bowling": 12,
       "fielding": 96,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "matthew-hayden",
@@ -2702,7 +2921,8 @@
       "batting": 91,
       "bowling": 21,
       "fielding": 79,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "michael-hussey",
@@ -2714,7 +2934,8 @@
       "batting": 87,
       "bowling": 17,
       "fielding": 75,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "kevin-pietersen",
@@ -2726,7 +2947,8 @@
       "batting": 88,
       "bowling": 18,
       "fielding": 76,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 2
     },
     {
       "id": "shikhar-dhawan",
@@ -2738,7 +2960,8 @@
       "batting": 86,
       "bowling": 16,
       "fielding": 74,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "ross-taylor",
@@ -2750,7 +2973,8 @@
       "batting": 91,
       "bowling": 21,
       "fielding": 79,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "murali-vijay",
@@ -2762,7 +2986,8 @@
       "batting": 87,
       "bowling": 17,
       "fielding": 75,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "shaun-marsh",
@@ -2774,7 +2999,8 @@
       "batting": 91,
       "bowling": 21,
       "fielding": 79,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "chris-lynn",
@@ -2786,7 +3012,8 @@
       "batting": 90,
       "bowling": 20,
       "fielding": 78,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "dinesh-karthik",
@@ -2798,7 +3025,8 @@
       "batting": 84,
       "bowling": 10,
       "fielding": 94,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "jacques-kallis",
@@ -2810,7 +3038,8 @@
       "batting": 79,
       "bowling": 77,
       "fielding": 81,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "andrew-symonds",
@@ -2822,7 +3051,8 @@
       "batting": 81,
       "bowling": 79,
       "fielding": 83,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "irfan-pathan",
@@ -2834,7 +3064,8 @@
       "batting": 84,
       "bowling": 82,
       "fielding": 86,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 1
     },
     {
       "id": "yusuf-pathan",
@@ -2846,7 +3077,8 @@
       "batting": 81,
       "bowling": 79,
       "fielding": 83,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "morne-morkel",
@@ -2858,7 +3090,8 @@
       "batting": 41,
       "bowling": 89,
       "fielding": 73,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 2
     },
     {
       "id": "piyush-chawla",
@@ -2870,7 +3103,8 @@
       "batting": 46,
       "bowling": 94,
       "fielding": 78,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "amit-mishra",
@@ -2882,7 +3116,8 @@
       "batting": 45,
       "bowling": 93,
       "fielding": 77,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "pravin-tambe",
@@ -2894,7 +3129,8 @@
       "batting": 46,
       "bowling": 94,
       "fielding": 78,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "umesh-yadav",
@@ -2906,7 +3142,8 @@
       "batting": 42,
       "bowling": 90,
       "fielding": 74,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "mohit-sharma",
@@ -2918,7 +3155,8 @@
       "batting": 44,
       "bowling": 92,
       "fielding": 76,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "wriddhiman-saha",
@@ -2930,7 +3168,8 @@
       "batting": 88,
       "bowling": 14,
       "fielding": 98,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "parthiv-patel",
@@ -2942,7 +3181,8 @@
       "batting": 81,
       "bowling": 7,
       "fielding": 91,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "naman-ojha",
@@ -2954,7 +3194,8 @@
       "batting": 86,
       "bowling": 12,
       "fielding": 96,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "robin-uthappa",
@@ -2966,7 +3207,8 @@
       "batting": 86,
       "bowling": 16,
       "fielding": 74,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "sachin-tendulkar",
@@ -2978,7 +3220,8 @@
       "batting": 89,
       "bowling": 19,
       "fielding": 77,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "gautam-gambhir",
@@ -2990,7 +3233,8 @@
       "batting": 88,
       "bowling": 18,
       "fielding": 76,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "rahul-dravid",
@@ -3002,7 +3246,8 @@
       "batting": 88,
       "bowling": 18,
       "fielding": 76,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "mahela-jayawardene",
@@ -3014,7 +3259,8 @@
       "batting": 87,
       "bowling": 17,
       "fielding": 75,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "kumar-sangakkara",
@@ -3026,7 +3272,8 @@
       "batting": 87,
       "bowling": 13,
       "fielding": 97,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "mitchell-johnson",
@@ -3038,7 +3285,8 @@
       "batting": 48,
       "bowling": 96,
       "fielding": 80,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "zaheer-khan",
@@ -3050,7 +3298,8 @@
       "batting": 43,
       "bowling": 91,
       "fielding": 75,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "brett-lee",
@@ -3062,7 +3311,8 @@
       "batting": 46,
       "bowling": 94,
       "fielding": 78,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 5
     },
     {
       "id": "shaun-pollock",
@@ -3074,7 +3324,8 @@
       "batting": 83,
       "bowling": 81,
       "fielding": 85,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "andrew-flintoff",
@@ -3086,7 +3337,8 @@
       "batting": 80,
       "bowling": 78,
       "fielding": 82,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "shakib-al-hasan",
@@ -3146,7 +3398,8 @@
       "batting": 93,
       "bowling": 23,
       "fielding": 81,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 1
     },
     {
       "id": "mohammad-hafeez",
@@ -3158,7 +3411,8 @@
       "batting": 79,
       "bowling": 77,
       "fielding": 81,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 7
     },
     {
       "id": "michael-clarke",
@@ -3170,7 +3424,8 @@
       "batting": 94,
       "bowling": 24,
       "fielding": 82,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "imran-tahir",
@@ -3182,7 +3437,8 @@
       "batting": 46,
       "bowling": 94,
       "fielding": 78,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "ashish-nehra",
@@ -3194,7 +3450,8 @@
       "batting": 45,
       "bowling": 93,
       "fielding": 77,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "ajit-agarkar",
@@ -3206,7 +3463,8 @@
       "batting": 48,
       "bowling": 96,
       "fielding": 80,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "sreesanth",
@@ -3218,7 +3476,8 @@
       "batting": 44,
       "bowling": 92,
       "fielding": 76,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 8
     },
     {
       "id": "praveen-kumar",
@@ -3230,7 +3489,8 @@
       "batting": 46,
       "bowling": 94,
       "fielding": 78,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "munaf-patel",
@@ -3242,7 +3502,8 @@
       "batting": 48,
       "bowling": 96,
       "fielding": 80,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 4
     },
     {
       "id": "ravi-rampaul",
@@ -3254,7 +3515,8 @@
       "batting": 42,
       "bowling": 90,
       "fielding": 74,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 2
     },
     {
       "id": "doug-bollinger",
@@ -3266,7 +3528,8 @@
       "batting": 44,
       "bowling": 92,
       "fielding": 76,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 1
     },
     {
       "id": "nathan-coulter-nile",
@@ -3278,7 +3541,8 @@
       "batting": 48,
       "bowling": 96,
       "fielding": 80,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "dirk-nannes",
@@ -3290,7 +3554,8 @@
       "batting": 48,
       "bowling": 96,
       "fielding": 80,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "shane-bond",
@@ -3302,7 +3567,8 @@
       "batting": 43,
       "bowling": 91,
       "fielding": 75,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "ashok-dinda",
@@ -3314,7 +3580,8 @@
       "batting": 40,
       "bowling": 88,
       "fielding": 72,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "pragyan-ojha",
@@ -3326,7 +3593,8 @@
       "batting": 46,
       "bowling": 94,
       "fielding": 78,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 0
     },
     {
       "id": "moises-henriques",
@@ -3338,7 +3606,8 @@
       "batting": 81,
       "bowling": 79,
       "fielding": 83,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 1
     },
     {
       "id": "thisara-perera",
@@ -3350,7 +3619,8 @@
       "batting": 85,
       "bowling": 83,
       "fielding": 87,
-      "basePrice": 200
+      "basePrice": 200,
+      "troubleRating": 3
     },
     {
       "id": "stuart-binny",
