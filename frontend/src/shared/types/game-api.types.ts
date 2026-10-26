@@ -10,6 +10,7 @@ import type {
   JoinLobbyInput,
   Lobby,
 } from "./lobby.types";
+import type { Playoffs } from "./playoffs.types";
 import type {
   GetSquadInput,
   SetStartingXiInput,
@@ -81,4 +82,9 @@ export type GameApi = {
    * owner has no starting XI yet.
    */
   readonly advanceRound: (input: AdvanceRoundInput) => Promise<League>;
+  /**
+   * Reads the playoff bracket. Rejects with `AuctionNotStartedError` before the
+   * auction starts. Places are null until they are known.
+   */
+  readonly getPlayoffs: (code: string) => Promise<Playoffs>;
 };

@@ -11,6 +11,7 @@ import { ErrorBanner } from "../ErrorBanner/ErrorBanner";
 import { FranchiseGrid } from "../FranchiseGrid/FranchiseGrid";
 import { Input } from "../Input/Input";
 import { LeaguePanel } from "../LeaguePanel/LeaguePanel";
+import { PlayoffsPanel } from "../PlayoffsPanel/PlayoffsPanel";
 import { SquadPanel } from "../SquadPanel/SquadPanel";
 import { styles } from "./LobbyView.styles";
 import type { LobbyViewProps } from "./LobbyView.types";
@@ -22,7 +23,7 @@ import type { LobbyViewProps } from "./LobbyView.types";
  * lobby says so rather than offering a form that would fail. Once the auction
  * has started, the auction panel takes the place of the grid and the form. Once
  * the auction has finished, an owner also sees the squad panel, to pick the XI,
- * and every guest sees the league. The squad panel remounts when the round
+ * and every guest sees the league and, once it is over, the playoffs. The squad panel remounts when the round
  * changes, so it shows the XI as locked once the first match has been played.
  *
  * @param props - The lobby, the viewing guest, the share link, and the actions.
@@ -170,6 +171,14 @@ export function LobbyView({
         <LeaguePanel
           code={lobby.code}
           canAdvance={isOwner}
+          onRoundAdvanced={onRoundAdvanced}
+        />
+      ) : null}
+
+      {lobby.phase === "playoffs" || lobby.phase === "complete" ? (
+        <PlayoffsPanel
+          code={lobby.code}
+          canAdvance={isOwner && lobby.phase === "playoffs"}
           onRoundAdvanced={onRoundAdvanced}
         />
       ) : null}

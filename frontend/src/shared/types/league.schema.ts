@@ -5,6 +5,7 @@ import {
   LEAGUE_MATCHES,
   LEAGUE_ROUNDS,
 } from "../const/league.const";
+import { LAST_ROUND } from "../const/lobby.const";
 import { MAX_WICKETS } from "../const/match.const";
 import {
   franchiseIdSchema,
@@ -53,13 +54,14 @@ export const standingSchema = object({
 
 /**
  * The league as the frontend sees it: every fixture in round order, the table,
- * and how far the season has got. `round` is 0 before the first round is played.
+ * and whether the league rounds are over. `round` is 0 before the first round
+ * is played; rounds past {@link LEAGUE_ROUNDS} are playoff rounds.
  */
 export const leagueSchema = object({
-  round: number().int().min(0).max(LEAGUE_ROUNDS),
+  round: number().int().min(0).max(LAST_ROUND),
   fixtures: array(fixtureSchema).length(LEAGUE_MATCHES),
   standings: array(standingSchema).length(FRANCHISE_COUNT),
-  seasonComplete: boolean(),
+  leagueComplete: boolean(),
 });
 
 /** Input for playing the next league round. Only an owner may play it. */

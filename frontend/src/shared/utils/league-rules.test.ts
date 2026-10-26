@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { LEAGUE_ROUNDS } from "../const/league.const";
+import { LAST_ROUND } from "../const/lobby.const";
 import { advanceBlock } from "./league-rules";
 
 describe("advanceBlock", () => {
@@ -18,19 +18,19 @@ describe("advanceBlock", () => {
 
   it("allows a later round without re-checking the XIs", () => {
     expect(
-      advanceBlock({ round: LEAGUE_ROUNDS - 1, everyOwnerHasStartingXi: true }),
+      advanceBlock({ round: LAST_ROUND - 1, everyOwnerHasStartingXi: true }),
     ).toBeNull();
   });
 
-  it("refuses to play once the league rounds are over", () => {
+  it("refuses to play once the season is over", () => {
     expect(
-      advanceBlock({ round: LEAGUE_ROUNDS, everyOwnerHasStartingXi: true }),
+      advanceBlock({ round: LAST_ROUND, everyOwnerHasStartingXi: true }),
     ).toBe("season-over");
   });
 
   it("reports the season first, when both reasons apply", () => {
     expect(
-      advanceBlock({ round: LEAGUE_ROUNDS, everyOwnerHasStartingXi: false }),
+      advanceBlock({ round: LAST_ROUND, everyOwnerHasStartingXi: false }),
     ).toBe("season-over");
   });
 });

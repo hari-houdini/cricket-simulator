@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { BID_TIMER_MS, SQUAD_SIZE } from "../../shared/const/auction.const";
-import { LEAGUE_MATCHES, LEAGUE_ROUNDS } from "../../shared/const/league.const";
+import { LEAGUE_MATCHES } from "../../shared/const/league.const";
+import { LAST_ROUND } from "../../shared/const/lobby.const";
 import { XI_SIZE } from "../../shared/const/squad.const";
 import type { Player } from "../../shared/types/player.types";
 import {
@@ -157,7 +158,7 @@ describe("mock league", () => {
       true,
     );
     expect(league.standings.every((row) => row.played === 0)).toBe(true);
-    expect(league.seasonComplete).toBe(false);
+    expect(league.leagueComplete).toBe(false);
   });
 
   it("refuses to play a round while an owner has no starting XI", async () => {
@@ -221,21 +222,21 @@ describe("mock league", () => {
     expect(playedFirst.fixtures).toEqual(playedSecond.fixtures);
   });
 
-  it("plays a full season of fourteen rounds, then refuses another round", async () => {
+  it("plays the league and playoffs to the end of the season, then refuses another round", async () => {
     const game = await setUpSoloLobby();
     await completeSoloAuction(game);
     await saveLegalXi(game);
 
     let league = await game.api.getLeague(game.code);
-    for (let round = 1; round <= LEAGUE_ROUNDS; round += 1) {
+    for (let round = 1; round <= LAST_ROUND; round += 1) {
       league = await game.api.advanceRound({
         code: game.code,
         guestId: asha.guestId,
       });
     }
 
-    expect(league.round).toBe(LEAGUE_ROUNDS);
-    expect(league.seasonComplete).toBe(true);
+    expect(league.round).toBe(LAST_ROUND);
+    expect(league.leagueComplete).toBe(true);
     expect(league.fixtures.every((fixture) => fixture.result !== null)).toBe(
       true,
     );

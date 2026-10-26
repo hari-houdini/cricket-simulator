@@ -140,12 +140,12 @@ export function LeaguePanel({
       <header {...stylex.props(styles.section)}>
         <h2 {...stylex.props(styles.heading)}>League</h2>
         <p {...stylex.props(styles.note)}>
-          {league.seasonComplete
+          {league.leagueComplete
             ? `The league is over: all ${LEAGUE_ROUNDS} rounds have been played.`
             : `${league.round} of ${LEAGUE_ROUNDS} rounds played.`}
         </p>
         {actionError ? <ErrorBanner message={actionError} /> : null}
-        {canAdvance && !league.seasonComplete ? (
+        {canAdvance && !league.leagueComplete ? (
           <Button
             disabled={pending || revealing}
             onClick={() => void playRound()}

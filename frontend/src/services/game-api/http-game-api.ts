@@ -28,5 +28,6 @@ export function createHttpGameApi(): GameApi {
     substitute: notImplemented,
     getLeague: notImplemented,
     advanceRound: notImplemented,
+    getPlayoffs: notImplemented,
   };
 }
