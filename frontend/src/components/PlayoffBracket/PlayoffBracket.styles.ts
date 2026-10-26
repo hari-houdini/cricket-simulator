@@ -4,6 +4,13 @@ import { tokens } from "../../shared/const/tokens.stylex";
 
 /** StyleX rules for {@link PlayoffBracket} and {@link KeyMomentView}'s cards. */
 export const styles = stylex.create({
+  /**
+   * The bracket's horizontal scroll container, so a narrow phone scrolls the
+   * bracket inside its own region rather than the page. It takes focus.
+   */
+  scroll: {
+    overflowX: "auto",
+  },
   list: {
     display: "grid",
     gap: tokens.spaceMd,

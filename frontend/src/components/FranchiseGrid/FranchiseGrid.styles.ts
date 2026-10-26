@@ -3,8 +3,9 @@ import * as stylex from "@stylexjs/stylex";
 import { tokens } from "../../shared/const/tokens.stylex";
 
 /**
- * StyleX rules for {@link FranchiseGrid}. One column on a phone, two from 640px
- * and three from 1024px, so each franchise row stays readable at 320px.
+ * StyleX rules for {@link FranchiseGrid}. One column on a phone, two from the
+ * 768px tablet breakpoint and three from 1024px (`ARCHITECTURE.md`), so each
+ * franchise row stays readable at 320px.
  */
 export const styles = stylex.create({
   list: {
@@ -14,7 +15,7 @@ export const styles = stylex.create({
     listStyle: "none",
     margin: 0,
     padding: 0,
-    "@media (min-width: 640px)": {
+    "@media (min-width: 768px)": {
       gridTemplateColumns: "1fr 1fr",
     },
     "@media (min-width: 1024px)": {

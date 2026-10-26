@@ -23,3 +23,16 @@ export const RoundInProgress: Story = {
     await expect(canvas.getByText("Yet to play")).toBeVisible();
   },
 };
+
+/**
+ * The schedule can be wider than a phone, so it scrolls inside its own region.
+ * The region must take keyboard focus and clip with its own horizontal scrollbar,
+ * otherwise the page itself scrolls sideways.
+ */
+export const ScrollRegionIsFocusable: Story = {
+  play: async ({ canvas }) => {
+    const region = canvas.getByRole("region", { name: "Schedule" });
+    await expect(region).toHaveAttribute("tabindex", "0");
+    await expect(getComputedStyle(region).overflowX).toBe("auto");
+  },
+};

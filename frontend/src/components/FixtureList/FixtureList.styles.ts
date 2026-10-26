@@ -4,6 +4,13 @@ import { tokens } from "../../shared/const/tokens.stylex";
 
 /** StyleX rules for {@link FixtureList}. */
 export const styles = stylex.create({
+  /**
+   * The only horizontal scroll container for the schedule, so the page never
+   * scrolls sideways on a phone. It takes focus (see {@link FixtureList}).
+   */
+  scroll: {
+    overflowX: "auto",
+  },
   stack: {
     display: "flex",
     flexDirection: "column",

@@ -1,7 +1,7 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-
+import { focusRing } from "../../shared/const/focus-ring.styles";
 import type { FixtureRow } from "../../shared/types/fixture-row.types";
 import type { MatchScore } from "../../shared/types/league.types";
 import { franchiseAbbreviation } from "../../shared/utils/franchise-label";
@@ -36,24 +36,33 @@ export function FixtureList({ rows }: FixtureListProps) {
   const rounds = [...new Set(rows.map((row) => row.round))];
 
   return (
-    <div {...stylex.props(styles.stack)}>
-      {rounds.map((round) => (
-        <section key={round} aria-labelledby={`round-${round}`}>
-          <h4 id={`round-${round}`} {...stylex.props(styles.heading)}>
-            Round {round}
-          </h4>
-          <ul aria-live="polite" {...stylex.props(styles.list)}>
-            {rows
-              .filter((row) => row.round === round)
-              .map((row) => (
-                <li key={row.key} {...stylex.props(styles.row)}>
-                  <FixtureLine row={row} />
-                </li>
-              ))}
-          </ul>
-        </section>
-      ))}
-    </div>
+    <section
+      aria-label="Schedule"
+      // A scroll container must be focusable so keyboard users can reach content
+      // that sits off-screen on a phone (axe: scrollable-region-focusable).
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable region, see the comment above
+      tabIndex={0}
+      {...stylex.props(styles.scroll, focusRing.ring)}
+    >
+      <div {...stylex.props(styles.stack)}>
+        {rounds.map((round) => (
+          <section key={round} aria-labelledby={`round-${round}`}>
+            <h4 id={`round-${round}`} {...stylex.props(styles.heading)}>
+              Round {round}
+            </h4>
+            <ul aria-live="polite" {...stylex.props(styles.list)}>
+              {rows
+                .filter((row) => row.round === round)
+                .map((row) => (
+                  <li key={row.key} {...stylex.props(styles.row)}>
+                    <FixtureLine row={row} />
+                  </li>
+                ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </section>
   );
 }
 
