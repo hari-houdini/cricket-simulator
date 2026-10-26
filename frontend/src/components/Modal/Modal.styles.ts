@@ -49,6 +49,15 @@ export const styles = stylex.create({
     borderRadius: tokens.radiusSm,
     fontSize: "16px",
     cursor: "pointer",
+    transitionProperty: "background-color, color",
+    transitionDuration: tokens.durationDefault,
+    transitionTimingFunction: tokens.easingInOut,
+    ":hover": {
+      backgroundColor: tokens.colorBase,
+    },
+    "@media (prefers-reduced-motion: reduce)": {
+      transitionProperty: "none",
+    },
     outlineColor: tokens.colorGoldPrimary,
     outlineWidth: "2px",
     outlineOffset: "2px",

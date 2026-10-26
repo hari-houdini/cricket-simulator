@@ -129,7 +129,7 @@ These are targets. Check them by hand until CI enforces them.
 
 - **Accessibility (WCAG 2.2 AA):** every interactive element is keyboard-reachable with a visible focus indicator. Images have meaningful `alt` text, or `alt=""` if decorative. Color is never the only signal. Contrast is at least 4.5:1 for body text and 3:1 for large text and UI components. Dynamic content uses `aria-live` where it matters. Each page has `<main>`, `<nav>`, and `<header>`/`<footer>` landmarks and a skip link. Never use `tabindex` greater than 0.
 - **Performance:** JS per page at most 150 KB gzipped, CSS at most 30 KB gzipped, at most 2 font families, LCP at most 2.5 s, CLS at most 0.1. Images are at most 500 KB, use WebP or AVIF, and are lazy-loaded.
-- **Animation:** animate only `transform` and `opacity`. Do not read layout inside an animation frame. Keep `will-change` only while an animation runs. Wrap non-trivial motion in `@media (prefers-reduced-motion: reduce)` with a static fallback.
+- **Animation:** animate only `transform` and `opacity`, plus `color`, `background-color`, `border-color`, and `box-shadow` for the default state transition (`durationDefault`, 300ms, `ease-in-out`). Those four are allowed so hover and focus read as smooth. The named timings in `docs/ui/design-system.md` §7 keep their own durations. Never animate layout properties. Do not read layout inside an animation frame. Keep `will-change` only while an animation runs. Wrap non-trivial motion in `@media (prefers-reduced-motion: reduce)` with a static fallback.
 
 ## Documentation
 

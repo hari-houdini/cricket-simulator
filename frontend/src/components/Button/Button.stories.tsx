@@ -31,6 +31,28 @@ export const Tertiary: Story = {
   args: { variant: "tertiary", children: "View details" },
 };
 
+/**
+ * Hover reveals the gold underline. The play checks the compiled `:hover::after`
+ * rule draws the underline to `scaleX(1)`. It reads the stylesheet rather than
+ * a real hover, because `userEvent.hover` does not set `:hover` in this browser
+ * run. StyleX wraps rules in `@layer`, so the match is on the rule text.
+ */
+export const TertiaryHover: Story = {
+  args: { variant: "tertiary", children: "View details" },
+  play: async () => {
+    const rules = Array.from(document.styleSheets).flatMap((sheet) =>
+      Array.from(sheet.cssRules).map((rule) => rule.cssText),
+    );
+    await expect(
+      rules.some(
+        (text) =>
+          text.includes(":hover::after") &&
+          text.includes("transform: scaleX(1)"),
+      ),
+    ).toBe(true);
+  },
+};
+
 /** Small, 32px, for compact actions. Below the 44px touch target, so use only where space is tight. */
 export const Small: Story = {
   args: { size: "sm", children: "Pass" },

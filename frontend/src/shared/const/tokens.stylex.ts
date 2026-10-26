@@ -43,6 +43,11 @@ export const tokens = stylex.defineVars({
   spaceXl: "32px",
   /** 48px, screen-level spacing. */
   space2xl: "48px",
+  /**
+   * 12px vertical padding for inputs (§Forms). Not on the spacing scale, but the
+   * design system specifies it for input height and touch comfort.
+   */
+  spaceInput: "12px",
 
   /** 8px radius for buttons and inputs. */
   radiusSm: "8px",
@@ -52,12 +57,26 @@ export const tokens = stylex.defineVars({
   /** Raised neumorphic shadow for buttons and cards. */
   shadowRaised:
     "0 8px 16px rgba(0,8,20,0.2), inset 0 2px 4px rgba(255,255,255,0.1)",
+  /** Deeper raised shadow on hover, per §6 "shadow deepens slightly". */
+  shadowRaisedHover:
+    "0 12px 24px rgba(0,8,20,0.28), inset 0 2px 4px rgba(255,255,255,0.1)",
+  /** Focused input: inset shadow plus a faint gold glow (§Forms). */
+  shadowInputFocus:
+    "0 4px 8px rgba(0,8,20,0.2), inset 0 2px 4px rgba(0,0,0,0.15), 0 0 4px rgba(255,195,0,0.3)",
+  /** Navy-and-gold sphere, the app icon from §Branding, as a background gradient. */
+  gradientSphere:
+    "radial-gradient(circle at 32% 28%, #ffd60a 0%, #ffc300 36%, #003566 80%, #001d3d 100%)",
   /** Pressed neumorphic shadow for active buttons and focused inputs. */
   shadowPressed:
     "inset 0 4px 8px rgba(0,8,20,0.2), inset 0 -2px 4px rgba(255,255,255,0.1)",
   /** Lightweight shadow for secondary elements. */
   shadowSubtle: "0 4px 12px rgba(0,8,20,0.15)",
 
+  /**
+   * Default for hover, focus, and color changes on interactive elements. This is
+   * a general rule added on top of §7, which keeps its own named durations.
+   */
+  durationDefault: "300ms",
   /** Micro interactions such as button press. */
   durationMicro: "150ms",
   /** Card expand, collapse, and swap. */

@@ -23,7 +23,7 @@ export const styles = stylex.create({
   control: {
     minHeight: "44px",
     paddingInline: tokens.spaceMd,
-    paddingBlock: tokens.spaceSm,
+    paddingBlock: tokens.spaceInput,
     backgroundColor: tokens.colorMid,
     color: tokens.colorText,
     fontFamily: tokens.fontSans,
@@ -33,6 +33,9 @@ export const styles = stylex.create({
     borderStyle: "solid",
     borderColor: "transparent",
     boxShadow: tokens.shadowPressed,
+    transitionProperty: "border-color, box-shadow, background-color",
+    transitionDuration: tokens.durationDefault,
+    transitionTimingFunction: tokens.easingInOut,
     outlineColor: tokens.colorGoldPrimary,
     outlineWidth: "2px",
     outlineOffset: "2px",
@@ -40,9 +43,16 @@ export const styles = stylex.create({
       default: "none",
       ":focus-visible": "solid",
     },
+    ":focus": {
+      borderColor: tokens.colorGoldPrimary,
+      boxShadow: tokens.shadowInputFocus,
+    },
     ":disabled": {
       opacity: 0.5,
       cursor: "not-allowed",
+    },
+    "@media (prefers-reduced-motion: reduce)": {
+      transitionProperty: "none",
     },
   },
   toggleRow: {
