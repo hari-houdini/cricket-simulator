@@ -93,6 +93,15 @@ export const styles = stylex.create({
     color: tokens.colorText,
     textDecoration: "none",
   },
+  /** Closing landmark under `<main>`, with the disclaimer in the muted text colour. */
+  footer: {
+    borderTopColor: tokens.colorMid,
+    borderTopStyle: "solid",
+    borderTopWidth: tokens.borderWidthHairline,
+    fontSize: "14px",
+    padding: tokens.spaceMd,
+    textAlign: "center",
+  },
   main: {
     display: "flex",
     flexDirection: "column",

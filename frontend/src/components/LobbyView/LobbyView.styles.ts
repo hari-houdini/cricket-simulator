@@ -29,6 +29,13 @@ export const styles = stylex.create({
   shareLink: {
     overflowWrap: "anywhere",
     color: tokens.colorGoldPrimary,
+    outlineColor: tokens.colorGoldPrimary,
+    outlineOffset: tokens.offsetFocusRing,
+    outlineStyle: {
+      default: "none",
+      ":focus-visible": "solid",
+    },
+    outlineWidth: tokens.widthFocusRing,
   },
   ownerList: {
     display: "flex",

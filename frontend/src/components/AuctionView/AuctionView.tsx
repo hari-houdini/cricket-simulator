@@ -1,7 +1,7 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-
+import { useId } from "react";
 import { SQUAD_SIZE } from "../../shared/const/auction.const";
 import { bidBlockReason, timeLeftMs } from "../../shared/utils/auction-rules";
 import { describeBidBlock } from "../../shared/utils/describe-api-error";
@@ -59,6 +59,7 @@ export function AuctionView({
 }: AuctionViewProps) {
   const purse = auction.purses.find((item) => item.guestId === guestId);
   const lot = auction.lot;
+  const lotHeadingId = useId();
 
   if (auction.status === "complete" || lot === null) {
     return (
@@ -90,6 +91,7 @@ export function AuctionView({
     now,
   );
   const timeLeft = timeLeftMs(lot.endsAt, now);
+  const bidBlockId = `${lotHeadingId}-block`;
   const bidLabel = `Bid ${formatLakhs(lot.minimumBidLakhs)}`;
 
   return (
@@ -97,8 +99,8 @@ export function AuctionView({
       {error ? <ErrorBanner message={error} /> : null}
       <div {...stylex.props(styles.layout)}>
         <div {...stylex.props(styles.panel)}>
-          <section aria-labelledby="lot-heading">
-            <h2 id="lot-heading" {...stylex.props(styles.heading)}>
+          <section aria-labelledby={lotHeadingId}>
+            <h2 id={lotHeadingId} {...stylex.props(styles.heading)}>
               Up for auction
             </h2>
             <p {...stylex.props(styles.playerName)}>{lot.player.name}</p>
@@ -133,12 +135,13 @@ export function AuctionView({
             <div>
               <Button
                 disabled={pending || blockReason !== null}
+                aria-describedby={blockReason ? bidBlockId : undefined}
                 onClick={() => onBid(lot.minimumBidLakhs)}
               >
                 {bidLabel}
               </Button>
               {blockReason ? (
-                <p {...stylex.props(styles.note)}>
+                <p id={bidBlockId} {...stylex.props(styles.note)}>
                   {describeBidBlock(blockReason)}
                 </p>
               ) : null}

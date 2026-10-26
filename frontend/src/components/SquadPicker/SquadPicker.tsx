@@ -1,7 +1,7 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { FIRST_MATCH_ROUND, XI_SIZE } from "../../shared/const/squad.const";
 import type { StartingXi } from "../../shared/types/squad.types";
@@ -89,6 +89,7 @@ type DraftXiProps = Pick<
  */
 function DraftXi({ squad, pending, error, onSave }: DraftXiProps) {
   const [draft, setDraft] = useState(() => draftFrom(squad.startingXi));
+  const statusId = useId();
   const block = startingXiBlock(squad.players, draft);
   const canSave =
     block === null && draft.captainId !== null && draft.viceCaptainId !== null;
@@ -173,7 +174,11 @@ function DraftXi({ squad, pending, error, onSave }: DraftXiProps) {
       <h3 {...stylex.props(styles.heading)}>
         Starting XI: {draft.playerIds.length} of {XI_SIZE} chosen
       </h3>
-      <output aria-live="polite" {...stylex.props(styles.message)}>
+      <output
+        id={statusId}
+        aria-live="polite"
+        {...stylex.props(styles.message)}
+      >
         {block === null
           ? "Your starting XI is legal. Save it when you are ready."
           : describeXiBlock(block)}
@@ -200,7 +205,7 @@ function DraftXi({ squad, pending, error, onSave }: DraftXiProps) {
                       aria-label={`Captain: ${player.name}`}
                       onClick={() => toggleCaptain(player.id)}
                     >
-                      Captain
+                      {draft.captainId === player.id ? "✓ Captain" : "Captain"}
                     </Button>
                     <Button
                       size="sm"
@@ -210,7 +215,9 @@ function DraftXi({ squad, pending, error, onSave }: DraftXiProps) {
                       aria-label={`Vice-captain: ${player.name}`}
                       onClick={() => toggleViceCaptain(player.id)}
                     >
-                      Vice-captain
+                      {draft.viceCaptainId === player.id
+                        ? "✓ Vice-captain"
+                        : "Vice-captain"}
                     </Button>
                   </>
                 ) : null}
@@ -220,7 +227,6 @@ function DraftXi({ squad, pending, error, onSave }: DraftXiProps) {
                   disabled={
                     pending || (!inXi && draft.playerIds.length >= XI_SIZE)
                   }
-                  aria-pressed={inXi}
                   aria-label={`${inXi ? "Remove" : "Add"} ${player.name} ${inXi ? "from" : "to"} XI`}
                   onClick={() => toggleInXi(player.id)}
                 >
@@ -232,7 +238,11 @@ function DraftXi({ squad, pending, error, onSave }: DraftXiProps) {
         })}
       </ul>
       <div>
-        <Button disabled={pending || !canSave} onClick={handleSave}>
+        <Button
+          disabled={pending || !canSave}
+          aria-describedby={statusId}
+          onClick={handleSave}
+        >
           Save starting XI
         </Button>
       </div>

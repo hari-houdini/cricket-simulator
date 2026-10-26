@@ -28,8 +28,11 @@ export const tokens = stylex.defineVars({
   colorStatusSuccess: "#10b981",
   /** Warning state, also used for the connection banner. */
   colorStatusWarning: "#f59e0b",
-  /** Unavailable or sold state. */
-  colorStatusError: "#ef4444",
+  /**
+   * Unavailable or sold state. Lightened from #ef4444, which gave 4.49:1 on
+   * `colorBase` and missed the 4.5:1 body-text minimum.
+   */
+  colorStatusError: "#f25f5c",
 
   /** 4px, micro-spacing. */
   spaceXs: "4px",
