@@ -2,7 +2,7 @@
 
 import * as stylex from "@stylexjs/stylex";
 import { type FormEvent, useState } from "react";
-
+import { focusRing } from "../../shared/const/focus-ring.styles";
 import { LOBBY_PHASE_LABELS, MAX_OWNERS } from "../../shared/const/lobby.const";
 import { TEAMS } from "../../shared/const/teams.const";
 import { AuctionPanel } from "../AuctionPanel/AuctionPanel";
@@ -74,7 +74,10 @@ export function LobbyView({
         </p>
         <p {...stylex.props(styles.note)}>
           Share this link:{" "}
-          <a href={shareUrl} {...stylex.props(styles.shareLink)}>
+          <a
+            href={shareUrl}
+            {...stylex.props(styles.shareLink, focusRing.ring)}
+          >
             {shareUrl}
           </a>
         </p>

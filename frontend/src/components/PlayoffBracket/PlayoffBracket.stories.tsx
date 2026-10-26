@@ -34,3 +34,15 @@ export const AfterTheFinal: Story = {
     ).toBeVisible();
   },
 };
+
+/**
+ * The bracket scrolls inside its own region, so a narrow phone never scrolls the
+ * page sideways. The region must take keyboard focus.
+ */
+export const ScrollRegionIsFocusable: Story = {
+  play: async ({ canvas }) => {
+    const region = canvas.getByRole("region", { name: "Playoff bracket" });
+    await expect(region).toHaveAttribute("tabindex", "0");
+    await expect(getComputedStyle(region).overflowX).toBe("auto");
+  },
+};

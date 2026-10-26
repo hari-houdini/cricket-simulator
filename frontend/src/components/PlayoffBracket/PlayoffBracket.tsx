@@ -1,7 +1,7 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-
+import { focusRing } from "../../shared/const/focus-ring.styles";
 import { PLAYOFF_SLOT_LABELS } from "../../shared/const/playoffs.const";
 import type { PlayoffSlotView } from "../../shared/types/playoffs.types";
 import {
@@ -23,7 +23,14 @@ import type { PlayoffBracketProps } from "./PlayoffBracket.types";
  */
 export function PlayoffBracket({ matches, champion }: PlayoffBracketProps) {
   return (
-    <div>
+    <section
+      aria-label="Playoff bracket"
+      // A scroll container must be focusable so keyboard users can reach content
+      // that sits off-screen on a phone (axe: scrollable-region-focusable).
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable region, see the comment above
+      tabIndex={0}
+      {...stylex.props(styles.scroll, focusRing.ring)}
+    >
       <ol {...stylex.props(styles.list)}>
         {matches.map((match) => (
           <li
@@ -50,7 +57,7 @@ export function PlayoffBracket({ matches, champion }: PlayoffBracketProps) {
           Champion: {franchiseName(champion)}
         </p>
       ) : null}
-    </div>
+    </section>
   );
 }
 

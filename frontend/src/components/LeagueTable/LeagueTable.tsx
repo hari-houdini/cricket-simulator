@@ -2,6 +2,7 @@
 
 import * as stylex from "@stylexjs/stylex";
 import { useState } from "react";
+import { focusRing } from "../../shared/const/focus-ring.styles";
 import { franchiseName } from "../../shared/utils/franchise-label";
 import {
   formatNetRunRate,
@@ -74,7 +75,14 @@ export function LeagueTable({ standings }: LeagueTableProps) {
   }
 
   return (
-    <div {...stylex.props(styles.scroll)}>
+    <section
+      aria-label="Standings"
+      // A scroll container must be focusable, so keyboard users can reach the
+      // columns that sit off-screen on a phone (axe: scrollable-region-focusable).
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable region, see the comment above
+      tabIndex={0}
+      {...stylex.props(styles.scroll, focusRing.ring)}
+    >
       <table aria-label="League table" {...stylex.props(styles.table)}>
         <thead>
           <tr>
@@ -119,6 +127,6 @@ export function LeagueTable({ standings }: LeagueTableProps) {
           ))}
         </tbody>
       </table>
-    </div>
+    </section>
   );
 }

@@ -50,3 +50,14 @@ export const SortByPoints: Story = {
     );
   },
 };
+
+/**
+ * The table scrolls sideways on a phone, so its wrapper must take keyboard focus.
+ * Otherwise a keyboard reader cannot reach the columns that sit off-screen.
+ */
+export const ScrollRegionIsFocusable: Story = {
+  play: async ({ canvas }) => {
+    const region = canvas.getByRole("region", { name: "Standings" });
+    await expect(region).toHaveAttribute("tabindex", "0");
+  },
+};

@@ -4,7 +4,7 @@ import * as stylex from "@stylexjs/stylex";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ZodError } from "zod";
-
+import { focusRing } from "../../shared/const/focus-ring.styles";
 import type { Lobby } from "../../shared/types/lobby.types";
 import { describeApiError } from "../../shared/utils/describe-api-error";
 import { LobbyNotFoundError } from "../../shared/utils/game-api.errors";
@@ -129,7 +129,7 @@ export function LobbyScreen({ code }: LobbyScreenProps) {
         title="No lobby has this code"
         description="Check the code and try again, or ask the owner for a new link."
         action={
-          <Link href="/" {...stylex.props(styles.link)}>
+          <Link href="/" {...stylex.props(styles.link, focusRing.ring)}>
             Back to home
           </Link>
         }
