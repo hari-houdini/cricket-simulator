@@ -1,5 +1,9 @@
 import type { Preview } from "@storybook/nextjs-vite";
 
+// Same global styles as the app, so stories render with the StyleX output and
+// the design tokens the components depend on.
+import "../src/app/globals.css";
+
 const preview: Preview = {
   parameters: {
     controls: {

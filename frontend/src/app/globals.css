@@ -1,17 +1,15 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/*
+ * Global resets. The `@stylex;` line is replaced at build time by
+ * `@stylexjs/postcss-plugin` with every `stylex.create` rule in the included
+ * source files, so it must stay in this file.
+ */
+@layer resets {
+  * {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+/* biome-ignore lint/suspicious/noUnknownAtRules: StyleX directive, replaced by the postcss plugin at build time */
+@stylex;

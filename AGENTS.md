@@ -54,8 +54,8 @@ After every change, `pnpm lint` and `pnpm exec tsc --noEmit` must pass in `front
   2. The package has a commit in the last 6 months.
   3. The gzipped size is under 50 KB, and it adds few transitive dependencies, each reviewed.
   4. It is recorded in the approved list below.
-- **Approved list (frontend, seeded from `frontend/package.json`):** `next`, `react`, `react-dom`, `@biomejs/biome`, `@types/node`, `@types/react`, `@types/react-dom`, `babel-plugin-react-compiler`, `typescript`, `storybook`, `@storybook/nextjs-vite`, `@chromatic-com/storybook`, `@storybook/addon-vitest`, `@storybook/addon-a11y`, `@storybook/addon-docs`, `@storybook/addon-mcp`, `vite`, `vitest`, `@vitest/browser-playwright`, `@vitest/coverage-v8`, `playwright`.
-- **Pending approval:** StyleX (`ARCHITECTURE.md` styling choice). It is not yet installed and must pass the checklist above before it is added.
+- **Approved list (frontend, seeded from `frontend/package.json`):** `next`, `react`, `react-dom`, `@biomejs/biome`, `@types/node`, `@types/react`, `@types/react-dom`, `babel-plugin-react-compiler`, `typescript`, `storybook`, `@storybook/nextjs-vite`, `@chromatic-com/storybook`, `@storybook/addon-vitest`, `@storybook/addon-a11y`, `@storybook/addon-docs`, `@storybook/addon-mcp`, `vite`, `vitest`, `@vitest/browser-playwright`, `@vitest/coverage-v8`, `playwright`, `@stylexjs/stylex` (runtime, about 0.9 KB gzipped, transitive deps `styleq`, `invariant`, `css-mediaquery`), `@stylexjs/babel-plugin` and `@stylexjs/postcss-plugin` (build-time only), `zod` (about 25 KB gzipped with named imports), `@babel/core` 7.29.7 (build-time only; already in the tree through the StyleX plugins, pinned to the 7.x line they require, since 8.x is a separate major).
+- **zod import style:** import the runtime functions by name (`import { object, string } from "zod"`). A namespace import (`import { z } from "zod"`) keeps every export alive and bundles to about 92 KB gzipped, over the 50 KB limit. Get types with a type-only import, `import type { z } from "zod"`, and `z.infer<typeof schema>`.
 - **Audits:** `pnpm audit` and `cargo audit` run on every pull request. Findings at high or critical severity fail the check.
 - **GitHub Actions** (none exist yet): pin every action to its full 40-character commit SHA, with a trailing `# vX.Y.Z` comment. Dependabot proposes SHA bumps.
 - **Build scripts:** pnpm 12 blocks dependency build scripts unless allow-listed. Add a package to `allowBuilds` in `frontend/pnpm-workspace.yaml` only after checking it. The current list is `esbuild` (required by Vite), `sharp` (disabled), and `unrs-resolver` (disabled).
@@ -85,7 +85,8 @@ Backend (`backend/`): follow the service split in `ARCHITECTURE.md` (match simul
 
 - Route files use Next.js conventions: `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`.
 - Components are PascalCase: `Button.tsx`, `SquadPicker.tsx`.
-- Non-component modules use a type suffix and sit next to what they support: `<name>.types.ts`, `<name>.const.ts`, `<name>.test.ts`.
+- Non-component modules use a type suffix and sit next to what they support: `<name>.types.ts`, `<name>.schema.ts`, `<name>.styles.ts`, `<name>.const.ts`, `<name>.mock.ts`, `<name>.test.ts`.
+- Schemas are zod (`<name>.schema.ts`). Types are derived from them with `z.infer` in `<name>.types.ts`, never declared by hand.
 - Rust files use snake_case, matching `ARCHITECTURE.md` (`match_simulator.rs`).
 
 ## TypeScript
@@ -107,10 +108,11 @@ Backend (`backend/`): follow the service split in `ARCHITECTURE.md` (match simul
 
 ## Styling
 
-- StyleX is the chosen styling system (`ARCHITECTURE.md`) but is not yet installed. Until it is, use plain CSS in `frontend/src/app/globals.css`.
+- StyleX is the styling system (`ARCHITECTURE.md`). Component styles live in `<name>.styles.ts` using `stylex.create`.
 - Tailwind is not used. Do not add it or utility-class markup.
-- Define design tokens (colors, spacing, type) once, as CSS custom properties on `:root`. Do not hard-code color, spacing, or font values elsewhere.
-- Dark theme follows `prefers-color-scheme`.
+- Define design tokens (colors, spacing, radius, shadows, durations) once, with `stylex.defineVars` in `frontend/src/shared/const/tokens.stylex.ts`. Do not hard-code color, spacing, or font values elsewhere.
+- The palette is dark-only, from `docs/ui/design-system.md`. There is no light theme, so the `prefers-color-scheme` split does not apply.
+- Fonts are Bodoni Moda (headings) and DM Sans (body), loaded with `next/font/google`.
 - Target breakpoints from `ARCHITECTURE.md`: 320px to 768px mobile, 768px to 1024px tablet, 1024px and up desktop.
 
 ## Security
@@ -166,6 +168,6 @@ Use Conventional Commits: `type(scope): subject`. Common types are `feat`, `fix`
 | Add an `index.ts` barrel file | Import from the file directly |
 | Use `any` | Use `unknown` and narrow it |
 | Reference an action by tag such as `@v4` | Pin the full commit SHA with a `# vX.Y.Z` comment |
-| Add Tailwind or utility-class styling | Use plain CSS tokens now, StyleX once approved |
+| Add Tailwind or utility-class styling | Use StyleX `stylex.create` with `defineVars` tokens |
 | Commit a dependency change without its lockfile | Commit `pnpm-lock.yaml` or `Cargo.lock` together with the manifest |
 | Weaken a `tsconfig` strict flag to silence an error | Fix the type |

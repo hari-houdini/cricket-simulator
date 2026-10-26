@@ -1,0 +1,11 @@
+/* app/globals.css */
+@layer resets {
+  * {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+  }
+}
+
+/* biome-ignore lint/suspicious/noUnknownAtRules: StyleX directive, replaced by the postcss plugin at build time */
+@stylex;
