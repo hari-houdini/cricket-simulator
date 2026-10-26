@@ -33,6 +33,19 @@ describe("createGameApi", () => {
     expect(lobby.owners).toHaveLength(1);
   });
 
+  it("keeps the mock's lobbies across calls, so a later read sees an earlier create", async () => {
+    const api = createGameApi("mock");
+    const created = await api.createLobby({
+      name: "Persisted",
+      guestId: "guest-1",
+      displayName: "Asha",
+    });
+
+    const reread = await api.getLobby(created.code);
+
+    expect(reread.name).toBe("Persisted");
+  });
+
   it("returns the HTTP stub for http mode, which rejects every call", async () => {
     const api = createGameApi("http");
 
