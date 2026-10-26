@@ -19,5 +19,12 @@ export const styles = stylex.create({
   },
   link: {
     color: tokens.colorGoldPrimary,
+    outlineColor: tokens.colorGoldPrimary,
+    outlineOffset: tokens.offsetFocusRing,
+    outlineStyle: {
+      default: "none",
+      ":focus-visible": "solid",
+    },
+    outlineWidth: tokens.widthFocusRing,
   },
 });

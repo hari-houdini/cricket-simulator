@@ -78,6 +78,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <main id="main" {...stylex.props(styles.main)}>
             {children}
           </main>
+          <footer {...stylex.props(styles.footer)}>
+            <p>
+              A fantasy game. Not affiliated with the Indian Premier League.
+            </p>
+          </footer>
         </AppProviders>
       </body>
     </html>

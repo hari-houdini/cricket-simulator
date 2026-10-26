@@ -28,6 +28,9 @@ export const styles = stylex.create({
     borderRadius: tokens.radiusMd,
     boxShadow: tokens.shadowRaised,
     fontFamily: tokens.fontSans,
+    // The dialog takes focus on open so screen readers announce it. It is not
+    // itself a control, so it shows no focus ring.
+    outlineStyle: "none",
   },
   header: {
     display: "flex",
