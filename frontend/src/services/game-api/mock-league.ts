@@ -1,9 +1,16 @@
+import { DEFAULT_TROUBLE_RATING } from "../../shared/const/player.const";
 import type { MatchScore } from "../../shared/types/league.types";
 import type { Player } from "../../shared/types/player.types";
 import type {
   LeagueMatch,
   PlayoffSlot,
 } from "../../shared/types/schedule.types";
+import { fairPlayFactor, playerMatchScore } from "../../shared/utils/fair-play";
+import {
+  fantasyPointsFor,
+  pickManOfTheMatch,
+} from "../../shared/utils/fantasy-points";
+import type { PlayerPerformance } from "../../shared/utils/match-performance";
 import {
   simulateMatch,
   teamStrength,
@@ -93,5 +100,67 @@ export function playMatch(
     awayRuns: outcome.awayRuns,
     awayWickets: outcome.awayWickets,
     winnerFranchiseId,
+  };
+}
+
+/** A player's line in one match, with the scores the awards are worked from. */
+export type RecordedPerformance = PlayerPerformance & {
+  /** Fantasy points before any captain or vice-captain multiplier. */
+  readonly fantasyPoints: number;
+  /** The player's fair-play score in this match. */
+  readonly fairPlayScore: number;
+};
+
+/** Everything kept about one played match: each player's line, and the Man of the Match. */
+export type MatchRecord = {
+  /** The match's seed key, which identifies it within the lobby. */
+  readonly matchKey: string;
+  readonly round: number;
+  readonly homeFranchiseId: string;
+  readonly awayFranchiseId: string;
+  readonly performances: readonly RecordedPerformance[];
+  readonly manOfTheMatchId: string | null;
+};
+
+/**
+ * Turns a match's allocated performances into a record: fantasy points, each
+ * player's fair-play score, and the Man of the Match. The fair-play factor is
+ * seeded per player and match, so every guest sees the same scores.
+ *
+ * @param input - The match, its allocated performances, and each player's trouble rating.
+ * @returns The record of the match.
+ */
+export function recordMatch(input: {
+  readonly matchKey: string;
+  readonly round: number;
+  readonly homeFranchiseId: string;
+  readonly awayFranchiseId: string;
+  readonly performances: readonly PlayerPerformance[];
+  readonly troubleRatingById: ReadonlyMap<string, number>;
+}): MatchRecord {
+  const performances: RecordedPerformance[] = input.performances.map(
+    (performance) => {
+      const factor = fairPlayFactor(
+        createSeededRandom(
+          `${input.matchKey}:fair-play:${performance.playerId}`,
+        )(),
+      );
+      const trouble =
+        input.troubleRatingById.get(performance.playerId) ??
+        DEFAULT_TROUBLE_RATING;
+      return {
+        ...performance,
+        fantasyPoints: fantasyPointsFor(performance),
+        fairPlayScore: playerMatchScore(trouble, factor),
+      };
+    },
+  );
+  return {
+    matchKey: input.matchKey,
+    round: input.round,
+    homeFranchiseId: input.homeFranchiseId,
+    awayFranchiseId: input.awayFranchiseId,
+    performances,
+    manOfTheMatchId: pickManOfTheMatch(performances),
   };
 }

@@ -29,5 +29,6 @@ export function createHttpGameApi(): GameApi {
     getLeague: notImplemented,
     advanceRound: notImplemented,
     getPlayoffs: notImplemented,
+    getAwards: notImplemented,
   };
 }

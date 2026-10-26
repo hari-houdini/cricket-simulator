@@ -6,6 +6,7 @@ import { type FormEvent, useState } from "react";
 import { LOBBY_PHASE_LABELS, MAX_OWNERS } from "../../shared/const/lobby.const";
 import { TEAMS } from "../../shared/const/teams.const";
 import { AuctionPanel } from "../AuctionPanel/AuctionPanel";
+import { AwardsPanel } from "../AwardsPanel/AwardsPanel";
 import { Button } from "../Button/Button";
 import { ErrorBanner } from "../ErrorBanner/ErrorBanner";
 import { FranchiseGrid } from "../FranchiseGrid/FranchiseGrid";
@@ -23,8 +24,9 @@ import type { LobbyViewProps } from "./LobbyView.types";
  * lobby says so rather than offering a form that would fail. Once the auction
  * has started, the auction panel takes the place of the grid and the form. Once
  * the auction has finished, an owner also sees the squad panel, to pick the XI,
- * and every guest sees the league and, once it is over, the playoffs. The squad panel remounts when the round
- * changes, so it shows the XI as locked once the first match has been played.
+ * and every guest sees the league, the playoffs once they begin, and the awards
+ * so far. The squad and awards panels remount when the round changes, so they
+ * show the latest state once a match has been played.
  *
  * @param props - The lobby, the viewing guest, the share link, and the actions.
  * @returns The lobby's sections inside the page's `<main>`.
@@ -181,6 +183,10 @@ export function LobbyView({
           canAdvance={isOwner && lobby.phase === "playoffs"}
           onRoundAdvanced={onRoundAdvanced}
         />
+      ) : null}
+
+      {lobby.auctionStatus === "complete" ? (
+        <AwardsPanel key={lobby.round} code={lobby.code} />
       ) : null}
     </div>
   );

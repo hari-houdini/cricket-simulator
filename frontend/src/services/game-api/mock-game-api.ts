@@ -12,6 +12,7 @@ import {
   startAuctionInputSchema,
 } from "../../shared/types/auction.schema";
 import type { Auction } from "../../shared/types/auction.types";
+import type { Awards } from "../../shared/types/awards.types";
 import type { GameApi } from "../../shared/types/game-api.types";
 import {
   advanceRoundInputSchema,
@@ -63,6 +64,10 @@ import {
 } from "../../shared/utils/game-api.errors";
 import { keyMomentsFor } from "../../shared/utils/key-moments";
 import { advanceBlock } from "../../shared/utils/league-rules";
+import {
+  allocateMatch,
+  type PlayingSide,
+} from "../../shared/utils/match-performance";
 import { strongestXi } from "../../shared/utils/match-simulator";
 import {
   decisionFor,
@@ -84,10 +89,13 @@ import {
   recordBid,
   settleExpiredLots,
 } from "./mock-auction";
+import { type AwardOwner, buildAwards } from "./mock-awards";
 import {
+  type MatchRecord,
   matchSeedKey,
   playMatch,
   playoffResultKey,
+  recordMatch,
   resultKey,
 } from "./mock-league";
 
@@ -171,6 +179,8 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
   const leagueResults = new Map<string, MatchScore>();
   /** Played playoff matches, keyed by {@link playoffResultKey}. */
   const playoffResults = new Map<string, PlayoffResult>();
+  /** Every played match's player lines, by lobby code, for the awards. */
+  const matchRecordsByCode = new Map<string, MatchRecord[]>();
   let sequence = 0;
 
   /**
@@ -373,12 +383,15 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         currentPlayers().filter((player) => player.franchiseId === franchiseId),
       );
     }
-    const purse = auctionsByCode
-      .get(code)
-      ?.auction.purses.find((item) => item.guestId === owner.guestId);
+    const squad =
+      auctionsByCode
+        .get(code)
+        ?.auction.purses.find((item) => item.guestId === owner.guestId)
+        ?.squad ?? [];
     // Every owner has a saved XI here: advanceRound checks that before it plays.
+    // The XI's order is the batting order, so the saved order is kept.
     const xiIds = choicesFor(code, owner.guestId).startingXi?.playerIds ?? [];
-    return (purse?.squad ?? []).filter((player) => xiIds.includes(player.id));
+    return xiIds.flatMap((id) => squad.filter((player) => player.id === id));
   }
 
   /**
@@ -448,6 +461,69 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
   }
 
   /**
+   * Plays one fixture and records every player's line. A knockout match cannot
+   * be tied, so a level score goes to a super over.
+   *
+   * @param code - A normalised lobby code.
+   * @param round - The round the fixture is played in.
+   * @param homeFranchiseId - The home franchise, which bats first.
+   * @param awayFranchiseId - The away franchise.
+   * @param knockout - Whether the match is a playoff match.
+   * @returns The score, with the winner set for a knockout, and whether a super over decided it.
+   */
+  function playFixture(
+    code: string,
+    round: number,
+    homeFranchiseId: string,
+    awayFranchiseId: string,
+    knockout: boolean,
+  ): { score: MatchScore; superOver: boolean } {
+    const seedKey = matchSeedKey(code, round, homeFranchiseId, awayFranchiseId);
+    const homeField = fieldFor(code, homeFranchiseId);
+    const awayField = fieldFor(code, awayFranchiseId);
+    const played = playMatch(
+      seedKey,
+      homeFranchiseId,
+      awayFranchiseId,
+      homeField,
+      awayField,
+    );
+
+    const superOver = knockout && played.winnerFranchiseId === null;
+    const score: MatchScore = {
+      ...played,
+      winnerFranchiseId: superOver
+        ? superOverWinner(
+            homeFranchiseId,
+            awayFranchiseId,
+            createSeededRandom(`${seedKey}:super-over`)(),
+          )
+        : played.winnerFranchiseId,
+    };
+
+    const home: PlayingSide = { franchiseId: homeFranchiseId, xi: homeField };
+    const away: PlayingSide = { franchiseId: awayFranchiseId, xi: awayField };
+    const record = recordMatch({
+      matchKey: seedKey,
+      round,
+      homeFranchiseId,
+      awayFranchiseId,
+      performances: allocateMatch(seedKey, home, away, score),
+      troubleRatingById: new Map(
+        [...homeField, ...awayField].flatMap((player): [string, number][] =>
+          player.troubleRating === undefined
+            ? []
+            : [[player.id, player.troubleRating]],
+        ),
+      ),
+    });
+    const records = matchRecordsByCode.get(code) ?? [];
+    records.push(record);
+    matchRecordsByCode.set(code, records);
+    return { score, superOver };
+  }
+
+  /**
    * Plays every fixture of a league round and stores the results.
    *
    * @param code - A normalised lobby code.
@@ -456,21 +532,14 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
   function playLeagueRound(code: string, round: number) {
     for (const match of leagueSchedule()) {
       if (match.round === round) {
-        leagueResults.set(
-          resultKey(code, match),
-          playMatch(
-            matchSeedKey(
-              code,
-              round,
-              match.homeFranchiseId,
-              match.awayFranchiseId,
-            ),
-            match.homeFranchiseId,
-            match.awayFranchiseId,
-            fieldFor(code, match.homeFranchiseId),
-            fieldFor(code, match.awayFranchiseId),
-          ),
+        const { score } = playFixture(
+          code,
+          round,
+          match.homeFranchiseId,
+          match.awayFranchiseId,
+          false,
         );
+        leagueResults.set(resultKey(code, match), score);
       }
     }
   }
@@ -493,29 +562,54 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       throw new Error(`Playoff round ${round} has no teams to play.`);
     }
 
-    const seedKey = matchSeedKey(code, round, home, away);
-    const score = playMatch(
-      seedKey,
-      home,
-      away,
-      fieldFor(code, home),
-      fieldFor(code, away),
-    );
-    const winnerFranchiseId =
-      score.winnerFranchiseId ??
-      superOverWinner(
-        home,
-        away,
-        createSeededRandom(`${seedKey}:super-over`)(),
-      );
-    const settled: MatchScore = { ...score, winnerFranchiseId };
+    const { score, superOver } = playFixture(code, round, home, away, true);
+    // A knockout match is never tied: playFixture settles a level score.
+    const winnerFranchiseId = score.winnerFranchiseId;
+    if (winnerFranchiseId === null) {
+      throw new Error(`Playoff round ${round} ended without a winner.`);
+    }
     playoffResults.set(playoffResultKey(code, match.slot), {
       homeFranchiseId: home,
       awayFranchiseId: away,
       winnerFranchiseId,
-      superOver: score.winnerFranchiseId === null,
-      score: settled,
-      keyMoments: keyMomentsFor(settled, home, away),
+      superOver,
+      score,
+      keyMoments: keyMomentsFor(score, home, away),
+    });
+  }
+
+  /**
+   * Builds the awards for a lobby from its played matches.
+   *
+   * @param code - A normalised lobby code.
+   * @returns The awards, validated.
+   */
+  function awardsView(code: string): Awards {
+    const lobby = findLobby(code);
+    const owners: AwardOwner[] = lobby.owners.flatMap((owner) => {
+      if (owner.franchiseId === null) {
+        return [];
+      }
+      const xi = choicesFor(code, owner.guestId).startingXi;
+      return [
+        {
+          guestId: owner.guestId,
+          displayName: owner.displayName,
+          franchiseId: owner.franchiseId,
+          captainId: xi?.captainId ?? null,
+          viceCaptainId: xi?.viceCaptainId ?? null,
+        },
+      ];
+    });
+    return buildAwards({
+      seasonComplete: lobby.phase === "complete",
+      records: matchRecordsByCode.get(code) ?? [],
+      owners,
+      standings: buildStandings(
+        TEAMS.map((team) => team.id),
+        fixturesFor(code),
+      ),
+      players: currentPlayers(),
     });
   }
 
@@ -678,6 +772,12 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         lobby.phase = "complete";
       }
       return leagueView(input.code);
+    },
+
+    async getAwards(rawCode) {
+      const code = normalizeCode(rawCode);
+      requireSeason(code);
+      return awardsView(code);
     },
 
     async getPlayoffs(rawCode) {

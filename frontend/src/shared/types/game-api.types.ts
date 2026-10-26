@@ -3,6 +3,7 @@ import type {
   PlaceBidInput,
   StartAuctionInput,
 } from "./auction.types";
+import type { Awards } from "./awards.types";
 import type { AdvanceRoundInput, League } from "./league.types";
 import type {
   ClaimFranchiseInput,
@@ -87,4 +88,10 @@ export type GameApi = {
    * auction starts. Places are null until they are known.
    */
   readonly getPlayoffs: (code: string) => Promise<Playoffs>;
+  /**
+   * Reads the awards for the season so far: the caps, the Most Valuable Player,
+   * the Emerging Player, Fair Play, and each match's Man of the Match. Rejects
+   * with `AuctionNotStartedError` before the auction starts.
+   */
+  readonly getAwards: (code: string) => Promise<Awards>;
 };
