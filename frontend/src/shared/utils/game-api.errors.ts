@@ -1,5 +1,6 @@
 import { MAX_OWNERS } from "../const/lobby.const";
 import type { BidBlock } from "./auction-rules";
+import type { SubstitutionBlock, XiBlock } from "./squad-rules";
 
 /**
  * Thrown when no lobby has the requested code. The UI shows this as a clear
@@ -140,5 +141,58 @@ export class BidBlockedError extends Error {
   constructor(readonly reason: BidBlock) {
     super(`The bid was refused: ${reason}.`);
     this.name = "BidBlockedError";
+  }
+}
+
+/**
+ * Thrown when a squad is read before the auction has finished. The squad is
+ * only complete once every owner has drafted, so the UI waits for the auction.
+ */
+export class SquadNotReadyError extends Error {
+  /**
+   * @param code - The code of the lobby whose auction is still running.
+   */
+  constructor(code: string) {
+    super(`The auction in lobby "${code}" has not finished.`);
+    this.name = "SquadNotReadyError";
+  }
+}
+
+/**
+ * Thrown when a starting XI is saved after it has locked at the first match.
+ */
+export class XiLockedError extends Error {
+  /**
+   * @param code - The code of the lobby whose starting XI is locked.
+   */
+  constructor(code: string) {
+    super(`The starting XI in lobby "${code}" is locked for the season.`);
+    this.name = "XiLockedError";
+  }
+}
+
+/**
+ * Thrown when a starting XI breaks a squad rule, such as the wicket-keeper count.
+ */
+export class XiBlockedError extends Error {
+  /**
+   * @param reason - Which rule the XI broke, from {@link XiBlock}.
+   */
+  constructor(readonly reason: XiBlock) {
+    super(`The starting XI was refused: ${reason}.`);
+    this.name = "XiBlockedError";
+  }
+}
+
+/**
+ * Thrown when the free substitution is refused, from {@link SubstitutionBlock}.
+ */
+export class SubstitutionBlockedError extends Error {
+  /**
+   * @param reason - Why the substitution was refused.
+   */
+  constructor(readonly reason: SubstitutionBlock) {
+    super(`The substitution was refused: ${reason}.`);
+    this.name = "SubstitutionBlockedError";
   }
 }

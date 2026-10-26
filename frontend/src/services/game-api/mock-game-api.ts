@@ -17,6 +17,14 @@ import {
 } from "../../shared/types/lobby.schema";
 import type { Lobby, Owner } from "../../shared/types/lobby.types";
 import type { Player } from "../../shared/types/player.types";
+import {
+  getSquadInputSchema,
+  setStartingXiInputSchema,
+  squadSchema,
+  startingXiSchema,
+  substituteInputSchema,
+} from "../../shared/types/squad.schema";
+import type { Squad, StartingXi } from "../../shared/types/squad.types";
 import { bidBlockReason } from "../../shared/utils/auction-rules";
 import { franchiseClaimBlock } from "../../shared/utils/franchise-claim";
 import {
@@ -30,8 +38,17 @@ import {
   LobbyFullError,
   LobbyNotFoundError,
   NotAnOwnerError,
+  SquadNotReadyError,
+  SubstitutionBlockedError,
+  XiBlockedError,
+  XiLockedError,
 } from "../../shared/utils/game-api.errors";
 import { createSeededRandom } from "../../shared/utils/seeded-random";
+import {
+  isXiLocked,
+  startingXiBlock,
+  substitutionBlock,
+} from "../../shared/utils/squad-rules";
 import { auctionOrder } from "./auction-pool";
 import {
   createMockAuction,
@@ -77,6 +94,15 @@ type StoredAuction = {
 };
 
 /**
+ * One owner's choices in a lobby. The squad's players come from the auction, so
+ * only the XI and the substitution are kept here.
+ */
+type StoredSquadChoices = {
+  startingXi: StartingXi | null;
+  substitutionUsed: boolean;
+};
+
+/**
  * Builds the in-memory mock of the game API. It keeps lobbies for as long as
  * the returned object lives, so each page load starts with an empty set, as
  * `docs/specs/mock-api-mvp.md` accepts.
@@ -105,6 +131,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
   const now = options.now ?? Date.now;
   const lobbiesByCode = new Map<string, Lobby>();
   const auctionsByCode = new Map<string, StoredAuction>();
+  const squadChoices = new Map<string, StoredSquadChoices>();
   let sequence = 0;
 
   /**
@@ -171,6 +198,72 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
     const lobby = findLobby(code);
     lobby.auctionStatus = stored.auction.status;
     return stored;
+  }
+
+  /**
+   * Returns one owner's saved squad choices, creating an empty record the first
+   * time the owner reads or changes the squad.
+   *
+   * @param code - A normalised lobby code.
+   * @param guestId - The owner's guest ID.
+   * @returns The owner's choices, which the caller may change.
+   */
+  function choicesFor(code: string, guestId: string): StoredSquadChoices {
+    const key = JSON.stringify([code, guestId]);
+    let choices = squadChoices.get(key);
+    if (!choices) {
+      choices = { startingXi: null, substitutionUsed: false };
+      squadChoices.set(key, choices);
+    }
+    return choices;
+  }
+
+  /**
+   * Looks up an owner's squad once the auction has finished, which is the only
+   * time a squad is complete.
+   *
+   * @param code - A normalised lobby code.
+   * @param guestId - The owner's guest ID.
+   * @returns The squad's players, the lobby round and the owner's choices.
+   * @throws {SquadNotReadyError} When the auction has not finished.
+   * @throws {NotAnOwnerError} When the guest holds no squad in the lobby.
+   */
+  function completedSquad(code: string, guestId: string) {
+    const stored = settledAuction(code);
+    if (stored.auction.status !== "complete") {
+      throw new SquadNotReadyError(code);
+    }
+    const purse = stored.auction.purses.find(
+      (item) => item.guestId === guestId,
+    );
+    if (!purse) {
+      throw new NotAnOwnerError(guestId);
+    }
+    return {
+      players: purse.squad,
+      round: findLobby(code).round,
+      choices: choicesFor(code, guestId),
+    };
+  }
+
+  /**
+   * Builds the squad the API returns from a completed squad and its choices.
+   *
+   * @param guestId - The owner's guest ID.
+   * @param completed - The result of {@link completedSquad}.
+   * @returns A validated squad.
+   */
+  function squadView(
+    guestId: string,
+    completed: ReturnType<typeof completedSquad>,
+  ): Squad {
+    return squadSchema.parse({
+      guestId,
+      players: completed.players,
+      startingXi: completed.choices.startingXi,
+      locked: isXiLocked(completed.round),
+      substitutionUsed: completed.choices.substitutionUsed,
+    });
   }
 
   return {
@@ -314,6 +407,73 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       }
       recordBid(stored.auction, input.guestId, input.amountLakhs, clock);
       return auctionSchema.parse(stored.auction);
+    },
+
+    async getSquad(rawInput) {
+      const input = getSquadInputSchema.parse({
+        ...rawInput,
+        code: normalizeCode(rawInput.code),
+      });
+      return squadView(
+        input.guestId,
+        completedSquad(input.code, input.guestId),
+      );
+    },
+
+    async setStartingXi(rawInput) {
+      const input = setStartingXiInputSchema.parse({
+        ...rawInput,
+        code: normalizeCode(rawInput.code),
+      });
+      const completed = completedSquad(input.code, input.guestId);
+      if (isXiLocked(completed.round)) {
+        throw new XiLockedError(input.code);
+      }
+
+      const selection = {
+        playerIds: input.playerIds,
+        captainId: input.captainId,
+        viceCaptainId: input.viceCaptainId,
+      };
+      const block = startingXiBlock(completed.players, selection);
+      if (block !== null) {
+        throw new XiBlockedError(block);
+      }
+      completed.choices.startingXi = startingXiSchema.parse(selection);
+      return squadView(input.guestId, completed);
+    },
+
+    async substitute(rawInput) {
+      const input = substituteInputSchema.parse({
+        ...rawInput,
+        code: normalizeCode(rawInput.code),
+      });
+      const completed = completedSquad(input.code, input.guestId);
+      const { choices } = completed;
+      const block = substitutionBlock({
+        squad: completed.players,
+        startingXi: choices.startingXi,
+        substitutionUsed: choices.substitutionUsed,
+        round: completed.round,
+        outPlayerId: input.outPlayerId,
+        inPlayerId: input.inPlayerId,
+      });
+      if (block !== null) {
+        throw new SubstitutionBlockedError(block);
+      }
+
+      // The block check above passed, so the XI exists and holds the outgoing player.
+      const xi = choices.startingXi;
+      if (xi) {
+        choices.startingXi = startingXiSchema.parse({
+          ...xi,
+          playerIds: xi.playerIds.map((id) =>
+            id === input.outPlayerId ? input.inPlayerId : id,
+          ),
+        });
+      }
+      choices.substitutionUsed = true;
+      return squadView(input.guestId, completed);
     },
   };
 }

@@ -10,6 +10,7 @@ import { Button } from "../Button/Button";
 import { ErrorBanner } from "../ErrorBanner/ErrorBanner";
 import { FranchiseGrid } from "../FranchiseGrid/FranchiseGrid";
 import { Input } from "../Input/Input";
+import { SquadPanel } from "../SquadPanel/SquadPanel";
 import { styles } from "./LobbyView.styles";
 import type { LobbyViewProps } from "./LobbyView.types";
 
@@ -18,7 +19,8 @@ import type { LobbyViewProps } from "./LobbyView.types";
  * share link, owners, and the franchise grid, with a start control for owners.
  * A guest who has not joined sees the join form instead of the grid, and a full
  * lobby says so rather than offering a form that would fail. Once the auction
- * has started, the auction panel takes the place of the grid and the form.
+ * has started, the auction panel takes the place of the grid and the form. Once
+ * the auction has finished, an owner also sees the squad panel, to pick the XI.
  *
  * @param props - The lobby, the viewing guest, the share link, and the actions.
  * @returns The lobby's sections inside the page's `<main>`.
@@ -155,6 +157,10 @@ export function LobbyView({
           </Button>
         </form>
       )}
+
+      {lobby.auctionStatus === "complete" && isOwner ? (
+        <SquadPanel code={lobby.code} />
+      ) : null}
     </div>
   );
 }

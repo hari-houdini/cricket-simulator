@@ -1,5 +1,6 @@
 import { ZodError } from "zod";
 
+import { MIN_BOWLING_OPTIONS } from "../const/squad.const";
 import type { BidBlock } from "./auction-rules";
 import {
   AuctionAlreadyStartedError,
@@ -12,7 +13,12 @@ import {
   LobbyFullError,
   LobbyNotFoundError,
   NotAnOwnerError,
+  SquadNotReadyError,
+  SubstitutionBlockedError,
+  XiBlockedError,
+  XiLockedError,
 } from "./game-api.errors";
+import type { SubstitutionBlock, XiBlock } from "./squad-rules";
 
 /** What to tell the guest for each reason a bid is refused. */
 const BID_BLOCK_MESSAGES = {
@@ -34,6 +40,69 @@ const BID_BLOCK_MESSAGES = {
  */
 export function describeBidBlock(reason: BidBlock): string {
   return BID_BLOCK_MESSAGES[reason];
+}
+
+/** What to tell the guest for each reason a starting XI is refused. */
+const XI_BLOCK_MESSAGES = {
+  "wrong-size": "Pick exactly 11 players for your starting XI.",
+  duplicate: "Each player can appear in the XI only once.",
+  "not-in-squad": "Only players from your squad can play in the XI.",
+  "captain-not-in-xi": "Choose a captain from your starting XI.",
+  "vice-captain-not-in-xi": "Choose a vice-captain from your starting XI.",
+  "same-captain-and-vice-captain":
+    "The captain and vice-captain must be different players.",
+  "no-wicket-keeper": "Your starting XI needs one wicket-keeper.",
+  "too-many-wicket-keepers":
+    "Your starting XI can have only one wicket-keeper.",
+  "too-few-bowling-options": `Your starting XI needs at least ${MIN_BOWLING_OPTIONS} bowling options: bowlers and bowling all-rounders.`,
+} as const satisfies Record<XiBlock, string>;
+
+/** What to tell the guest for each reason a substitution is refused, other than an XI rule. */
+const SUBSTITUTION_BLOCK_MESSAGES = {
+  "not-yet-played": "Substitutions open after the first match.",
+  "already-used": "You have already used your free substitution this season.",
+  "no-starting-xi": "Save your starting XI before you make a substitution.",
+  "out-not-in-xi": "Pick a player from your starting XI to take off.",
+  "captain-or-vice-captain":
+    "Your captain and vice-captain cannot be substituted out.",
+  "in-not-in-squad": "Pick a player from your squad to bring on.",
+  "in-already-in-xi": "That player is already in your starting XI.",
+} as const satisfies Record<Exclude<SubstitutionBlock, XiBlock>, string>;
+
+/**
+ * Whether a substitution refusal is really a starting-XI rule, which the swap
+ * would break, rather than a rule about the swap itself.
+ *
+ * @param reason - The reason a substitution was refused.
+ * @returns True when the reason is one of the XI rules.
+ */
+function isXiBlock(reason: SubstitutionBlock): reason is XiBlock {
+  return reason in XI_BLOCK_MESSAGES;
+}
+
+/**
+ * Says why a starting XI is not allowed, in words the guest can act on. The
+ * picker shows it while the guest is still choosing.
+ *
+ * @param reason - The reason from the squad rules.
+ * @returns A short sentence.
+ */
+export function describeXiBlock(reason: XiBlock): string {
+  return XI_BLOCK_MESSAGES[reason];
+}
+
+/**
+ * Says why a substitution is not allowed. A refusal that comes from an XI rule
+ * names that rule, so the guest knows what the swap would break.
+ *
+ * @param reason - The reason from the squad rules.
+ * @returns A short sentence.
+ */
+export function describeSubstitutionBlock(reason: SubstitutionBlock): string {
+  if (isXiBlock(reason)) {
+    return `That swap would leave an illegal XI. ${XI_BLOCK_MESSAGES[reason]}`;
+  }
+  return SUBSTITUTION_BLOCK_MESSAGES[reason];
 }
 
 /**
@@ -75,6 +144,18 @@ export function describeApiError(error: unknown): string {
   }
   if (error instanceof BidBlockedError) {
     return describeBidBlock(error.reason);
+  }
+  if (error instanceof SquadNotReadyError) {
+    return "The squad is ready once every owner has finished the auction.";
+  }
+  if (error instanceof XiLockedError) {
+    return "Your starting XI is locked for the season, since the first match has been played.";
+  }
+  if (error instanceof XiBlockedError) {
+    return describeXiBlock(error.reason);
+  }
+  if (error instanceof SubstitutionBlockedError) {
+    return describeSubstitutionBlock(error.reason);
   }
   if (error instanceof ZodError) {
     return "Check what you entered and try again.";

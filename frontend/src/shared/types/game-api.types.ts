@@ -9,6 +9,12 @@ import type {
   JoinLobbyInput,
   Lobby,
 } from "./lobby.types";
+import type {
+  GetSquadInput,
+  SetStartingXiInput,
+  Squad,
+  SubstituteInput,
+} from "./squad.types";
 
 /**
  * The game API the UI depends on. Components and hooks use this type only, so
@@ -46,4 +52,21 @@ export type GameApi = {
    * bid. Rejects with `BidBlockedError` when the bid is refused.
    */
   readonly placeBid: (input: PlaceBidInput) => Promise<Auction>;
+  /**
+   * Reads one owner's squad. Rejects with `SquadNotReadyError` until the
+   * auction has finished, and with `NotAnOwnerError` for a guest who holds no
+   * squad in the lobby.
+   */
+  readonly getSquad: (input: GetSquadInput) => Promise<Squad>;
+  /**
+   * Saves the owner's starting XI. Rejects with `XiLockedError` once the first
+   * match has been played, and with `XiBlockedError` when the XI breaks a rule.
+   */
+  readonly setStartingXi: (input: SetStartingXiInput) => Promise<Squad>;
+  /**
+   * Makes the owner's one free substitution. Rejects with
+   * `SubstitutionBlockedError` before the first match, after the swap is used,
+   * or when the swap would leave an illegal XI.
+   */
+  readonly substitute: (input: SubstituteInput) => Promise<Squad>;
 };

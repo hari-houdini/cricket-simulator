@@ -17,6 +17,13 @@ import { styles } from "./LobbyScreen.styles";
 import type { LobbyScreenProps } from "./LobbyScreen.types";
 
 /**
+ * How often the lobby is re-read while its auction runs. The auction panel reads
+ * the auction itself, but the lobby decides whether the squad panel shows, so
+ * the lobby must move on to `complete` without a reload.
+ */
+const LOBBY_POLL_MS = 1000;
+
+/**
  * What the screen is showing: loading, a lobby, no lobby at this code, or a
  * failure that the guest can read.
  */
@@ -71,6 +78,32 @@ export function LobbyScreen({ code }: LobbyScreenProps) {
       cancelled = true;
     };
   }, [api, code, guestId]);
+
+  const auctionRunning =
+    state.status === "ready" && state.lobby.auctionStatus === "running";
+
+  // Re-read the lobby while the auction runs, so it notices when the auction ends.
+  // A failed read is skipped; the next tick tries again.
+  useEffect(() => {
+    if (!auctionRunning) {
+      return;
+    }
+    let cancelled = false;
+    const id = window.setInterval(() => {
+      api
+        .getLobby(code)
+        .then((lobby) => {
+          if (!cancelled) {
+            setState({ status: "ready", lobby });
+          }
+        })
+        .catch(() => undefined);
+    }, LOBBY_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [api, code, auctionRunning]);
 
   /**
    * Runs an action that returns the lobby, and shows the result or the error.

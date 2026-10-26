@@ -23,5 +23,8 @@ export function createHttpGameApi(): GameApi {
     startAuction: notImplemented,
     getAuction: notImplemented,
     placeBid: notImplemented,
+    getSquad: notImplemented,
+    setStartingXi: notImplemented,
+    substitute: notImplemented,
   };
 }

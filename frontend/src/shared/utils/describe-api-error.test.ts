@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { lobbyCodeSchema } from "../types/lobby.schema";
-import { describeApiError } from "./describe-api-error";
+import {
+  describeApiError,
+  describeSubstitutionBlock,
+  describeXiBlock,
+} from "./describe-api-error";
 import {
   AuctionAlreadyStartedError,
   AuctionNotStartedError,
@@ -12,7 +16,34 @@ import {
   LobbyFullError,
   LobbyNotFoundError,
   NotAnOwnerError,
+  SquadNotReadyError,
+  SubstitutionBlockedError,
+  XiBlockedError,
+  XiLockedError,
 } from "./game-api.errors";
+import type { SubstitutionBlock, XiBlock } from "./squad-rules";
+
+const XI_REASONS: readonly XiBlock[] = [
+  "wrong-size",
+  "duplicate",
+  "not-in-squad",
+  "captain-not-in-xi",
+  "vice-captain-not-in-xi",
+  "same-captain-and-vice-captain",
+  "no-wicket-keeper",
+  "too-many-wicket-keepers",
+  "too-few-bowling-options",
+];
+
+const SUBSTITUTION_REASONS: readonly SubstitutionBlock[] = [
+  "not-yet-played",
+  "already-used",
+  "no-starting-xi",
+  "out-not-in-xi",
+  "captain-or-vice-captain",
+  "in-not-in-squad",
+  "in-already-in-xi",
+];
 
 describe("describeApiError", () => {
   it("names the missing lobby and says how to recover", () => {
@@ -110,5 +141,57 @@ describe("describeApiError", () => {
     expect(describeApiError(new Error("socket closed"))).toBe(
       "Something went wrong. Try again.",
     );
+  });
+
+  it("says the squad is not ready until the auction has finished", () => {
+    expect(describeApiError(new SquadNotReadyError("ABC123"))).toContain(
+      "once every owner has finished the auction",
+    );
+  });
+
+  it("says the starting XI is locked once the first match has been played", () => {
+    expect(describeApiError(new XiLockedError("ABC123"))).toContain("locked");
+  });
+
+  it("explains a refused starting XI with the rule it broke", () => {
+    for (const reason of XI_REASONS) {
+      expect(describeApiError(new XiBlockedError(reason))).toBe(
+        describeXiBlock(reason),
+      );
+    }
+  });
+
+  it("explains a refused substitution with the reason it was refused", () => {
+    for (const reason of SUBSTITUTION_REASONS) {
+      expect(describeApiError(new SubstitutionBlockedError(reason))).toBe(
+        describeSubstitutionBlock(reason),
+      );
+    }
+  });
+});
+
+describe("describeXiBlock", () => {
+  it("gives a specific message for every XI rule, with the bowling minimum filled in", () => {
+    for (const reason of XI_REASONS) {
+      expect(describeXiBlock(reason).length).toBeGreaterThan(0);
+    }
+    expect(describeXiBlock("too-few-bowling-options")).toContain("4 bowling");
+  });
+});
+
+describe("describeSubstitutionBlock", () => {
+  it("names the XI rule a swap would break", () => {
+    expect(describeSubstitutionBlock("no-wicket-keeper")).toContain(
+      "illegal XI",
+    );
+    expect(describeSubstitutionBlock("no-wicket-keeper")).toContain(
+      describeXiBlock("no-wicket-keeper"),
+    );
+  });
+
+  it("gives a message for every swap rule that is not an XI rule", () => {
+    for (const reason of SUBSTITUTION_REASONS) {
+      expect(describeSubstitutionBlock(reason)).not.toContain("illegal XI");
+    }
   });
 });
