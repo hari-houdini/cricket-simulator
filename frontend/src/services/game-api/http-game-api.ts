@@ -1,4 +1,4 @@
-import type { GameApi } from "./game-api.types";
+import type { GameApi } from "../../shared/types/game-api.types";
 
 const NOT_IMPLEMENTED_MESSAGE =
   'The HTTP game API is not implemented yet. Set NEXT_PUBLIC_API_MODE to "mock" until the Rust backend exists.';
@@ -19,5 +19,6 @@ export function createHttpGameApi(): GameApi {
     createLobby: notImplemented,
     getLobby: notImplemented,
     joinLobby: notImplemented,
+    claimFranchise: notImplemented,
   };
 }

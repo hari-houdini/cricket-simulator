@@ -1,15 +1,25 @@
 import { LOBBY_CODE_LENGTH, MAX_OWNERS } from "../../shared/const/lobby.const";
 import { SEED_VERSION } from "../../shared/const/seed.const";
+import { TEAMS } from "../../shared/const/teams.const";
+import type { GameApi } from "../../shared/types/game-api.types";
 import {
+  claimFranchiseInputSchema,
   createLobbyInputSchema,
   joinLobbyInputSchema,
   lobbyCodeSchema,
   lobbySchema,
 } from "../../shared/types/lobby.schema";
 import type { Lobby, Owner } from "../../shared/types/lobby.types";
+import { franchiseClaimBlock } from "../../shared/utils/franchise-claim";
+import {
+  FranchiseClaimClosedError,
+  FranchiseNotFoundError,
+  FranchiseTakenError,
+  LobbyFullError,
+  LobbyNotFoundError,
+  NotAnOwnerError,
+} from "../../shared/utils/game-api.errors";
 import { createSeededRandom } from "../../shared/utils/seeded-random";
-import { LobbyFullError, LobbyNotFoundError } from "./game-api.errors";
-import type { GameApi } from "./game-api.types";
 
 const CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -46,7 +56,19 @@ function freshSeed(): string {
  * @returns A {@link GameApi} backed by memory.
  */
 export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
-  const random = createSeededRandom(options.seed ?? freshSeed());
+  // Built on first use, not here. Building it draws a fresh seed when none is
+  // given, and Next forbids reading Math.random while it prerenders the app.
+  let random: (() => number) | undefined;
+
+  /**
+   * Returns the next value from the lobby code generator.
+   *
+   * @returns A number in [0, 1).
+   */
+  function nextRandom(): number {
+    random ??= createSeededRandom(options.seed ?? freshSeed());
+    return random();
+  }
   const lobbiesByCode = new Map<string, Lobby>();
   let sequence = 0;
 
@@ -62,7 +84,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       code = "";
       for (let index = 0; index < LOBBY_CODE_LENGTH; index += 1) {
         code += CODE_ALPHABET.charAt(
-          Math.floor(random() * CODE_ALPHABET.length),
+          Math.floor(nextRandom() * CODE_ALPHABET.length),
         );
       }
     } while (lobbiesByCode.has(code));
@@ -103,6 +125,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       const owner: Owner = {
         guestId: input.guestId,
         displayName: input.displayName,
+        franchiseId: null,
       };
       const code = drawUnusedCode();
       sequence += 1;
@@ -144,7 +167,41 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       lobby.owners.push({
         guestId: input.guestId,
         displayName: input.displayName,
+        franchiseId: null,
       });
+      return lobbySchema.parse(lobby);
+    },
+
+    async claimFranchise(rawInput) {
+      const input = claimFranchiseInputSchema.parse({
+        ...rawInput,
+        code: normalizeCode(rawInput.code),
+      });
+      const lobby = findLobby(input.code);
+
+      if (!TEAMS.some((team) => team.id === input.franchiseId)) {
+        throw new FranchiseNotFoundError(input.franchiseId);
+      }
+
+      const block = franchiseClaimBlock(
+        lobby,
+        input.guestId,
+        input.franchiseId,
+      );
+      if (block === "closed") {
+        throw new FranchiseClaimClosedError();
+      }
+      if (block === "not-an-owner") {
+        throw new NotAnOwnerError(input.guestId);
+      }
+      if (block === "taken") {
+        throw new FranchiseTakenError(input.franchiseId);
+      }
+
+      const owner = lobby.owners.find((item) => item.guestId === input.guestId);
+      if (owner) {
+        owner.franchiseId = input.franchiseId;
+      }
       return lobbySchema.parse(lobby);
     },
   };

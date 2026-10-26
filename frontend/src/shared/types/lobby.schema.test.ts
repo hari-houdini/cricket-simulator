@@ -6,7 +6,7 @@ import {
   lobbySchema,
 } from "./lobby.schema";
 
-const owner = { guestId: "guest-1", displayName: "Asha" };
+const owner = { guestId: "guest-1", displayName: "Asha", franchiseId: null };
 
 const validLobby = {
   id: "lobby-1",
@@ -27,6 +27,7 @@ describe("lobbySchema", () => {
     const owners = Array.from({ length: 11 }, (_, index) => ({
       guestId: `guest-${index}`,
       displayName: `Owner ${index}`,
+      franchiseId: null,
     }));
 
     expect(() => lobbySchema.parse({ ...validLobby, owners })).toThrow();

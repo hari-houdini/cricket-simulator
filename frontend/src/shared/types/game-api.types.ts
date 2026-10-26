@@ -1,16 +1,18 @@
 import type {
+  ClaimFranchiseInput,
   CreateLobbyInput,
   JoinLobbyInput,
   Lobby,
-} from "../../shared/types/lobby.types";
+} from "./lobby.types";
 
 /**
  * The game API the UI depends on. Components and hooks use this type only, so
  * the mock and the Rust backend are interchangeable behind one switch
- * (`NEXT_PUBLIC_API_MODE`, see {@link createGameApi}).
+ * (`NEXT_PUBLIC_API_MODE`, see `createGameApi` in `services/game-api/`).
  *
- * Every method rejects with a typed error from `game-api.errors.ts` when the
- * lobby cannot be found or joined, and with a `ZodError` when input is invalid.
+ * Every method rejects with a typed error from `shared/utils/game-api.errors.ts`
+ * when the lobby cannot be found, joined or claimed, and with a `ZodError` when
+ * input is invalid.
  */
 export type GameApi = {
   /** Creates a lobby with the caller as its first owner. */
@@ -19,4 +21,9 @@ export type GameApi = {
   readonly getLobby: (code: string) => Promise<Lobby>;
   /** Adds the caller as an owner. Joining again with the same guest ID is a no-op. */
   readonly joinLobby: (input: JoinLobbyInput) => Promise<Lobby>;
+  /**
+   * Gives the caller's owner one free franchise. Claiming the franchise they
+   * already hold is a no-op. Switching to another free franchise replaces it.
+   */
+  readonly claimFranchise: (input: ClaimFranchiseInput) => Promise<Lobby>;
 };

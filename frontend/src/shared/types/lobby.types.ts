@@ -1,6 +1,7 @@
 import type { z } from "zod";
 
 import type {
+  claimFranchiseInputSchema,
   createLobbyInputSchema,
   joinLobbyInputSchema,
   lobbyPhaseSchema,
@@ -25,3 +26,6 @@ export type CreateLobbyInput = z.infer<typeof createLobbyInputSchema>;
 
 /** Input for joining a lobby, derived from {@link joinLobbyInputSchema}. */
 export type JoinLobbyInput = z.infer<typeof joinLobbyInputSchema>;
+
+/** Input for claiming a franchise, derived from {@link claimFranchiseInputSchema}. */
+export type ClaimFranchiseInput = z.infer<typeof claimFranchiseInputSchema>;

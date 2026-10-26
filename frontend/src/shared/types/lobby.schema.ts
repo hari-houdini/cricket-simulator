@@ -38,10 +38,21 @@ export const guestIdSchema = string().min(1).max(64);
  */
 export const displayNameSchema = string().trim().min(1).max(24);
 
-/** A guest who owns a franchise in a lobby. */
+/**
+ * The id of an IPL franchise, such as `"csk"`. It is checked against the
+ * franchise seed when a franchise is claimed, not here, so the schema does not
+ * depend on the constants.
+ */
+export const franchiseIdSchema = string().regex(/^[a-z]+$/);
+
+/**
+ * A guest who owns a franchise in a lobby. `franchiseId` is null until the
+ * owner claims one, since owners join first and pick a franchise second.
+ */
 export const ownerSchema = object({
   guestId: guestIdSchema,
   displayName: displayNameSchema,
+  franchiseId: franchiseIdSchema.nullable(),
 });
 
 /**
@@ -75,4 +86,11 @@ export const joinLobbyInputSchema = object({
   code: lobbyCodeSchema,
   guestId: guestIdSchema,
   displayName: displayNameSchema,
+});
+
+/** Input for an owner claiming a franchise in a lobby. */
+export const claimFranchiseInputSchema = object({
+  code: lobbyCodeSchema,
+  guestId: guestIdSchema,
+  franchiseId: franchiseIdSchema,
 });

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { LobbyFullError, LobbyNotFoundError } from "./game-api.errors";
+import {
+  FranchiseNotFoundError,
+  FranchiseTakenError,
+  LobbyFullError,
+  LobbyNotFoundError,
+  NotAnOwnerError,
+} from "../../shared/utils/game-api.errors";
 import { createMockGameApi } from "./mock-game-api";
 
 const creator = { guestId: "guest-1", displayName: "Asha" };
@@ -14,7 +20,7 @@ describe("createMockGameApi", () => {
     expect(lobby.name).toBe("Sunday League");
     expect(lobby.phase).toBe("auction");
     expect(lobby.round).toBe(0);
-    expect(lobby.owners).toEqual([creator]);
+    expect(lobby.owners).toEqual([{ ...creator, franchiseId: null }]);
     expect(lobby.code).toMatch(/^[A-Z0-9]{6}$/);
   });
 
@@ -131,10 +137,125 @@ describe("createMockGameApi", () => {
   it("returns copies, so changing a result does not change the stored lobby", async () => {
     const api = createMockGameApi();
     const created = await api.createLobby({ name: "Copy", ...creator });
-    created.owners.push({ guestId: "intruder", displayName: "Intruder" });
+    created.owners.push({
+      guestId: "intruder",
+      displayName: "Intruder",
+      franchiseId: null,
+    });
 
     const fetched = await api.getLobby(created.code);
 
     expect(fetched.owners).toHaveLength(1);
+  });
+
+  it("lets an owner claim a free franchise", async () => {
+    const api = createMockGameApi();
+    const created = await api.createLobby({ name: "Claim", ...creator });
+
+    const claimed = await api.claimFranchise({
+      code: created.code,
+      guestId: creator.guestId,
+      franchiseId: "csk",
+    });
+
+    expect(claimed.owners[0]?.franchiseId).toBe("csk");
+  });
+
+  it("rejects a claim on a franchise another owner holds with FranchiseTakenError", async () => {
+    const api = createMockGameApi();
+    const created = await api.createLobby({ name: "Taken", ...creator });
+    await api.claimFranchise({
+      code: created.code,
+      guestId: creator.guestId,
+      franchiseId: "mi",
+    });
+    await api.joinLobby({
+      code: created.code,
+      guestId: "guest-2",
+      displayName: "Ravi",
+    });
+
+    await expect(
+      api.claimFranchise({
+        code: created.code,
+        guestId: "guest-2",
+        franchiseId: "mi",
+      }),
+    ).rejects.toBeInstanceOf(FranchiseTakenError);
+  });
+
+  it("lets an owner switch to another free franchise, releasing the first", async () => {
+    const api = createMockGameApi();
+    const created = await api.createLobby({ name: "Switch", ...creator });
+    await api.claimFranchise({
+      code: created.code,
+      guestId: creator.guestId,
+      franchiseId: "mi",
+    });
+
+    const switched = await api.claimFranchise({
+      code: created.code,
+      guestId: creator.guestId,
+      franchiseId: "rcb",
+    });
+
+    expect(switched.owners).toEqual([{ ...creator, franchiseId: "rcb" }]);
+  });
+
+  it("rejects a claim from a guest who has not joined with NotAnOwnerError", async () => {
+    const api = createMockGameApi();
+    const created = await api.createLobby({ name: "Outsider", ...creator });
+
+    await expect(
+      api.claimFranchise({
+        code: created.code,
+        guestId: "stranger",
+        franchiseId: "kkr",
+      }),
+    ).rejects.toBeInstanceOf(NotAnOwnerError);
+  });
+
+  it("rejects a franchise id outside the seed with FranchiseNotFoundError", async () => {
+    const api = createMockGameApi();
+    const created = await api.createLobby({ name: "Unknown", ...creator });
+
+    await expect(
+      api.claimFranchise({
+        code: created.code,
+        guestId: creator.guestId,
+        franchiseId: "bengaluru",
+      }),
+    ).rejects.toBeInstanceOf(FranchiseNotFoundError);
+  });
+
+  it("runs a lobby through create, join, claim and a taken refusal", async () => {
+    const api = createMockGameApi({ seed: "workflow" });
+    const created = await api.createLobby({ name: "Flow", ...creator });
+    const joined = await api.joinLobby({
+      code: created.code.toLowerCase(),
+      guestId: "guest-2",
+      displayName: "Ravi",
+    });
+    await api.claimFranchise({
+      code: joined.code,
+      guestId: creator.guestId,
+      franchiseId: "srh",
+    });
+
+    const view = await api.getLobby(created.code);
+
+    expect(
+      view.owners.map((owner) => [owner.displayName, owner.franchiseId]),
+    ).toEqual([
+      ["Asha", "srh"],
+      ["Ravi", null],
+    ]);
+    await expect(
+      api.claimFranchise({
+        code: created.code,
+        guestId: "guest-2",
+        franchiseId: "srh",
+      }),
+    ).rejects.toBeInstanceOf(FranchiseTakenError);
   });
 });

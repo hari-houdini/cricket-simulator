@@ -1,4 +1,4 @@
-import type { GameApi } from "./game-api.types";
+import type { GameApi } from "../../shared/types/game-api.types";
 import { createHttpGameApi } from "./http-game-api";
 import { createMockGameApi } from "./mock-game-api";
 

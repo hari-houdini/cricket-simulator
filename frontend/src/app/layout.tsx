@@ -4,6 +4,7 @@ import { Bodoni_Moda, DM_Sans } from "next/font/google";
 import Link from "next/link";
 
 import "./globals.css";
+import { AppProviders } from "./AppProviders";
 import { styles } from "./layout.styles";
 
 const bodoniModa = Bodoni_Moda({
@@ -50,29 +51,34 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       ].join(" ")}
     >
       <body {...stylex.props(styles.body)}>
-        <a href="#main" {...stylex.props(styles.skipLink)}>
-          Skip to content
-        </a>
-        <header {...stylex.props(styles.header)}>
-          <Link href="/" {...stylex.props(styles.brandLink, styles.focusRing)}>
-            <span {...stylex.props(styles.brand)}>IPL Cricket Simulator</span>
-          </Link>
-          <nav aria-label="Primary">
-            <ul {...stylex.props(styles.navList)}>
-              <li>
-                <Link
-                  href="/"
-                  {...stylex.props(styles.navLink, styles.focusRing)}
-                >
-                  Home
-                </Link>
-              </li>
-            </ul>
-          </nav>
-        </header>
-        <main id="main" {...stylex.props(styles.main)}>
-          {children}
-        </main>
+        <AppProviders>
+          <a href="#main" {...stylex.props(styles.skipLink)}>
+            Skip to content
+          </a>
+          <header {...stylex.props(styles.header)}>
+            <Link
+              href="/"
+              {...stylex.props(styles.brandLink, styles.focusRing)}
+            >
+              <span {...stylex.props(styles.brand)}>IPL Cricket Simulator</span>
+            </Link>
+            <nav aria-label="Primary">
+              <ul {...stylex.props(styles.navList)}>
+                <li>
+                  <Link
+                    href="/"
+                    {...stylex.props(styles.navLink, styles.focusRing)}
+                  >
+                    Home
+                  </Link>
+                </li>
+              </ul>
+            </nav>
+          </header>
+          <main id="main" {...stylex.props(styles.main)}>
+            {children}
+          </main>
+        </AppProviders>
       </body>
     </html>
   );
