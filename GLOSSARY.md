@@ -34,6 +34,14 @@ _Avoid_: Cricketer (in code), athlete
 One of Batter, Bowler, All-rounder or Wicket-keeper.
 _Avoid_: Position, type
 
+**Category**:
+An auction tier for a player: Marquee, Capped or Uncapped. A player's base price follows from its category.
+_Avoid_: Tier, class
+
+**Player pool**:
+The master list of real IPL players that the auction draws from. A lobby copies the pool when it is created.
+_Avoid_: Player list, database
+
 **Squad**:
 The 15 players a franchise drafts at auction.
 _Avoid_: Team (see Franchise), roster
@@ -141,6 +149,12 @@ _Avoid_: Highlight, event
 **Man of the Match**:
 The player with the most fantasy points in a match.
 _Avoid_: MoM (in UI copy only)
+
+## Data
+
+**Seed file**:
+A versioned data file in `data/seeds/` that holds the franchises, the player pool or the league template. A lobby records the seed version it was created with, so its season can be replayed.
+_Avoid_: Fixture, dump
 
 ## Fair play
 

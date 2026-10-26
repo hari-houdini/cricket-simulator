@@ -30,6 +30,15 @@ export default defineConfig({
           },
         },
       },
+      {
+        // Plain logic tests (utilities, services) run in Node, with no browser.
+        extends: true,
+        test: {
+          name: "unit",
+          environment: "node",
+          include: ["src/**/*.test.ts"],
+        },
+      },
     ],
   },
 });

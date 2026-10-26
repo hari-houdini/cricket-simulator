@@ -1,0 +1,408 @@
+{
+  "schemaVersion": 1,
+  "seedVersion": "1.1.0",
+  "dataAsOf": "2026-10-26",
+  "source": "League template: 14 rounds of 5 matches, 70 matches. Each pair meets once or twice; each team plays 14 matches and hosts 7. Playoff slots follow game-design.md section 5.",
+  "league": [
+    {
+      "round": 1,
+      "homeFranchiseId": "csk",
+      "awayFranchiseId": "pbks"
+    },
+    {
+      "round": 1,
+      "homeFranchiseId": "mi",
+      "awayFranchiseId": "gt"
+    },
+    {
+      "round": 1,
+      "homeFranchiseId": "rcb",
+      "awayFranchiseId": "lsg"
+    },
+    {
+      "round": 1,
+      "homeFranchiseId": "kkr",
+      "awayFranchiseId": "srh"
+    },
+    {
+      "round": 1,
+      "homeFranchiseId": "dc",
+      "awayFranchiseId": "rr"
+    },
+    {
+      "round": 2,
+      "homeFranchiseId": "csk",
+      "awayFranchiseId": "gt"
+    },
+    {
+      "round": 2,
+      "homeFranchiseId": "pbks",
+      "awayFranchiseId": "lsg"
+    },
+    {
+      "round": 2,
+      "homeFranchiseId": "mi",
+      "awayFranchiseId": "srh"
+    },
+    {
+      "round": 2,
+      "homeFranchiseId": "rcb",
+      "awayFranchiseId": "rr"
+    },
+    {
+      "round": 2,
+      "homeFranchiseId": "kkr",
+      "awayFranchiseId": "dc"
+    },
+    {
+      "round": 3,
+      "homeFranchiseId": "csk",
+      "awayFranchiseId": "lsg"
+    },
+    {
+      "round": 3,
+      "homeFranchiseId": "gt",
+      "awayFranchiseId": "srh"
+    },
+    {
+      "round": 3,
+      "homeFranchiseId": "pbks",
+      "awayFranchiseId": "rr"
+    },
+    {
+      "round": 3,
+      "homeFranchiseId": "mi",
+      "awayFranchiseId": "dc"
+    },
+    {
+      "round": 3,
+      "homeFranchiseId": "rcb",
+      "awayFranchiseId": "kkr"
+    },
+    {
+      "round": 4,
+      "homeFranchiseId": "csk",
+      "awayFranchiseId": "srh"
+    },
+    {
+      "round": 4,
+      "homeFranchiseId": "lsg",
+      "awayFranchiseId": "rr"
+    },
+    {
+      "round": 4,
+      "homeFranchiseId": "gt",
+      "awayFranchiseId": "dc"
+    },
+    {
+      "round": 4,
+      "homeFranchiseId": "pbks",
+      "awayFranchiseId": "kkr"
+    },
+    {
+      "round": 4,
+      "homeFranchiseId": "mi",
+      "awayFranchiseId": "rcb"
+    },
+    {
+      "round": 5,
+      "homeFranchiseId": "csk",
+      "awayFranchiseId": "rr"
+    },
+    {
+      "round": 5,
+      "homeFranchiseId": "srh",
+      "awayFranchiseId": "dc"
+    },
+    {
+      "round": 5,
+      "homeFranchiseId": "lsg",
+      "awayFranchiseId": "kkr"
+    },
+    {
+      "round": 5,
+      "homeFranchiseId": "gt",
+      "awayFranchiseId": "rcb"
+    },
+    {
+      "round": 5,
+      "homeFranchiseId": "pbks",
+      "awayFranchiseId": "mi"
+    },
+    {
+      "round": 6,
+      "homeFranchiseId": "csk",
+      "awayFranchiseId": "dc"
+    },
+    {
+      "round": 6,
+      "homeFranchiseId": "rr",
+      "awayFranchiseId": "kkr"
+    },
+    {
+      "round": 6,
+      "homeFranchiseId": "rcb",
+      "awayFranchiseId": "srh"
+    },
+    {
+      "round": 6,
+      "homeFranchiseId": "lsg",
+      "awayFranchiseId": "mi"
+    },
+    {
+      "round": 6,
+      "homeFranchiseId": "pbks",
+      "awayFranchiseId": "gt"
+    },
+    {
+      "round": 7,
+      "homeFranchiseId": "kkr",
+      "awayFranchiseId": "csk"
+    },
+    {
+      "round": 7,
+      "homeFranchiseId": "dc",
+      "awayFranchiseId": "rcb"
+    },
+    {
+      "round": 7,
+      "homeFranchiseId": "mi",
+      "awayFranchiseId": "rr"
+    },
+    {
+      "round": 7,
+      "homeFranchiseId": "srh",
+      "awayFranchiseId": "pbks"
+    },
+    {
+      "round": 7,
+      "homeFranchiseId": "gt",
+      "awayFranchiseId": "lsg"
+    },
+    {
+      "round": 8,
+      "homeFranchiseId": "csk",
+      "awayFranchiseId": "rcb"
+    },
+    {
+      "round": 8,
+      "homeFranchiseId": "kkr",
+      "awayFranchiseId": "mi"
+    },
+    {
+      "round": 8,
+      "homeFranchiseId": "pbks",
+      "awayFranchiseId": "dc"
+    },
+    {
+      "round": 8,
+      "homeFranchiseId": "rr",
+      "awayFranchiseId": "gt"
+    },
+    {
+      "round": 8,
+      "homeFranchiseId": "lsg",
+      "awayFranchiseId": "srh"
+    },
+    {
+      "round": 9,
+      "homeFranchiseId": "mi",
+      "awayFranchiseId": "csk"
+    },
+    {
+      "round": 9,
+      "homeFranchiseId": "rcb",
+      "awayFranchiseId": "pbks"
+    },
+    {
+      "round": 9,
+      "homeFranchiseId": "gt",
+      "awayFranchiseId": "kkr"
+    },
+    {
+      "round": 9,
+      "homeFranchiseId": "dc",
+      "awayFranchiseId": "lsg"
+    },
+    {
+      "round": 9,
+      "homeFranchiseId": "srh",
+      "awayFranchiseId": "rr"
+    },
+    {
+      "round": 10,
+      "homeFranchiseId": "pbks",
+      "awayFranchiseId": "csk"
+    },
+    {
+      "round": 10,
+      "homeFranchiseId": "gt",
+      "awayFranchiseId": "mi"
+    },
+    {
+      "round": 10,
+      "homeFranchiseId": "lsg",
+      "awayFranchiseId": "rcb"
+    },
+    {
+      "round": 10,
+      "homeFranchiseId": "srh",
+      "awayFranchiseId": "kkr"
+    },
+    {
+      "round": 10,
+      "homeFranchiseId": "rr",
+      "awayFranchiseId": "dc"
+    },
+    {
+      "round": 11,
+      "homeFranchiseId": "gt",
+      "awayFranchiseId": "csk"
+    },
+    {
+      "round": 11,
+      "homeFranchiseId": "lsg",
+      "awayFranchiseId": "pbks"
+    },
+    {
+      "round": 11,
+      "homeFranchiseId": "srh",
+      "awayFranchiseId": "mi"
+    },
+    {
+      "round": 11,
+      "homeFranchiseId": "rr",
+      "awayFranchiseId": "rcb"
+    },
+    {
+      "round": 11,
+      "homeFranchiseId": "dc",
+      "awayFranchiseId": "kkr"
+    },
+    {
+      "round": 12,
+      "homeFranchiseId": "lsg",
+      "awayFranchiseId": "csk"
+    },
+    {
+      "round": 12,
+      "homeFranchiseId": "srh",
+      "awayFranchiseId": "gt"
+    },
+    {
+      "round": 12,
+      "homeFranchiseId": "rr",
+      "awayFranchiseId": "pbks"
+    },
+    {
+      "round": 12,
+      "homeFranchiseId": "dc",
+      "awayFranchiseId": "mi"
+    },
+    {
+      "round": 12,
+      "homeFranchiseId": "kkr",
+      "awayFranchiseId": "rcb"
+    },
+    {
+      "round": 13,
+      "homeFranchiseId": "srh",
+      "awayFranchiseId": "csk"
+    },
+    {
+      "round": 13,
+      "homeFranchiseId": "rr",
+      "awayFranchiseId": "lsg"
+    },
+    {
+      "round": 13,
+      "homeFranchiseId": "dc",
+      "awayFranchiseId": "gt"
+    },
+    {
+      "round": 13,
+      "homeFranchiseId": "kkr",
+      "awayFranchiseId": "pbks"
+    },
+    {
+      "round": 13,
+      "homeFranchiseId": "rcb",
+      "awayFranchiseId": "mi"
+    },
+    {
+      "round": 14,
+      "homeFranchiseId": "rr",
+      "awayFranchiseId": "csk"
+    },
+    {
+      "round": 14,
+      "homeFranchiseId": "dc",
+      "awayFranchiseId": "srh"
+    },
+    {
+      "round": 14,
+      "homeFranchiseId": "kkr",
+      "awayFranchiseId": "lsg"
+    },
+    {
+      "round": 14,
+      "homeFranchiseId": "rcb",
+      "awayFranchiseId": "gt"
+    },
+    {
+      "round": 14,
+      "homeFranchiseId": "mi",
+      "awayFranchiseId": "pbks"
+    }
+  ],
+  "playoffs": [
+    {
+      "round": 15,
+      "slot": "qualifier-1",
+      "home": {
+        "kind": "standing",
+        "position": 1
+      },
+      "away": {
+        "kind": "standing",
+        "position": 2
+      }
+    },
+    {
+      "round": 16,
+      "slot": "eliminator",
+      "home": {
+        "kind": "standing",
+        "position": 3
+      },
+      "away": {
+        "kind": "standing",
+        "position": 4
+      }
+    },
+    {
+      "round": 17,
+      "slot": "qualifier-2",
+      "home": {
+        "kind": "loser",
+        "slot": "qualifier-1"
+      },
+      "away": {
+        "kind": "winner",
+        "slot": "eliminator"
+      }
+    },
+    {
+      "round": 18,
+      "slot": "final",
+      "home": {
+        "kind": "winner",
+        "slot": "qualifier-1"
+      },
+      "away": {
+        "kind": "winner",
+        "slot": "qualifier-2"
+      }
+    }
+  ]
+}

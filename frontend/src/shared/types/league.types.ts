@@ -1,0 +1,24 @@
+import type { z } from "zod";
+
+import type {
+  advanceRoundInputSchema,
+  fixtureSchema,
+  leagueSchema,
+  matchScoreSchema,
+  standingSchema,
+} from "./league.schema";
+
+/** The score of a played league match, derived from {@link matchScoreSchema}. */
+export type MatchScore = z.infer<typeof matchScoreSchema>;
+
+/** One league fixture, derived from {@link fixtureSchema}. */
+export type Fixture = z.infer<typeof fixtureSchema>;
+
+/** One row of the league table, derived from {@link standingSchema}. */
+export type Standing = z.infer<typeof standingSchema>;
+
+/** The league view, derived from {@link leagueSchema}. */
+export type League = z.infer<typeof leagueSchema>;
+
+/** Input for playing the next round, derived from {@link advanceRoundInputSchema}. */
+export type AdvanceRoundInput = z.infer<typeof advanceRoundInputSchema>;

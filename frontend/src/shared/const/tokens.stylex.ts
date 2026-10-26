@@ -98,4 +98,20 @@ export const tokens = stylex.defineVars({
   fontSerif: "var(--font-bodoni-moda), serif",
   /** Body font. Loaded by `next/font/google` in the root layout. */
   fontSans: "var(--font-dm-sans), sans-serif",
+  /** Wordmark size in the app header. */
+  fontSizeBrand: "1.25rem",
+  /** Page heading size. */
+  fontSizeHeading: "2rem",
+  /** Bold weight for headings and the wordmark. */
+  fontWeightBold: "700",
+  /** Semibold weight for the skip link. */
+  fontWeightSemibold: "600",
+  /** Maximum width of the app shell's main column. */
+  widthShell: "1024px",
+  /** Hairline rule under the app header. */
+  borderWidthHairline: "1px",
+  /** Width of the keyboard focus ring. */
+  widthFocusRing: "2px",
+  /** Gap between the focus ring and the element it marks. */
+  offsetFocusRing: "2px",
 });
