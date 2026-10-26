@@ -15,6 +15,7 @@ const validLobby = {
   phase: "auction",
   round: 0,
   owners: [owner],
+  seedVersion: "1.0.0",
 };
 
 describe("lobbySchema", () => {

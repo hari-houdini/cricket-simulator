@@ -5,6 +5,7 @@ import {
   LOBBY_CODE_LENGTH,
   MAX_OWNERS,
 } from "../const/lobby.const";
+import { seedVersionSchema } from "./seed.schema";
 
 /**
  * The phases a lobby moves through, in order: the live auction, the league,
@@ -55,6 +56,11 @@ export const lobbySchema = object({
   phase: lobbyPhaseSchema,
   round: number().int().min(0).max(LAST_ROUND),
   owners: array(ownerSchema).max(MAX_OWNERS),
+  /**
+   * The seed data set the lobby was created with. A season replays against this
+   * version, so the lobby never silently picks up later player data.
+   */
+  seedVersion: seedVersionSchema,
 });
 
 /** Input for creating a lobby. The creator becomes its first owner. */

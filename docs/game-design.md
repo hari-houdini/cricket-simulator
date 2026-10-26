@@ -105,7 +105,7 @@ The rule that a previous winner is ineligible is not applied in this game.
 
 This is a **fantasy mechanic**, not a factual claim about any player. It is labelled that way in the UI.
 
-- **Trouble rating**: each player has a seeded value from 0 to 10, set by the project owner from publicly documented on-field incidents only. Players without a seeded value use a base of **2**.
+- **Trouble rating**: each player has a value from 0 to 10. Values come from publicly documented on-field incidents and from widely held public opinion, and no source is recorded for each entry. The owner reviews every non-default entry before publication. Players without an entry use a base of **2**.
 - **Player match score** = 10 minus (trouble rating × a seeded random factor between 0.5 and 1.5), clamped to 0–10.
 - **Team match rating** = average of the starting XI's player match scores.
 - **Season fair-play standing** = average of the team's match ratings.
@@ -117,7 +117,7 @@ The randomiser is seeded from lobby and match, so the outcome is the same for ev
 ## 10. Data Shapes (summary)
 
 ```
-Player    { id, name, ipl_team, role, batting, bowling, fielding, base_price, trouble_rating }
+Player    { id, name, franchise_id, role, category, retired, batting, bowling, fielding, base_price, trouble_rating }
 Squad     { 15 x Player, starting_xi (11 ids), captain_id, vice_captain_id, purse_remaining, substitution_used }
 Lobby     { id, code, owners: [{ guest_id, franchise, squad }], phase: 'auction' | 'league' | 'playoffs' | 'complete', round: 1-18 }
 Match     { lobby_id, round, home, away, result, key_moments, man_of_the_match, fair_play_ratings }

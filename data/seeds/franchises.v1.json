@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "seedVersion": "1.0.0",
+  "dataAsOf": "2026-10-26",
+  "source": "Franchise ids, names and colours mirror shared/const/teams.const.ts. Colours marked UNVERIFIED there are still unconfirmed.",
+  "franchises": [
+    {
+      "id": "csk",
+      "name": "Chennai Super Kings",
+      "abbreviation": "CSK",
+      "color": "#F9CD05"
+    },
+    {
+      "id": "mi",
+      "name": "Mumbai Indians",
+      "abbreviation": "MI",
+      "color": "#005FA2"
+    },
+    {
+      "id": "rcb",
+      "name": "Royal Challengers Bengaluru",
+      "abbreviation": "RCB",
+      "color": "#E63329"
+    },
+    {
+      "id": "kkr",
+      "name": "Kolkata Knight Riders",
+      "abbreviation": "KKR",
+      "color": "#3A225D"
+    },
+    {
+      "id": "dc",
+      "name": "Delhi Capitals",
+      "abbreviation": "DC",
+      "color": "#213F7D"
+    },
+    {
+      "id": "rr",
+      "name": "Rajasthan Royals",
+      "abbreviation": "RR",
+      "color": "#254AA5"
+    },
+    {
+      "id": "srh",
+      "name": "Sunrisers Hyderabad",
+      "abbreviation": "SRH",
+      "color": "#F7A721"
+    },
+    {
+      "id": "lsg",
+      "name": "Lucknow Super Giants",
+      "abbreviation": "LSG",
+      "color": "#A72056"
+    },
+    {
+      "id": "gt",
+      "name": "Gujarat Titans",
+      "abbreviation": "GT",
+      "color": "#1B2133"
+    },
+    {
+      "id": "pbks",
+      "name": "Punjab Kings",
+      "abbreviation": "PBKS",
+      "color": "#ED1D24"
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import { LOBBY_CODE_LENGTH, MAX_OWNERS } from "../../shared/const/lobby.const";
+import { SEED_VERSION } from "../../shared/const/seed.const";
 import {
   createLobbyInputSchema,
   joinLobbyInputSchema,
@@ -112,6 +113,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         phase: "auction",
         round: 0,
         owners: [owner],
+        seedVersion: SEED_VERSION,
       };
       lobbiesByCode.set(code, lobby);
       return lobbySchema.parse(lobby);

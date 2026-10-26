@@ -202,17 +202,19 @@ Batting and bowling averages are stats on award screens, not awards.
 struct Player {
     id: String,
     name: String,
-    ipl_team: String,
+    franchise_id: Option<String>,  // None when retired
     role: Role,  // Batter, Bowler, AllRounder, WicketKeeper
-    base_price: u32,  // ₹ base price for the auction
+    category: Category,  // Marquee, Capped, Uncapped
+    retired: bool,
+    base_price: u32,  // lakhs (₹1cr = 100 lakhs), set by category (ADR 0004)
     trouble_rating: u8,  // 0-10, seeded; base value 2 if unseeded (game-design section 9)
     ratings: PlayerRatings,
 }
 
 struct PlayerRatings {
-    batting: f32,    // 0.0-100.0
-    bowling: f32,    // 0.0-100.0
-    fielding: f32,   // 0.0-100.0
+    batting: u8,    // integer 0-100 (ADR 0004)
+    bowling: u8,    // integer 0-100
+    fielding: u8,   // integer 0-100
 }
 ```
 
@@ -288,8 +290,9 @@ struct Lobby {
     created_by: String,
     created_at: DateTime,
     users: Vec<LobbyUser>,
-    current_phase: Phase,  // League, Playoffs, Complete
+    current_phase: Phase,  // Auction, League, Playoffs, Complete
     current_round: u32,
+    seed_version: String,  // seed data set the lobby was created with (see data/seeds/)
     season: Season,
     standings: Standings,
 }
