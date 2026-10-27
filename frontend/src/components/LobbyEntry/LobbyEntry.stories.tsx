@@ -1,8 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, within } from "storybook/test";
 
-import { createMockGameApi } from "../../services/game-api/mock-game-api";
-import { GuestSessionProvider } from "../GuestSessionProvider/GuestSessionProvider";
 import { LobbyEntry } from "./LobbyEntry";
 
 const meta = {
@@ -11,13 +9,6 @@ const meta = {
     // The form calls useRouter, which needs the App Router context in Storybook.
     nextjs: { appDirectory: true },
   },
-  decorators: [
-    (Story) => (
-      <GuestSessionProvider api={createMockGameApi({ seed: "story" })}>
-        <Story />
-      </GuestSessionProvider>
-    ),
-  ],
 } satisfies Meta<typeof LobbyEntry>;
 
 export default meta;

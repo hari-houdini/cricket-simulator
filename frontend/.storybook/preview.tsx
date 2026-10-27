@@ -3,8 +3,19 @@ import type { Preview } from "@storybook/nextjs-vite";
 // Same global styles as the app, so stories render with the StyleX output and
 // the design tokens the components depend on.
 import "../src/app/globals.css";
+import { GuestSessionProvider } from "../src/components/GuestSessionProvider/GuestSessionProvider";
+import { createMockGameApi } from "../src/services/game-api/mock-game-api";
 
 const preview: Preview = {
+  // Every story gets a guest session backed by the seeded mock API. This lives
+  // here, not in the stories, because components must not import services.
+  decorators: [
+    (Story) => (
+      <GuestSessionProvider api={createMockGameApi({ seed: "story" })}>
+        <Story />
+      </GuestSessionProvider>
+    ),
+  ],
   parameters: {
     controls: {
       matchers: {

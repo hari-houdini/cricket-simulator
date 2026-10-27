@@ -10,11 +10,11 @@ export const POINTS_PER_CATCH = 10;
 /** Share of wickets that come with a catch. The engine has no ball-by-ball detail, so catches are drawn at this rate. */
 export const CATCH_RATE = 0.6;
 
-/** Multiplier on a captain's fantasy points (`docs/game-design.md` section 4). Working value. */
-export const CAPTAIN_MULTIPLIER = 2;
+/** Multiplier on a captain's fantasy points (`docs/game-design.md` section 4). */
+export const CAPTAIN_MULTIPLIER = 1.5;
 
-/** Multiplier on a vice-captain's fantasy points. Working value. */
-export const VICE_CAPTAIN_MULTIPLIER = 1.5;
+/** Multiplier on a vice-captain's fantasy points (`docs/game-design.md` section 4). */
+export const VICE_CAPTAIN_MULTIPLIER = 1.25;
 
 /** The best a player's match score can be in the fair-play rating (`docs/game-design.md` section 9). */
 export const FAIR_PLAY_MAX_SCORE = 10;

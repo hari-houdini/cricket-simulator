@@ -1,5 +1,4 @@
 import {
-  BOWLING_ALL_ROUNDER_MIN_RATING,
   FIRST_MATCH_ROUND,
   MIN_BOWLING_OPTIONS,
   REQUIRED_WICKET_KEEPERS,
@@ -48,20 +47,15 @@ export type SubstitutionBlock =
   | XiBlock;
 
 /**
- * Whether a player counts as a bowling option for the XI minimum: a bowler, or
- * an all-rounder whose bowling rating reaches {@link BOWLING_ALL_ROUNDER_MIN_RATING}.
+ * Whether a player counts as a bowling option for the XI minimum: a bowler or
+ * an all-rounder. The design gives no bowling threshold for all-rounders, so
+ * none is applied here.
  *
  * @param player - The player to check.
  * @returns True when the player counts towards {@link MIN_BOWLING_OPTIONS}.
  */
 export function isBowlingOption(player: Player): boolean {
-  if (player.role === "bowler") {
-    return true;
-  }
-  return (
-    player.role === "all-rounder" &&
-    player.bowling >= BOWLING_ALL_ROUNDER_MIN_RATING
-  );
+  return player.role === "bowler" || player.role === "all-rounder";
 }
 
 /**

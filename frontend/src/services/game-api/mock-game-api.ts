@@ -43,6 +43,7 @@ import {
 } from "../../shared/types/squad.schema";
 import type { Squad, StartingXi } from "../../shared/types/squad.types";
 import { bidBlockReason } from "../../shared/utils/auction-rules";
+import { defaultStartingXi } from "../../shared/utils/default-xi";
 import { franchiseClaimBlock } from "../../shared/utils/franchise-claim";
 import {
   AuctionAlreadyStartedError,
@@ -383,15 +384,27 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         currentPlayers().filter((player) => player.franchiseId === franchiseId),
       );
     }
-    const squad =
-      auctionsByCode
-        .get(code)
-        ?.auction.purses.find((item) => item.guestId === owner.guestId)
-        ?.squad ?? [];
-    // Every owner has a saved XI here: advanceRound checks that before it plays.
+    const squad = squadOf(code, owner.guestId);
+    // Every owner has an XI here: advanceRound stores one before it plays.
     // The XI's order is the batting order, so the saved order is kept.
     const xiIds = choicesFor(code, owner.guestId).startingXi?.playerIds ?? [];
     return xiIds.flatMap((id) => squad.filter((player) => player.id === id));
+  }
+
+  /**
+   * Reads an owner's squad from the auction. Empty before the auction has
+   * started.
+   *
+   * @param code - A normalised lobby code.
+   * @param guestId - The owner's guest ID.
+   * @returns The owner's players, in the order they were bought.
+   */
+  function squadOf(code: string, guestId: string): Player[] {
+    return (
+      auctionsByCode
+        .get(code)
+        ?.auction.purses.find((item) => item.guestId === guestId)?.squad ?? []
+    );
   }
 
   /**
@@ -747,15 +760,28 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         throw new NotAnOwnerError(input.guestId);
       }
 
-      const everyOwnerHasStartingXi = lobby.owners.every(
-        (owner) => choicesFor(input.code, owner.guestId).startingXi !== null,
+      const everyOwnerCanField = lobby.owners.every(
+        (owner) =>
+          choicesFor(input.code, owner.guestId).startingXi !== null ||
+          defaultStartingXi(squadOf(input.code, owner.guestId)) !== null,
       );
       const block = advanceBlock({
         round: lobby.round,
-        everyOwnerHasStartingXi,
+        everyOwnerCanField,
       });
       if (block !== null) {
         throw new LeagueAdvanceBlockedError(block);
+      }
+
+      // An owner who saved no XI plays with the default one. It is stored, so
+      // the owner can see it and it locks with the rest of the XI.
+      for (const owner of lobby.owners) {
+        const choices = choicesFor(input.code, owner.guestId);
+        if (choices.startingXi === null) {
+          choices.startingXi = defaultStartingXi(
+            squadOf(input.code, owner.guestId),
+          );
+        }
       }
 
       const round = lobby.round + 1;

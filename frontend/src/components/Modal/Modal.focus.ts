@@ -1,3 +1,5 @@
+"use client";
+
 import { type RefObject, useEffect } from "react";
 
 import { nextFocusIndex } from "../../shared/utils/focus-cycle";

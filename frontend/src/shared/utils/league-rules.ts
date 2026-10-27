@@ -1,30 +1,33 @@
 import { LAST_ROUND } from "../const/lobby.const";
 
 /** Why the next round cannot be played. */
-export type AdvanceBlock = "season-over" | "missing-starting-xi";
+export type AdvanceBlock = "season-over" | "no-legal-starting-xi";
 
 /** What the advance check needs to know about the lobby. */
 export type AdvanceCheck = {
   /** The round most recently played. 0 before the first round. */
   readonly round: number;
-  /** True once every owner has saved a starting XI. */
-  readonly everyOwnerHasStartingXi: boolean;
+  /**
+   * True when every owner has a starting XI, either saved or the default one
+   * (see `defaultStartingXi`).
+   */
+  readonly everyOwnerCanField: boolean;
 };
 
 /**
  * Checks whether the next round can be played. The season ends after the last
- * playoff round, and no round is played until every owner has an XI, because
- * the XI is what the owner's franchise plays with.
+ * playoff round, and no round is played until every owner can field an XI,
+ * because the XI is what the owner's franchise plays with.
  *
- * @param check - The lobby's round and whether every owner has saved an XI.
+ * @param check - The lobby's round and whether every owner can field an XI.
  * @returns The reason the round cannot be played, or null when it can.
  */
 export function advanceBlock(check: AdvanceCheck): AdvanceBlock | null {
   if (check.round >= LAST_ROUND) {
     return "season-over";
   }
-  if (!check.everyOwnerHasStartingXi) {
-    return "missing-starting-xi";
+  if (!check.everyOwnerCanField) {
+    return "no-legal-starting-xi";
   }
   return null;
 }

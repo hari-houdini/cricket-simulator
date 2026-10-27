@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  BOWLING_ALL_ROUNDER_MIN_RATING,
-  FIRST_MATCH_ROUND,
-} from "../const/squad.const";
+import { FIRST_MATCH_ROUND } from "../const/squad.const";
 import type { Player } from "../types/player.types";
 import type { StartingXi } from "../types/squad.types";
 import {
@@ -39,7 +36,7 @@ function player(id: string, role: Player["role"], bowling = 0): Player {
 
 /**
  * A 16-player squad: one wicket-keeper to spare, four bowlers, two all-rounders
- * (one above the bowling threshold, one below), and nine batters. Any legal XI
+ * (both bowling options), and nine batters. Any legal XI
  * can be built from it, and each test breaks one rule.
  */
 const squad: Player[] = [
@@ -49,8 +46,8 @@ const squad: Player[] = [
   player("b2", "bowler", 70),
   player("b3", "bowler", 70),
   player("b4", "bowler", 70),
-  player("ar-bowls", "all-rounder", BOWLING_ALL_ROUNDER_MIN_RATING),
-  player("ar-bats", "all-rounder", BOWLING_ALL_ROUNDER_MIN_RATING - 1),
+  player("ar1", "all-rounder"),
+  player("ar2", "all-rounder"),
   player("bat1", "batter"),
   player("bat2", "batter"),
   player("bat3", "batter"),
@@ -72,7 +69,7 @@ const legal: XiSelection = {
     "b2",
     "b3",
     "b4",
-    "ar-bowls",
+    "ar1",
     "bat1",
     "bat2",
     "bat3",
@@ -98,17 +95,9 @@ describe("isBowlingOption", () => {
     expect(isBowlingOption(player("b", "bowler", 0))).toBe(true);
   });
 
-  it("counts an all-rounder at the bowling threshold, and not one below it", () => {
-    expect(
-      isBowlingOption(
-        player("a", "all-rounder", BOWLING_ALL_ROUNDER_MIN_RATING),
-      ),
-    ).toBe(true);
-    expect(
-      isBowlingOption(
-        player("a", "all-rounder", BOWLING_ALL_ROUNDER_MIN_RATING - 1),
-      ),
-    ).toBe(false);
+  it("counts every all-rounder, whatever their bowling rating", () => {
+    expect(isBowlingOption(player("a", "all-rounder", 100))).toBe(true);
+    expect(isBowlingOption(player("a", "all-rounder", 0))).toBe(true);
   });
 
   it("never counts batters or wicket-keepers", () => {
@@ -188,7 +177,7 @@ describe("startingXiBlock", () => {
     const fewBowlers = change({
       playerIds: legal.playerIds.map((id) => {
         if (id === "b4") return "bat6";
-        if (id === "ar-bowls") return "bat7";
+        if (id === "ar1") return "bat7";
         return id;
       }),
     });

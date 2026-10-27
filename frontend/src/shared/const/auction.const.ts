@@ -14,7 +14,7 @@ export const SQUAD_SIZE = 15;
  * Seconds on the clock at the start of each lot and after every bid. A bid
  * resets it, and when it reaches zero the highest bidder wins (the hammer).
  */
-export const BID_TIMER_SECONDS = 20;
+export const BID_TIMER_SECONDS = 5;
 
 /** The same timer in milliseconds, the unit the clock uses. */
 export const BID_TIMER_MS = BID_TIMER_SECONDS * 1000;

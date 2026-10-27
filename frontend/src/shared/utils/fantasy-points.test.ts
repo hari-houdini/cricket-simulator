@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  CAPTAIN_MULTIPLIER,
-  VICE_CAPTAIN_MULTIPLIER,
-} from "../const/awards.const";
-import {
   fantasyPointsFor,
   multiplierFor,
   pickManOfTheMatch,
@@ -51,12 +47,12 @@ describe("fantasyPointsFor", () => {
 });
 
 describe("multiplierFor", () => {
-  it("doubles a captain's points", () => {
-    expect(multiplierFor("captain")).toBe(CAPTAIN_MULTIPLIER);
+  it("scales a captain's points by one and a half", () => {
+    expect(multiplierFor("captain")).toBe(1.5);
   });
 
-  it("scales a vice-captain's points by one and a half", () => {
-    expect(multiplierFor("vice-captain")).toBe(VICE_CAPTAIN_MULTIPLIER);
+  it("scales a vice-captain's points by one and a quarter", () => {
+    expect(multiplierFor("vice-captain")).toBe(1.25);
   });
 
   it("leaves everyone else at one", () => {

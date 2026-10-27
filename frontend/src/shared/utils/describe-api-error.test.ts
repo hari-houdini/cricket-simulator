@@ -202,7 +202,7 @@ describe("describeSubstitutionBlock", () => {
 
 const ADVANCE_REASONS: readonly AdvanceBlock[] = [
   "season-over",
-  "missing-starting-xi",
+  "no-legal-starting-xi",
 ];
 
 describe("describeAdvanceBlock", () => {
@@ -210,9 +210,9 @@ describe("describeAdvanceBlock", () => {
     expect(describeAdvanceBlock("season-over")).toContain("season is over");
   });
 
-  it("asks every owner to save an XI before the first round", () => {
-    expect(describeAdvanceBlock("missing-starting-xi")).toContain(
-      "starting XI",
+  it("says a squad with no legal XI blocks the round", () => {
+    expect(describeAdvanceBlock("no-legal-starting-xi")).toContain(
+      "legal starting XI",
     );
   });
 });

@@ -111,8 +111,8 @@ export function describeSubstitutionBlock(reason: SubstitutionBlock): string {
 /** What to tell the guest for each reason the next round is refused. */
 const ADVANCE_BLOCK_MESSAGES = {
   "season-over": "The season is over. The champion has been crowned.",
-  "missing-starting-xi":
-    "Every owner must save a starting XI before the first round is played.",
+  "no-legal-starting-xi":
+    "An owner's squad cannot field a legal starting XI, so the round cannot be played.",
 } as const satisfies Record<AdvanceBlock, string>;
 
 /**

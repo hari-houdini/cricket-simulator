@@ -10,6 +10,7 @@ import {
   LeagueNotStartedError,
   NotAnOwnerError,
 } from "../../shared/utils/game-api.errors";
+import { startingXiBlock } from "../../shared/utils/squad-rules";
 import { createMockGameApi } from "./mock-game-api";
 
 const asha = { guestId: "asha", displayName: "Asha" };
@@ -93,8 +94,7 @@ async function saveLegalXi(game: Game) {
   );
   const bowlers = squad.players.filter(
     (player: Player) =>
-      player.role === "bowler" ||
-      (player.role === "all-rounder" && player.bowling >= 50),
+      player.role === "bowler" || player.role === "all-rounder",
   );
   const chosen = [keeper, ...bowlers.slice(0, 4)];
   for (const player of squad.players) {
@@ -161,13 +161,20 @@ describe("mock league", () => {
     expect(league.leagueComplete).toBe(false);
   });
 
-  it("refuses to play a round while an owner has no starting XI", async () => {
+  it("gives an owner who saved no XI a default one when round one is played", async () => {
     const game = await setUpSoloLobby();
     await completeSoloAuction(game);
 
-    await expect(
-      game.api.advanceRound({ code: game.code, guestId: asha.guestId }),
-    ).rejects.toMatchObject({ reason: "missing-starting-xi" });
+    await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
+    const squad = await game.api.getSquad({
+      code: game.code,
+      guestId: asha.guestId,
+    });
+
+    const xi = squad.startingXi;
+    expect(xi).not.toBeNull();
+    expect(squad.locked).toBe(true);
+    expect(xi && startingXiBlock(squad.players, xi)).toBeNull();
   });
 
   it("refuses a round from a guest who is not an owner", async () => {

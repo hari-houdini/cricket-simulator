@@ -29,7 +29,7 @@ export const styles = stylex.create({
     borderColor: "transparent",
     cursor: "pointer",
     transitionProperty:
-      "transform, background-color, border-color, box-shadow, color, outline-color",
+      "transform, background-color, border-color, box-shadow, color",
     transitionDuration: tokens.durationDefault,
     transitionTimingFunction: tokens.easingInOut,
     outlineColor: tokens.colorGoldPrimary,

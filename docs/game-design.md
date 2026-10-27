@@ -23,6 +23,7 @@ An **IPL T20 fantasy cricket game**. Guests join a lobby, each owns one IPL fran
 - Players come up one at a time in a fixed order, derived from the lobby seed.
 - Each owner has a **purse of ₹100cr** for the whole draft. Unspent money is not carried forward.
 - Each player has a countdown **timer of 20 seconds**. Every bid resets it. When it reaches zero, the highest bidder wins the player (the hammer).
+- If no one reads the auction while a timer runs out, the hammer still falls at its true time. The next lot then opens at the moment it is read, so an idle gap does not sell the whole pool at once.
 - **Bid increments** depend on the current bid:
   - Below ₹1cr: steps of ₹10L
   - ₹1cr to ₹5cr: steps of ₹50L
@@ -34,17 +35,18 @@ An **IPL T20 fantasy cricket game**. Guests join a lobby, each owns one IPL fran
 ## 4. Squad and Starting XI
 
 - A squad has **15 players**. The **starting XI** is 11 of them.
-- The starting XI must include **exactly one wicket-keeper** and at least **4 bowling options** (bowlers and bowling all-rounders). No other role minimums apply.
+- The starting XI must include **exactly one wicket-keeper** and at least **4 bowling options** (bowlers and all-rounders). No other role minimums apply.
 - **Captain** earns fantasy points at **1.5x**. **Vice-captain** earns them at **1.25x**.
-- The starting XI **locks after the first match**.
+- The starting XI **locks after the first match**. An owner who has saved no XI when the first round is played gets the strongest legal XI from their squad, which is stored and locked with the rest. A squad with no legal XI blocks the round (see Open Items).
 - Each owner gets **one free substitution per season**: one starting-XI player swapped for a squad player outside the XI. The swap is offered only after the first match.
+- The **captain and vice-captain cannot be substituted out**. Leadership stays with the same players for the whole season.
 
 ## 5. Season Structure
 
 - **League**: 10 franchises, double round-robin, 14 matches per franchise, 70 matches in total. Rounds 1–14.
 - **Points**: win 2, loss 0, tie 1 each.
 - **Standings**: by points, with net run rate (NRR) as the tie-break.
-- **Playoffs** follow the IPL format. Rounds 15–18:
+- **Playoffs** follow the IPL format. Playoff matches cannot tie: a level match is settled by a **super over**. Rounds 15–18:
   1. **Qualifier 1**: 1st vs 2nd. The winner goes to the Final.
   2. **Eliminator**: 3rd vs 4th. The loser is out.
   3. **Qualifier 2**: the loser of Qualifier 1 vs the winner of the Eliminator. The winner goes to the Final.
@@ -83,7 +85,7 @@ Every award screen shows the winner and runner-up, with the team each represents
 | Award | Basis |
 |-------|-------|
 | **Orange Cap** | Most runs in the season. Stats shown: runs, innings, average, strike rate. |
-| **Purple Cap** | Most wickets in the season. Stats shown: wickets, economy, average. |
+| **Purple Cap** | Most wickets in the season, ties broken by fewer runs conceded. Stats shown: wickets, economy, average. |
 | **Most Valuable Player** | Highest season fantasy points. |
 | **Man of the Match** | Per match, as in section 7. |
 | **Emerging Player** | See eligibility below. |
@@ -165,3 +167,4 @@ These are not yet decided. They are listed so no one assumes an answer.
 5. **Purse exhaustion**: what happens if an owner cannot afford the remaining players before filling 15 slots.
 6. **Disconnects**: what happens to an owner who loses connection during the auction.
 7. **PWA and analytics**: whether these are MVP or future. They appear in earlier drafts but are not settled.
+8. **Legal squads (TODO)**: the auction does not require a wicket-keeper or four bowling options, so a squad can end with no legal starting XI. Until the auction guarantees one, an owner in that position blocks the round. The fallback default XI in `defaultStartingXi` (`shared/utils/default-xi.ts`) cannot cover this case. Decide the squad rule the auction must enforce.
