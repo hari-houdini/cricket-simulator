@@ -60,7 +60,7 @@ Franchise
 
 Auction
 15. As an owner, I want to see the player currently up for auction with role, base price and trouble rating, so that I can decide whether to bid.
-16. As an owner, I want a countdown of 20 seconds that resets on every bid, so that bidding feels live.
+16. As an owner, I want a countdown of 5 seconds that resets on every bid, so that bidding feels live.
 17. As an owner, I want to bid using increment buttons only, so that I cannot enter an invalid amount.
 18. As an owner, I want the bid increment to follow the current bid (₹10L below ₹1cr, ₹50L from ₹1cr to ₹5cr, ₹1cr above ₹5cr), so that steps match the rules.
 19. As an owner, I want to see the bid log with who bid what, so that I can follow the auction.

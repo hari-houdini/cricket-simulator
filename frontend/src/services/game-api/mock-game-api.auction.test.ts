@@ -128,7 +128,8 @@ describe("placeBid", () => {
       throw new Error("expected a lot");
     }
 
-    advance(15_000);
+    // Bid halfway through the timer, so the reset is the only thing that moves endsAt.
+    advance(BID_TIMER_MS / 2);
     const auction = await api.placeBid({
       code,
       guestId: asha.guestId,

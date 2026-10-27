@@ -22,7 +22,7 @@ An **IPL T20 fantasy cricket game**. Guests join a lobby, each owns one IPL fran
 
 - Players come up one at a time in a fixed order, derived from the lobby seed.
 - Each owner has a **purse of ₹100cr** for the whole draft. Unspent money is not carried forward.
-- Each player has a countdown **timer of 20 seconds**. Every bid resets it. When it reaches zero, the highest bidder wins the player (the hammer).
+- Each player has a countdown **timer of 5 seconds**. Every bid resets it. When it reaches zero, the highest bidder wins the player (the hammer).
 - If no one reads the auction while a timer runs out, the hammer still falls at its true time. The next lot then opens at the moment it is read, so an idle gap does not sell the whole pool at once.
 - **Bid increments** depend on the current bid:
   - Below ₹1cr: steps of ₹10L
