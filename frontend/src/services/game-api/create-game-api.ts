@@ -62,17 +62,27 @@ function createLazyMockGameApi(): GameApi {
  * Creates the game API for the selected mode. This is the single switch between
  * mock data and the Rust backend.
  *
- * `process.env.NEXT_PUBLIC_API_MODE` is read here, through `process.env`, so Next
- * inlines the value at build time for client code.
+ * `process.env.NEXT_PUBLIC_API_MODE` and `process.env.NEXT_PUBLIC_API_URL` are
+ * read here, through `process.env`, so Next inlines them at build time for client code.
+ * `http` needs the backend origin, and it fails here rather than on the first call,
+ * so a missing URL shows up at startup.
  *
  * @param rawMode - The mode value. Defaults to the environment.
+ * @param rawBaseUrl - The backend origin, used only in `http` mode. Defaults to the environment.
  * @returns The mock or HTTP {@link GameApi}.
- * @throws {Error} When the mode is not recognised.
+ * @throws {Error} When the mode is not recognised, or `http` has no backend URL.
  */
 export function createGameApi(
   rawMode: string | undefined = process.env.NEXT_PUBLIC_API_MODE,
+  rawBaseUrl: string | undefined = process.env.NEXT_PUBLIC_API_URL,
 ): GameApi {
-  return resolveApiMode(rawMode) === "http"
-    ? createHttpGameApi()
-    : createLazyMockGameApi();
+  if (resolveApiMode(rawMode) === "mock") {
+    return createLazyMockGameApi();
+  }
+  if (rawBaseUrl === undefined || rawBaseUrl === "") {
+    throw new Error(
+      'NEXT_PUBLIC_API_URL must be set when NEXT_PUBLIC_API_MODE is "http", for example to the local Worker at http://localhost:8787.',
+    );
+  }
+  return createHttpGameApi({ baseUrl: rawBaseUrl });
 }

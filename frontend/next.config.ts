@@ -3,6 +3,15 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 /**
+ * The origin of the Rust backend, when the app is built for the `http` API mode.
+ * The browser may call only that origin, so it is added to `connect-src`. Mock
+ * mode leaves it unset and nothing is added.
+ */
+const apiOrigin = process.env.NEXT_PUBLIC_API_URL
+  ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
+  : undefined;
+
+/**
  * Content-Security-Policy applied to every response.
  *
  * `'unsafe-inline'` for scripts is required because Next.js injects inline
@@ -16,7 +25,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",
   "img-src 'self' data: blob:",
-  "connect-src 'self'",
+  `connect-src 'self'${apiOrigin ? ` ${apiOrigin}` : ""}`,
   "object-src 'none'",
   "frame-src 'none'",
   "base-uri 'self'",

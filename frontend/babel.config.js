@@ -6,12 +6,15 @@
  * `babel.config.ts`, which is why StyleX never compiled in the app before.
  */
 
-import path from "node:path";
-import type { TransformOptions } from "@babel/core";
+const path = require("node:path");
 
 const dev = process.env.NODE_ENV !== "production";
 
-const config: TransformOptions = {
+/**
+ * The shared Babel options. The StyleX plugin reads them from here, so the
+ * app, the PostCSS step and Storybook compile styles the same way.
+ */
+const config = {
   presets: ["next/babel"],
   plugins: [
     [
@@ -31,4 +34,4 @@ const config: TransformOptions = {
   ],
 };
 
-export default config;
+module.exports = config;

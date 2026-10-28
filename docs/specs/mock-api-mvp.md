@@ -31,8 +31,8 @@ Define the API contract once as zod schemas. Implement a game API client interfa
 One seam for the whole iteration: the **game API client interface** in `services/`.
 
 - `mock` implementation: in-memory, seeded, used for development, Storybook, and workflow tests.
-- `http` implementation: calls the Rust API in `ARCHITECTURE.md`. Not built in this iteration beyond the interface and a stub that fails loudly when selected.
-- Switch: one environment variable read through `process.env` (for example `NEXT_PUBLIC_API_MODE` set to `mock` or `http`). Default `mock`.
+- `http` implementation: calls the Rust API in `ARCHITECTURE.md`. Built in phase 4 (`services/game-api/http-game-api.ts`). Its refusals become the same typed errors as the mock's, and its responses are checked against the same zod schemas.
+- Switch: `NEXT_PUBLIC_API_MODE` set to `mock` or `http`, default `mock`. `http` also needs `NEXT_PUBLIC_API_URL`, the Worker's origin, which is also added to the CSP `connect-src`.
 
 Components and hooks import the interface, never the mock. Contract tests call the interface, so the same suite runs against the HTTP client once the Rust service exists.
 
@@ -120,7 +120,7 @@ Accessibility and layout
 
 **Architecture**
 - A **game API client** interface in `services/`. It exposes the operations the UI needs: create lobby, get lobby, join lobby, claim franchise, place bid, submit squad, set starting XI and captain, advance round, get match, get standings, get awards. Names follow the glossary.
-- Two implementations: `mock` (this iteration) and `http` (a stub until the Rust API exists; selecting it fails loudly).
+- Two implementations: `mock` and `http` (the client for the Rust API). A contract suite (`game-api.contract.test.ts`) runs the same scenarios against both, with the backend running when `API_CONTRACT_URL` is set.
 - The switch is one environment variable read through `process.env`. Default is `mock`.
 - Mock state lives in memory per page load. The guest ID is stored in `localStorage`, with reads and writes wrapped in try/catch. Refreshing loses lobby state, which is accepted for the mock.
 - The mock delivers events through the same subscription shape the WebSocket will use (`auction_bid`, `auction_hammer`, `match_started`, `key_moment`, `match_complete`, `season_complete`), so hooks do not change later.
@@ -189,7 +189,7 @@ Prior art: `shared/utils/` has no tests yet, so these set the pattern. Existing 
 ## Out of Scope
 
 - The Rust backend, Cloudflare Workers, Durable Objects, and the real match simulator. The mock does not claim its outcomes match the real simulator's.
-- The HTTP client's real implementation. Only the interface and the stub are in scope.
+- Auction, squad, league and playoff scenarios over HTTP. A full auction takes hundreds of timed lots, so the contract suite covers the lobby, auction-open and refusal paths over HTTP. The post-auction behaviour is covered by the mock tests, the Rust tests and the shared fixtures.
 - Real WebSocket transport. The mock delivers events.
 - Authentication and accounts. Guests only.
 - PWA, offline support, service worker, install prompt (post-MVP, `game-design.md` §13).

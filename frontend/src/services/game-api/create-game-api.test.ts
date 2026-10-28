@@ -46,11 +46,19 @@ describe("createGameApi", () => {
     expect(reread.name).toBe("Persisted");
   });
 
-  it("returns the HTTP stub for http mode, which rejects every call", async () => {
-    const api = createGameApi("http");
-
-    await expect(api.getLobby("ABC123")).rejects.toThrow(
-      "The HTTP game API is not implemented yet",
+  it("refuses http mode without a backend URL, so the gap shows at startup", () => {
+    expect(() => createGameApi("http", undefined)).toThrow(
+      "NEXT_PUBLIC_API_URL must be set",
     );
+    expect(() => createGameApi("http", "")).toThrow(
+      "NEXT_PUBLIC_API_URL must be set",
+    );
+  });
+
+  it("returns the HTTP client for http mode when a backend URL is set", () => {
+    const api = createGameApi("http", "http://localhost:8787");
+
+    expect(typeof api.getLobby).toBe("function");
+    expect(typeof api.advanceRound).toBe("function");
   });
 });

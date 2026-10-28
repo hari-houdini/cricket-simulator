@@ -349,6 +349,8 @@ GET    /api/lobbies/:code/playoffs           Bracket and results
 GET    /api/lobbies/:code/awards             Season awards, Man of the Match and Fair Play
 ```
 
+The frontend runs on its own origin. The Worker answers preflight requests and sends CORS headers only to the origins listed in `ALLOWED_ORIGINS` in `backend/wrangler.toml`. Before deploying, add the deployed frontend origin there. The frontend selects this API with `NEXT_PUBLIC_API_MODE=http` and `NEXT_PUBLIC_API_URL` set to the Worker's origin.
+
 The auction timer is a Durable Object alarm. Overdue lots are settled before any request reads or changes the lobby, so a read after the deadline shows the settled state.
 
 ### 4. WebSocket Events

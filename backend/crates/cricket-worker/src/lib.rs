@@ -5,6 +5,7 @@
 //! It needs the wasm target and is the only module that touches the `worker` SDK.
 
 pub mod api;
+pub mod cors;
 #[cfg(target_arch = "wasm32")]
 pub mod durable;
 pub mod errors;

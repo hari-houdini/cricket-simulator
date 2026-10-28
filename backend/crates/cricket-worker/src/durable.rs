@@ -10,6 +10,7 @@ use cricket_core::lobby::Lobby;
 use cricket_core::simulator::ModifierConfig;
 use worker::*;
 
+use crate::cors;
 use crate::errors::ApiError;
 use crate::operation::Operation;
 use crate::route::{self, Routed};
@@ -152,13 +153,19 @@ impl DurableObject for LobbyObject {
 
     async fn alarm(&self) -> Result<Response> {
         let now_ms = Date::now().as_millis();
-        if let Some(mut lobby) = self.load().await? {
-            let before = lobby.clone();
-            // The alarm only closes lots that are due. A failure here leaves the lobby as it was.
-            let _ = service::catch_up(&mut lobby, now_ms);
-            if lobby != before {
-                self.persist(&lobby, now_ms).await?;
+        match self.load().await {
+            Ok(Some(mut lobby)) => {
+                let before = lobby.clone();
+                // The alarm only closes lots that are due. A failure here leaves the lobby as it was.
+                let _ = service::catch_up(&mut lobby, now_ms);
+                if lobby != before {
+                    self.persist(&lobby, now_ms).await?;
+                }
             }
+            Ok(None) => {}
+            // An unreadable lobby would fail its alarm again on every retry, so the error is
+            // logged and the alarm is answered. The lobby stays as it was stored.
+            Err(error) => console_error!("the lobby could not be loaded for its alarm: {error}"),
         }
         Response::ok("")
     }
@@ -173,6 +180,28 @@ impl DurableObject for LobbyObject {
 /// @returns The lobby's response, or a 400 or 404 for a bad request or route.
 #[event(fetch)]
 async fn fetch(mut req: Request, env: Env, _ctx: Context) -> Result<Response> {
+    let allow_list = cors::parse_allow_list(
+        &env.var(cors::ALLOWED_ORIGINS_VAR)
+            .map(|value| value.to_string())
+            .unwrap_or_default(),
+    );
+    let origin = cors::allowed_origin(req.headers().get("origin")?.as_deref(), &allow_list);
+    // A preflight is answered here, before any route is checked, so the browser can send the real request.
+    if method_name(req.method()) == "OPTIONS" {
+        let mut response = Response::empty()?.with_status(204);
+        set_cors(response.headers_mut(), origin.as_deref())?;
+        return Ok(response);
+    }
+    let response = route_request(&mut req, &env).await?;
+    relay(response, origin.as_deref()).await
+}
+
+/// Parses one request and sends it to the lobby, or creates the lobby under a fresh code.
+///
+/// @param req - The incoming request, whose body is read.
+/// @param env - The bindings.
+/// @returns The response from the lobby, or a 400 or 404 for a bad request or route.
+async fn route_request(req: &mut Request, env: &Env) -> Result<Response> {
     let method = method_name(req.method());
     let url = req.url()?;
     let body = req.text().await?;
@@ -185,9 +214,41 @@ async fn fetch(mut req: Request, env: Env, _ctx: Context) -> Result<Response> {
             name,
             guest_id,
             display_name,
-        } => create_lobby(&env, &name, &guest_id, &display_name).await,
-        Routed::Lobby { code, operation } => forward(&env, &code, &operation).await,
+        } => create_lobby(env, &name, &guest_id, &display_name).await,
+        Routed::Lobby { code, operation } => forward(env, &code, &operation).await,
     }
+}
+
+/// Rebuilds a Durable Object's response with the CORS headers. The object's own response may
+/// have immutable headers, so it is read and sent again rather than changed.
+///
+/// @param response - The object's response.
+/// @param origin - The origin to allow, if the request came from an allowed one.
+/// @returns The response to send to the browser.
+async fn relay(mut response: Response, origin: Option<&str>) -> Result<Response> {
+    let status = response.status_code();
+    let body = response.bytes().await?;
+    let mut relayed = Response::from_bytes(body)?.with_status(status);
+    relayed
+        .headers_mut()
+        .set("content-type", "application/json")?;
+    set_cors(relayed.headers_mut(), origin)?;
+    Ok(relayed)
+}
+
+/// Sets the CORS headers. `Vary: Origin` is always sent, so a cache never serves one origin's
+/// answer to another. The allow headers are sent only for an allowed origin.
+///
+/// @param headers - The response headers, changed in place.
+/// @param origin - The allowed origin, if any.
+fn set_cors(headers: &mut Headers, origin: Option<&str>) -> Result<()> {
+    headers.set("vary", "Origin")?;
+    if let Some(origin) = origin {
+        headers.set("access-control-allow-origin", origin)?;
+        headers.set("access-control-allow-methods", cors::ALLOWED_METHODS)?;
+        headers.set("access-control-allow-headers", cors::ALLOWED_HEADERS)?;
+    }
+    Ok(())
 }
 
 /// Creates a lobby under a fresh code, trying another code if one is already taken.
@@ -244,14 +305,16 @@ async fn forward(env: &Env, code: &str, operation: &Operation) -> Result<Respons
     stub.fetch_with_request(request).await
 }
 
-/// The method as the route parser names it. Only `GET` and `POST` are routed.
+/// The method as the route parser names it. Only `GET` and `POST` are routed, and `OPTIONS` is
+/// answered as a preflight before routing.
 ///
 /// @param method - The request method.
-/// @returns `GET`, `POST`, or `OTHER`.
+/// @returns `GET`, `POST`, `OPTIONS`, or `OTHER`.
 fn method_name(method: Method) -> &'static str {
     match method {
         Method::Get => "GET",
         Method::Post => "POST",
+        Method::Options => "OPTIONS",
         _ => "OTHER",
     }
 }
