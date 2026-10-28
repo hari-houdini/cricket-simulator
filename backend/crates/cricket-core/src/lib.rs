@@ -5,6 +5,7 @@
 
 pub mod auction;
 pub mod awards;
+pub mod lobby;
 pub mod model;
 pub mod playoffs;
 pub mod schedule;
@@ -14,3 +15,4 @@ pub mod seed_data;
 pub mod simulator;
 pub mod squad;
 pub mod standings;
+pub mod system_squad;

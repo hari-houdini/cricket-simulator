@@ -6,6 +6,8 @@
 
 use std::collections::VecDeque;
 
+use serde::{Deserialize, Serialize};
+
 use crate::model::{Lakhs, Player};
 use crate::seed::{GameRng, seed_from};
 use crate::squad::{PURSE_LAKHS, SQUAD_SIZE};
@@ -55,7 +57,7 @@ pub fn lot_order(mut players: Vec<Player>, lobby_id: &str) -> Vec<Player> {
 }
 
 /// An owner's place in the lobby, before the auction starts.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OwnerSeat {
     /// The guest who owns the franchise.
     pub guest_id: String,
@@ -64,7 +66,7 @@ pub struct OwnerSeat {
 }
 
 /// Whether an owner is still in the lobby.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SeatStatus {
     /// In the lobby and able to continue.
     Active,
@@ -73,7 +75,7 @@ pub enum SeatStatus {
 }
 
 /// An owner's money and squad during the auction.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OwnerState {
     /// The guest who owns the franchise.
     pub guest_id: String,
@@ -97,7 +99,7 @@ impl OwnerState {
 }
 
 /// The current high bid on a lot.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Bid {
     /// The guest who placed the bid.
     pub guest_id: String,
@@ -106,7 +108,7 @@ pub struct Bid {
 }
 
 /// A player currently up for auction.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Lot {
     /// The player being auctioned.
     pub player: Player,
@@ -119,7 +121,7 @@ pub struct Lot {
 }
 
 /// How a lot ended.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum LotOutcome {
     /// The player went to the highest bidder (GLOSSARY.md, Hammer).
     Sold {
@@ -167,7 +169,7 @@ pub enum AuctionError {
 }
 
 /// A live auction for one lobby.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Auction {
     owners: Vec<OwnerState>,
     pool: VecDeque<Player>,

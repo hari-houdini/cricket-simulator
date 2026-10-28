@@ -4,6 +4,8 @@
 //! the same scores. Probabilities are integer weights out of 1000 so no float rounding can
 //! differ between platforms.
 
+use serde::{Deserialize, Serialize};
+
 use crate::model::{Ball, Innings, Player, WicketKind};
 use crate::seed::{GameRng, seed_from};
 
@@ -76,7 +78,7 @@ pub enum BallOutcome {
 }
 
 /// One side in a match: a franchise and its starting XI in batting order.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Side {
     /// The franchise.
     pub franchise_id: String,
@@ -97,7 +99,7 @@ impl Side {
 }
 
 /// A fair-play score for one starting-XI player in one match (GLOSSARY.md, Match score).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlayerFairPlay {
     /// The player.
     pub player_id: String,
@@ -117,7 +119,7 @@ pub enum MatchKind {
 }
 
 /// Everything a finished match produced.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MatchOutcome {
     /// Match identifier within the lobby, such as `r03-csk-mi`.
     pub id: String,

@@ -6,7 +6,7 @@
 
 use std::collections::{BTreeMap, HashSet};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::seed::{GameRng, seed_from};
 
@@ -14,7 +14,7 @@ use crate::seed::{GameRng, seed_from};
 pub const LEAGUE_ROUNDS: usize = 14;
 
 /// One league fixture, as written in the seed template.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Fixture {
     /// The round the template places the fixture in.

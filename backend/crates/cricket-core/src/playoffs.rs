@@ -1,5 +1,7 @@
 //! The IPL playoff bracket (docs/game-design.md section 5). Rounds 15 to 18.
 
+use serde::{Deserialize, Serialize};
+
 use crate::simulator::{MatchKind, MatchOutcome, ModifierConfig, Side, simulate_match};
 use crate::standings::TeamRecord;
 
@@ -11,15 +13,8 @@ pub const ELIMINATOR_ROUND: u32 = 16;
 pub const QUALIFIER_2_ROUND: u32 = 17;
 /// Round of the Final.
 pub const FINAL_ROUND: u32 = 18;
-
-/// The four playoff matches and the champion.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PlayoffResult {
-    /// Qualifier 1, Eliminator, Qualifier 2 and the Final, in that order.
-    pub matches: Vec<MatchOutcome>,
-    /// The winner of the Final.
-    pub champion_id: String,
-}
+/// Playoff matches in the bracket.
+pub const PLAYOFF_MATCHES: usize = 4;
 
 /// Why the playoffs cannot be run.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,31 +23,169 @@ pub enum PlayoffError {
     NotEnoughTeams { found: usize },
     /// A playoff franchise has no starting XI in `sides`.
     MissingSide(String),
+    /// Every playoff match has already been played.
+    BracketComplete,
+}
+
+/// The playoff bracket, played one match at a time.
+///
+/// Matches are played in order: Qualifier 1, Eliminator, Qualifier 2, then the Final. The
+/// seeds come from the league table when the bracket is created and do not change after.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlayoffBracket {
+    /// The top four franchises, seeds 1 to 4.
+    seeds: [String; 4],
+    /// Matches played so far, in bracket order.
+    matches: Vec<MatchOutcome>,
+}
+
+impl PlayoffBracket {
+    /// Creates a bracket from the final league table.
+    ///
+    /// @param table - The league table, best first.
+    /// @returns A bracket with no matches played.
+    /// @throws Returns {@link PlayoffError::NotEnoughTeams} if the table has fewer than four franchises.
+    pub fn new(table: &[TeamRecord]) -> Result<Self, PlayoffError> {
+        if table.len() < PLAYOFF_MATCHES {
+            return Err(PlayoffError::NotEnoughTeams { found: table.len() });
+        }
+        Ok(Self {
+            seeds: [
+                table[0].franchise_id.clone(),
+                table[1].franchise_id.clone(),
+                table[2].franchise_id.clone(),
+                table[3].franchise_id.clone(),
+            ],
+            matches: Vec::with_capacity(PLAYOFF_MATCHES),
+        })
+    }
+
+    /// The playoff matches played so far, in bracket order.
+    ///
+    /// @returns The completed matches.
+    pub fn matches(&self) -> &[MatchOutcome] {
+        &self.matches
+    }
+
+    /// The round of the next match, or `None` when the bracket is complete.
+    ///
+    /// @returns Round 15 to 18, or `None`.
+    pub fn next_round(&self) -> Option<u32> {
+        (self.matches.len() < PLAYOFF_MATCHES)
+            .then(|| QUALIFIER_1_ROUND + self.matches.len() as u32)
+    }
+
+    /// The champion, once the Final is played.
+    ///
+    /// @returns The winning franchise, or `None` before the Final.
+    pub fn champion(&self) -> Option<&str> {
+        self.matches
+            .get(PLAYOFF_MATCHES - 1)
+            .and_then(|outcome| outcome.winner_id.as_deref())
+    }
+
+    /// Plays the next match in the bracket.
+    ///
+    /// @param lobby_id - The lobby, used to seed the match.
+    /// @param sides - The starting XI for each franchise.
+    /// @param config - The ball model parameters.
+    /// @returns The completed match.
+    /// @throws Returns a {@link PlayoffError} if the bracket is finished or a side is missing.
+    pub fn play_next(
+        &mut self,
+        lobby_id: &str,
+        sides: &[Side],
+        config: &ModifierConfig,
+    ) -> Result<&MatchOutcome, PlayoffError> {
+        let round = self.next_round().ok_or(PlayoffError::BracketComplete)?;
+        let (match_id, home_id, away_id) = match self.matches.len() {
+            0 => (
+                "r15-qualifier-1",
+                self.seeds[0].clone(),
+                self.seeds[1].clone(),
+            ),
+            1 => (
+                "r16-eliminator",
+                self.seeds[2].clone(),
+                self.seeds[3].clone(),
+            ),
+            2 => (
+                "r17-qualifier-2",
+                self.loser(0)?.to_string(),
+                self.winner(1)?.to_string(),
+            ),
+            _ => (
+                "r18-final",
+                self.winner(0)?.to_string(),
+                self.winner(2)?.to_string(),
+            ),
+        };
+        let home = find_side(sides, &home_id)?;
+        let away = find_side(sides, &away_id)?;
+        let outcome = simulate_match(
+            lobby_id,
+            match_id,
+            round,
+            home,
+            away,
+            MatchKind::Playoff,
+            config,
+        );
+        self.matches.push(outcome);
+        Ok(self
+            .matches
+            .last()
+            .unwrap_or_else(|| unreachable!("a match was just pushed")))
+    }
+
+    /// The winner of a played match.
+    ///
+    /// @param index - Bracket position of the match.
+    /// @returns The winning franchise.
+    /// @throws Returns {@link PlayoffError::BracketComplete} if that match has not been played.
+    fn winner(&self, index: usize) -> Result<&str, PlayoffError> {
+        let outcome = self
+            .matches
+            .get(index)
+            .ok_or(PlayoffError::BracketComplete)?;
+        Ok(outcome.winner_id.as_deref().unwrap_or(&outcome.home_id))
+    }
+
+    /// The loser of a played match.
+    ///
+    /// @param index - Bracket position of the match.
+    /// @returns The franchise that lost.
+    /// @throws Returns {@link PlayoffError::BracketComplete} if that match has not been played.
+    fn loser(&self, index: usize) -> Result<&str, PlayoffError> {
+        let winner = self.winner(index)?;
+        let outcome = &self.matches[index];
+        Ok(if winner == outcome.home_id {
+            &outcome.away_id
+        } else {
+            &outcome.home_id
+        })
+    }
 }
 
 /// Finds the side for a franchise.
 ///
 /// @param sides - The lobby's sides.
 /// @param franchise_id - The franchise to find.
-/// @returns The side, or a {@link PlayoffError} if it is missing.
-fn side_for<'a>(sides: &'a [Side], franchise_id: &str) -> Result<&'a Side, PlayoffError> {
+/// @returns The side, or {@link PlayoffError::MissingSide} if it is not there.
+fn find_side<'a>(sides: &'a [Side], franchise_id: &str) -> Result<&'a Side, PlayoffError> {
     sides
         .iter()
         .find(|side| side.franchise_id == franchise_id)
         .ok_or_else(|| PlayoffError::MissingSide(franchise_id.to_string()))
 }
 
-/// Plays the four playoff matches from the final league table.
-///
-/// Qualifier 1 is 1st against 2nd. The Eliminator is 3rd against 4th. Qualifier 2 is the
-/// loser of Qualifier 1 against the Eliminator's winner. The Final is the winners of
-/// Qualifier 1 and Qualifier 2. Level playoff matches are settled by super overs.
+/// Plays all four playoff matches from the final league table.
 ///
 /// @param lobby_id - The lobby, used to seed the matches.
 /// @param table - The final league table, best first.
 /// @param sides - The starting XI for each franchise.
 /// @param config - The ball model parameters.
-/// @returns The playoff matches and the champion.
+/// @returns The four matches in bracket order, and the champion.
 /// @throws Returns a {@link PlayoffError} if the table is too short or a side is missing.
 pub fn run_playoffs(
     lobby_id: &str,
@@ -60,105 +193,27 @@ pub fn run_playoffs(
     sides: &[Side],
     config: &ModifierConfig,
 ) -> Result<PlayoffResult, PlayoffError> {
-    if table.len() < 4 {
-        return Err(PlayoffError::NotEnoughTeams { found: table.len() });
+    let mut bracket = PlayoffBracket::new(table)?;
+    while bracket.next_round().is_some() {
+        bracket.play_next(lobby_id, sides, config)?;
     }
-    let seeded = |position: usize| side_for(sides, &table[position].franchise_id);
-
-    let (first, second, third, fourth) = (seeded(0)?, seeded(1)?, seeded(2)?, seeded(3)?);
-
-    let qualifier_1 = play(
-        lobby_id,
-        "r15-qualifier-1",
-        QUALIFIER_1_ROUND,
-        first,
-        second,
-        config,
-    );
-    let eliminator = play(
-        lobby_id,
-        "r16-eliminator",
-        ELIMINATOR_ROUND,
-        third,
-        fourth,
-        config,
-    );
-
-    let qualifier_1_loser = side_for(sides, loser_of(&qualifier_1))?;
-    let eliminator_winner = side_for(sides, winner_of(&eliminator))?;
-    let qualifier_2 = play(
-        lobby_id,
-        "r17-qualifier-2",
-        QUALIFIER_2_ROUND,
-        qualifier_1_loser,
-        eliminator_winner,
-        config,
-    );
-
-    let qualifier_1_winner = side_for(sides, winner_of(&qualifier_1))?;
-    let qualifier_2_winner = side_for(sides, winner_of(&qualifier_2))?;
-    let final_match = play(
-        lobby_id,
-        "r18-final",
-        FINAL_ROUND,
-        qualifier_1_winner,
-        qualifier_2_winner,
-        config,
-    );
-
-    let champion_id = winner_of(&final_match).to_string();
+    let champion_id = bracket
+        .champion()
+        .ok_or(PlayoffError::BracketComplete)?
+        .to_string();
     Ok(PlayoffResult {
-        matches: vec![qualifier_1, eliminator, qualifier_2, final_match],
+        matches: bracket.matches,
         champion_id,
     })
 }
 
-/// Simulates one playoff match.
-///
-/// @param lobby_id - The lobby, used to seed the match.
-/// @param match_id - The playoff match identifier.
-/// @param round - The playoff round.
-/// @param home - The home side.
-/// @param away - The away side.
-/// @param config - The ball model parameters.
-/// @returns The completed playoff match.
-fn play(
-    lobby_id: &str,
-    match_id: &str,
-    round: u32,
-    home: &Side,
-    away: &Side,
-    config: &ModifierConfig,
-) -> MatchOutcome {
-    simulate_match(
-        lobby_id,
-        match_id,
-        round,
-        home,
-        away,
-        MatchKind::Playoff,
-        config,
-    )
-}
-
-/// Returns the winner of a playoff match. Playoff matches always have one.
-///
-/// @param outcome - The completed playoff match.
-/// @returns The winning franchise ID.
-fn winner_of(outcome: &MatchOutcome) -> &str {
-    outcome.winner_id.as_deref().unwrap_or(&outcome.home_id)
-}
-
-/// Returns the loser of a playoff match.
-///
-/// @param outcome - The completed playoff match.
-/// @returns The franchise that lost.
-fn loser_of(outcome: &MatchOutcome) -> &str {
-    if winner_of(outcome) == outcome.home_id {
-        &outcome.away_id
-    } else {
-        &outcome.home_id
-    }
+/// The four playoff matches and the champion.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlayoffResult {
+    /// Qualifier 1, Eliminator, Qualifier 2 and the Final, in that order.
+    pub matches: Vec<MatchOutcome>,
+    /// The winner of the Final.
+    pub champion_id: String,
 }
 
 #[cfg(test)]
@@ -249,11 +304,47 @@ mod tests {
     }
 
     #[test]
+    fn the_second_qualifier_pairs_the_qualifier_loser_with_the_eliminator_winner() {
+        let ids = ["a", "b", "c", "d"];
+        let sides: Vec<Side> = ids.iter().map(|id| side(id)).collect();
+        let result = run_playoffs("lobby-q2", &table(&ids), &sides, &ModifierConfig::default())
+            .expect("playoffs run");
+        let q1 = &result.matches[0];
+        let elim = &result.matches[1];
+        let q2 = &result.matches[2];
+        let q1_loser = if q1.winner_id == Some(q1.home_id.clone()) {
+            &q1.away_id
+        } else {
+            &q1.home_id
+        };
+        assert_eq!(&q2.home_id, q1_loser);
+        assert_eq!(q2.away_id, elim.winner_id.clone().unwrap_or_default());
+    }
+
+    #[test]
     fn the_playoffs_need_four_teams() {
         let sides = vec![side("a")];
         assert_eq!(
             run_playoffs("lobby", &table(&["a"]), &sides, &ModifierConfig::default()),
             Err(PlayoffError::NotEnoughTeams { found: 1 })
+        );
+    }
+
+    #[test]
+    fn the_bracket_refuses_to_play_past_the_final() {
+        let ids = ["a", "b", "c", "d"];
+        let sides: Vec<Side> = ids.iter().map(|id| side(id)).collect();
+        let mut bracket = PlayoffBracket::new(&table(&ids)).expect("bracket");
+        let config = ModifierConfig::default();
+        for _ in 0..PLAYOFF_MATCHES {
+            bracket
+                .play_next("lobby-end", &sides, &config)
+                .expect("match plays");
+        }
+        assert_eq!(bracket.next_round(), None);
+        assert_eq!(
+            bracket.play_next("lobby-end", &sides, &config).map(|_| ()),
+            Err(PlayoffError::BracketComplete)
         );
     }
 }
