@@ -1,0 +1,19 @@
+# Cloudflare Worker for the lobby (ARCHITECTURE.md). `worker-build` (0.8.7) compiles the
+# `cricket-worker` crate to wasm and writes the JavaScript entry point that `main` points at.
+name = "cricket-lobby"
+main = "crates/cricket-worker/build/worker/shim.mjs"
+compatibility_date = "2026-10-01"
+
+[build]
+command = "worker-build --release"
+cwd = "crates/cricket-worker"
+
+# One Durable Object per lobby, which is the only store (ADR 0002). SQLite-backed, as the
+# free plan requires.
+[[durable_objects.bindings]]
+name = "LOBBY"
+class_name = "LobbyObject"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LobbyObject"]
