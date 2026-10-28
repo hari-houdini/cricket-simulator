@@ -6,12 +6,12 @@
  * `babel.config.ts`, which is why StyleX never compiled in the app before.
  */
 
-const path = require("node:path");
+import path from "node:path";
+import type { TransformOptions } from "@babel/core";
 
 const dev = process.env.NODE_ENV !== "production";
 
-/** @type {import("@babel/core").TransformOptions} */
-module.exports = {
+const config: TransformOptions = {
   presets: ["next/babel"],
   plugins: [
     [
@@ -30,3 +30,5 @@ module.exports = {
     ],
   ],
 };
+
+export default config;

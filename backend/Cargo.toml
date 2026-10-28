@@ -1,0 +1,15 @@
+[workspace]
+members = ["crates/cricket-core"]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+publish = false
+
+# Exact pins only (AGENTS.md, Dependencies). Each crate was approved in the
+# grilling session before being added here.
+[workspace.dependencies]
+rand_chacha = "=0.10.0"
+rand_core = "=0.10.1"
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"

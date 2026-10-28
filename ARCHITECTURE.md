@@ -105,6 +105,10 @@ app/
 
 ## Backend Architecture (Cloudflare Workers)
 
+The backend is a Cargo workspace. `cricket-core` holds the game rules as pure Rust with no I/O. `cricket-worker` is the Worker adapter, which owns the Durable Object and the HTTP and WebSocket surface. Time and randomness enter the core as arguments. See [ADR 0005](docs/adr/0005-pure-core-with-worker-adapter.md).
+
+Delivery is in four phases: the core, the Worker adapter, the HTTP and WebSocket API, and the frontend cut-over from the mock.
+
 ### 1. Core Services
 
 #### Match Simulator (`match_simulator.rs`)
@@ -223,12 +227,14 @@ struct PlayerRatings {
 struct Squad {
     id: String,
     lobby_id: String,
-    user_id: String,
+    owner_id: String,  // the guest who owns the franchise
+    franchise_id: String,
     players: Vec<Player>,  // 15 drafted players
     starting_xi: Vec<String>,  // 11 player IDs from players
     captain_id: String,
     vice_captain_id: String,
-    total_spent: u32,  // ₹
+    total_spent: u32,  // lakhs (ADR 0004)
+    substitution_used: bool,
     season_stats: SeasonStats,
 }
 
@@ -250,10 +256,10 @@ struct Match {
     id: String,
     lobby_id: String,
     round: u32,
-    team1: Squad,
-    team2: Squad,
-    toss_winner: String,
-    batting_first: String,
+    home: Squad,  // see GLOSSARY.md, Franchise and Squad
+    away: Squad,
+    toss_winner: String,  // franchise_id
+    batting_first: String,  // franchise_id
     innings1: Innings,
     innings2: Innings,
     result: MatchResult,
@@ -262,8 +268,8 @@ struct Match {
 }
 
 struct Innings {
-    batting_team: Squad,
-    bowling_team: Squad,
+    batting_franchise_id: String,
+    bowling_franchise_id: String,
     balls: Vec<Ball>,
     total_runs: u32,
     total_wickets: u32,
@@ -287,18 +293,21 @@ struct Lobby {
     id: String,
     code: String,  // Shareable code
     name: String,
-    created_by: String,
+    created_by: String,  // guest_id
     created_at: DateTime,
-    users: Vec<LobbyUser>,
-    current_phase: Phase,  // Auction, League, Playoffs, Complete
+    owners: Vec<Owner>,  // removed owners are dropped (GLOSSARY.md, Removed owner)
+    phase: Phase,  // auction | league | playoffs | complete
     current_round: u32,
-    seed_version: String,  // seed data set the lobby was created with (see data/seeds/)
+    seed_version: String,  // seed data set the lobby was created with, copied at creation (see data/seeds/)
     season: Season,
     standings: Standings,
 }
 
-struct LobbyUser {
-    user_id: String,
+/// The guest who holds one franchise, its squad and its purse.
+struct Owner {
+    guest_id: String,
+    franchise_id: String,
+    purse_remaining: u32,  // lakhs
     squad: Squad,
     league_points: u32,
     playoff_record: PlayoffRecord,
