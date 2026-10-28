@@ -1,25 +1,23 @@
-//! The lobby service: one command in, one state change and a list of events out.
+//! The lobby service: one operation in, one JSON body out, with the lobby changed in place.
 //!
-//! This module is plain Rust with no Cloudflare types, so the whole season can be tested on
-//! the host. The Durable Object in `durable.rs` loads the lobby, calls {@link apply}, saves
-//! the result, sends the events, and sets the next alarm. Nothing here reads a clock: the
-//! caller passes `now_ms`.
+//! This module is plain Rust with no Cloudflare types, so the whole season is tested on the
+//! host. The Durable Object in `durable.rs` loads the lobby, calls {@link execute}, saves the
+//! result when it changed, and sets the next alarm. Nothing here reads a clock: the caller
+//! passes `now_ms`.
 
-use cricket_core::auction::LotOutcome;
+use cricket_core::auction::AuctionError;
 use cricket_core::lobby::{Lobby, LobbyError, Phase};
 use cricket_core::model::{Franchise, Player};
 use cricket_core::schedule::Fixture;
 use cricket_core::seed_data::{parse_franchises, parse_players, parse_schedule};
-use cricket_core::simulator::{MatchOutcome, ModifierConfig};
-use serde::{Deserialize, Serialize};
+use cricket_core::simulator::ModifierConfig;
+use cricket_core::squad::SQUAD_SIZE;
 
-/// Time between league rounds and playoff matches, in milliseconds.
-///
-/// `docs/game-design.md` section 6 asks for league matches in 1 to 2 seconds. Each step plays a
-/// whole round, so this is a round interval, not a per-match one. It is tunable.
-pub const ROUND_INTERVAL_MS: u64 = 2_000;
+use crate::errors::{ApiError, from_lobby, substitution_reason, xi_reason};
+use crate::operation::Operation;
+use crate::views;
 
-/// The seed data a lobby is created from. It is parsed once and shared by every command.
+/// The seed data a lobby is created from. It is parsed once and shared by every request.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Seeds {
     /// Seed version recorded on the lobby (GLOSSARY.md, Seed file).
@@ -28,7 +26,7 @@ pub struct Seeds {
     pub franchise_ids: Vec<String>,
     /// The player pool.
     pub players: Vec<Player>,
-    /// The league template.
+    /// The league template every lobby shuffles its own schedule from.
     pub template: Vec<Fixture>,
 }
 
@@ -38,7 +36,7 @@ impl Seeds {
     /// @param players_json - Contents of `players.v1.json`.
     /// @param franchises_json - Contents of `franchises.v1.json`.
     /// @param schedule_json - Contents of `ipl-schedule.v1.json`.
-    /// @returns The parsed seeds. The players' seed version is used for the lobby.
+    /// @returns The parsed seeds. The players' seed version is used for every lobby.
     /// @throws Returns a `serde_json::Error` if any file does not match its shape.
     pub fn parse(
         players_json: &str,
@@ -60,360 +58,590 @@ impl Seeds {
     }
 }
 
-/// A request to change a lobby. This is the internal command set; phase 3 exposes it as HTTP.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(
-    tag = "type",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
-pub enum Command {
-    /// A guest claims a franchise.
-    ClaimFranchise {
-        guest_id: String,
-        franchise_id: String,
-    },
-    /// A guest connects or disconnects.
-    SetConnected { guest_id: String, connected: bool },
-    /// The owners start the auction.
-    StartAuction,
-    /// An owner bids on the open lot.
-    PlaceBid { guest_id: String, amount: u32 },
-    /// An owner passes on the open lot.
-    PassLot { guest_id: String },
-    /// An owner sets their starting XI.
-    SetStartingXi {
-        guest_id: String,
-        player_ids: Vec<String>,
-        captain_id: String,
-        vice_captain_id: String,
-    },
-    /// Everyone is ready and the league starts.
-    StartLeague,
-    /// The alarm fired. The lobby advances its clock, or its season, depending on the phase.
-    Alarm,
-}
-
-/// Something that happened, sent to every connected guest.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(
-    tag = "type",
-    rename_all = "camelCase",
-    rename_all_fields = "camelCase"
-)]
-pub enum LobbyEvent {
-    /// The lobby moved to another phase.
-    PhaseChanged { phase: Phase },
-    /// A lot closed, as a sale or as unsold.
-    LotClosed { outcome: LotOutcome },
-    /// Matches were played in one step of the season.
-    MatchesPlayed { matches: Vec<MatchOutcome> },
-}
-
-/// What a command produced.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Outcome {
-    /// Events to send, in order.
-    pub events: Vec<LobbyEvent>,
-    /// When the next alarm should fire, in milliseconds, or `None` when the lobby needs no more
-    /// time-driven steps.
-    pub next_wake_ms: Option<u64>,
-}
-
-/// Creates a lobby from the seeds.
+/// Creates a lobby, with the creator as its first guest.
 ///
-/// @param id - The lobby identifier.
-/// @param seeds - The parsed seed data.
-/// @returns A lobby in the waiting phase.
-pub fn create_lobby(id: &str, seeds: &Seeds) -> Lobby {
-    Lobby::new(id, &seeds.seed_version, seeds.franchise_ids.clone())
+/// @param code - The lobby code, which is also its identifier.
+/// @param name - The lobby's name.
+/// @param guest_id - The creator.
+/// @param display_name - The creator's name.
+/// @param seeds - The seed data.
+/// @returns The new lobby.
+/// @throws Returns an {@link ApiError} if the creator cannot join, which an empty lobby prevents.
+pub fn create(
+    code: &str,
+    name: &str,
+    guest_id: &str,
+    display_name: &str,
+    seeds: &Seeds,
+) -> Result<Lobby, ApiError> {
+    let mut lobby = Lobby::new(
+        code,
+        name,
+        &seeds.seed_version,
+        seeds.franchise_ids.clone(),
+        seeds.template.clone(),
+    );
+    lobby.join(guest_id, display_name).map_err(from_lobby)?;
+    Ok(lobby)
 }
 
-/// Applies one command to a lobby.
+/// Settles every auction lot whose timer has run out by `now_ms`. Each call closes one lot and
+/// opens the next at `now_ms`, so the loop ends once no lot is overdue.
 ///
-/// @param lobby - The lobby to change. Updated in place when the command succeeds.
-/// @param command - The command to apply.
-/// @param now_ms - The current time, in milliseconds since the epoch.
-/// @param seeds - The seed data, used by `StartAuction` and `StartLeague`.
-/// @param config - The ball model parameters, used when the season advances.
-/// @returns The events and the next alarm time.
-/// @throws Returns a {@link LobbyError} if the lobby refuses the command. The lobby is left as it was.
-pub fn apply(
+/// @param lobby - The lobby to bring up to date.
+/// @param now_ms - The current time.
+/// @returns `Ok(())` once no lot is overdue.
+/// @throws Returns an {@link ApiError} if the auction refuses a close, which a running auction does not.
+pub fn catch_up(lobby: &mut Lobby, now_ms: u64) -> Result<(), ApiError> {
+    while auction_is_running(lobby) && overdue(lobby, now_ms) {
+        lobby.tick(now_ms).map_err(from_lobby)?;
+    }
+    Ok(())
+}
+
+/// The next time the lobby needs waking, for the auction timer.
+///
+/// @param lobby - The lobby.
+/// @returns The deadline of the open lot, or `None` when no timer is running.
+pub fn next_wake(lobby: &Lobby) -> Option<u64> {
+    if !auction_is_running(lobby) {
+        return None;
+    }
+    lobby
+        .auction()
+        .and_then(|auction| auction.current_lot())
+        .map(|lot| lot.deadline_ms)
+}
+
+/// Reports whether the auction is in progress with an open lot.
+///
+/// @param lobby - The lobby.
+/// @returns `true` while the auction is running.
+fn auction_is_running(lobby: &Lobby) -> bool {
+    lobby.phase() == Phase::Auction
+        && lobby
+            .auction()
+            .is_some_and(|auction| !auction.is_complete())
+}
+
+/// Reports whether the open lot's timer has run out.
+///
+/// @param lobby - The lobby.
+/// @param now_ms - The current time.
+/// @returns `true` when the lot should close now.
+fn overdue(lobby: &Lobby, now_ms: u64) -> bool {
+    lobby
+        .auction()
+        .and_then(|auction| auction.current_lot())
+        .is_some_and(|lot| now_ms >= lot.deadline_ms)
+}
+
+/// Runs one operation on a lobby.
+///
+/// The lobby is brought up to date first, so an auction lot that has run out is settled before
+/// the operation sees it. A refused operation can still have changed the lobby by that step,
+/// which is why the caller saves whenever the lobby differs.
+///
+/// @param lobby - The lobby, changed in place.
+/// @param operation - The action.
+/// @param now_ms - The current time.
+/// @param seeds - The seed data, for the auction pool.
+/// @param config - The ball model parameters.
+/// @returns The JSON body of the response.
+/// @throws Returns an {@link ApiError} for a refused operation, with the status and name the frontend expects.
+pub fn execute(
     lobby: &mut Lobby,
-    command: Command,
+    operation: Operation,
     now_ms: u64,
     seeds: &Seeds,
     config: &ModifierConfig,
-) -> Result<Outcome, LobbyError> {
-    // Work on a copy so a refused command leaves the stored lobby untouched.
-    let mut next = lobby.clone();
-    let before = next.phase();
-    let mut events = Vec::new();
-
-    match command {
-        Command::ClaimFranchise {
+) -> Result<String, ApiError> {
+    catch_up(lobby, now_ms)?;
+    let body = match operation {
+        // Creation happens before a lobby exists, in `create`, so reaching here means the code is taken.
+        Operation::CreateLobby { .. } => return Err(ApiError::new(409, "LobbyCodeTakenError")),
+        Operation::GetLobby => to_json(&views::lobby(lobby)),
+        Operation::Join {
+            guest_id,
+            display_name,
+        } => {
+            lobby.join(&guest_id, &display_name).map_err(join_error)?;
+            to_json(&views::lobby(lobby))
+        }
+        Operation::ClaimFranchise {
             guest_id,
             franchise_id,
         } => {
-            next.claim_franchise(&guest_id, &franchise_id)?;
+            lobby
+                .claim_franchise(&guest_id, &franchise_id)
+                .map_err(claim_error)?;
+            to_json(&views::lobby(lobby))
         }
-        Command::SetConnected {
+        Operation::StartAuction { guest_id } => {
+            if !lobby.is_member(&guest_id) {
+                return Err(ApiError::new(403, "NotAnOwnerError"));
+            }
+            lobby
+                .start_auction(seeds.players.clone(), now_ms)
+                .map_err(start_error)?;
+            to_json(&views::lobby(lobby))
+        }
+        Operation::GetAuction => to_json(&views::auction(lobby)?),
+        Operation::PlaceBid {
             guest_id,
-            connected,
+            amount_lakhs,
         } => {
-            events.extend(lot_events(next.set_connected(&guest_id, connected)?));
+            lobby
+                .place_bid(&guest_id, amount_lakhs, now_ms)
+                .map_err(|error| bid_error(lobby, &guest_id, error))?;
+            to_json(&views::auction(lobby)?)
         }
-        Command::StartAuction => {
-            events.extend(lot_events(
-                next.start_auction(seeds.players.clone(), now_ms)?,
-            ));
-        }
-        Command::PlaceBid { guest_id, amount } => {
-            next.place_bid(&guest_id, amount, now_ms)?;
-        }
-        Command::PassLot { guest_id } => {
-            events.extend(lot_events(next.pass_lot(&guest_id, now_ms)?));
-        }
-        Command::SetStartingXi {
+        Operation::GetSquad { guest_id } => to_json(&views::squad(lobby, &guest_id)?),
+        Operation::SetStartingXi {
             guest_id,
             player_ids,
             captain_id,
             vice_captain_id,
         } => {
-            next.set_starting_xi(&guest_id, player_ids, &captain_id, &vice_captain_id)?;
+            lobby
+                .set_starting_xi(&guest_id, player_ids, &captain_id, &vice_captain_id)
+                .map_err(xi_error)?;
+            to_json(&views::squad(lobby, &guest_id)?)
         }
-        Command::StartLeague => {
-            next.start_league(&seeds.template)?;
+        Operation::Substitute {
+            guest_id,
+            out_player_id,
+            in_player_id,
+        } => {
+            lobby
+                .substitute(&guest_id, &out_player_id, &in_player_id)
+                .map_err(substitute_error)?;
+            to_json(&views::squad(lobby, &guest_id)?)
         }
-        Command::Alarm => match next.phase() {
-            Phase::Auction => events.extend(lot_events(next.tick(now_ms)?)),
-            Phase::League | Phase::Playoffs => {
-                let matches = next.advance(config)?;
-                events.push(LobbyEvent::MatchesPlayed { matches });
-            }
-            Phase::Waiting | Phase::Complete => {}
-        },
-    }
-
-    if next.phase() != before {
-        events.insert(
-            0,
-            LobbyEvent::PhaseChanged {
-                phase: next.phase(),
-            },
-        );
-    }
-    let next_wake_ms = next_wake(&next, now_ms);
-    *lobby = next;
-    Ok(Outcome {
-        events,
-        next_wake_ms,
-    })
+        Operation::GetLeague => to_json(&views::league(lobby)?),
+        Operation::AdvanceRound { guest_id } => {
+            advance(lobby, &guest_id, config)?;
+            to_json(&views::league(lobby)?)
+        }
+        Operation::GetPlayoffs => to_json(&views::playoffs(lobby)?),
+        Operation::GetAwards => to_json(&views::awards(lobby)?),
+    };
+    Ok(body)
 }
 
-/// Turns closed lots into events.
+/// Plays the next league round or playoff match for an owner.
 ///
-/// @param outcomes - The lots closed by one command.
-/// @returns One `LotClosed` event per lot.
-fn lot_events(outcomes: Vec<LotOutcome>) -> Vec<LobbyEvent> {
-    outcomes
-        .into_iter()
-        .map(|outcome| LobbyEvent::LotClosed { outcome })
-        .collect()
-}
-
-/// Works out when the lobby next needs to act on its own.
-///
-/// During the auction that is the open lot's deadline. During the season it is one round
-/// interval after `now_ms`. Otherwise the lobby waits for guests.
-///
-/// @param lobby - The lobby after the command.
-/// @param now_ms - The current time, in milliseconds.
-/// @returns The alarm time, or `None`.
-fn next_wake(lobby: &Lobby, now_ms: u64) -> Option<u64> {
+/// @param lobby - The lobby.
+/// @param guest_id - The guest asking.
+/// @param config - The ball model parameters.
+/// @returns `Ok(())` when the step is played.
+/// @throws Returns an {@link ApiError} naming the block: season over, not started, not an owner, or an owner with no XI.
+fn advance(lobby: &mut Lobby, guest_id: &str, config: &ModifierConfig) -> Result<(), ApiError> {
     match lobby.phase() {
-        Phase::Auction => lobby
-            .auction()
-            .and_then(|auction| auction.current_lot())
-            .map(|lot| lot.deadline_ms.max(now_ms)),
-        Phase::League | Phase::Playoffs => Some(now_ms + ROUND_INTERVAL_MS),
-        Phase::Waiting | Phase::Complete => None,
+        Phase::Complete => {
+            return Err(ApiError::because(
+                409,
+                "LeagueAdvanceBlockedError",
+                "season-over",
+            ));
+        }
+        Phase::Waiting | Phase::Auction => {
+            return Err(ApiError::new(409, "LeagueNotStartedError"));
+        }
+        Phase::League | Phase::Playoffs => {}
+    }
+    if !lobby.is_owner(guest_id) {
+        return Err(ApiError::new(403, "NotAnOwnerError"));
+    }
+    lobby
+        .advance(config)
+        .map(drop)
+        .map_err(|error| match error {
+            LobbyError::XiMissing(_) => {
+                ApiError::because(409, "LeagueAdvanceBlockedError", "no-legal-starting-xi")
+            }
+            other => from_lobby(other),
+        })
+}
+
+/// Serialises a response body.
+///
+/// @param value - The DTO.
+/// @returns The JSON text.
+fn to_json<T: serde::Serialize>(value: &T) -> String {
+    serde_json::to_string(value).expect("DTOs serialise to JSON")
+}
+
+/// Maps a join refusal. A join once the auction has started is `AuctionAlreadyStartedError`.
+///
+/// @param error - The lobby refusal.
+/// @returns The HTTP refusal.
+fn join_error(error: LobbyError) -> ApiError {
+    match error {
+        LobbyError::WrongPhase { .. } => ApiError::new(409, "AuctionAlreadyStartedError"),
+        other => from_lobby(other),
+    }
+}
+
+/// Maps a claim refusal. A claim once the auction has started is `FranchiseClaimClosedError`.
+///
+/// @param error - The lobby refusal.
+/// @returns The HTTP refusal.
+fn claim_error(error: LobbyError) -> ApiError {
+    match error {
+        LobbyError::WrongPhase { .. } => ApiError::new(409, "FranchiseClaimClosedError"),
+        other => from_lobby(other),
+    }
+}
+
+/// Maps an auction start refusal. Starting twice is `AuctionAlreadyStartedError`.
+///
+/// @param error - The lobby refusal.
+/// @returns The HTTP refusal.
+fn start_error(error: LobbyError) -> ApiError {
+    match error {
+        LobbyError::WrongPhase { .. } => ApiError::new(409, "AuctionAlreadyStartedError"),
+        other => from_lobby(other),
+    }
+}
+
+/// Maps a bid refusal. A bid from an owner whose squad is already full is `squad-full`, because
+/// the auction only knows it as not bidding.
+///
+/// @param lobby - The lobby, to read the bidder's squad.
+/// @param guest_id - The bidder.
+/// @param error - The lobby refusal.
+/// @returns The HTTP refusal.
+fn bid_error(lobby: &Lobby, guest_id: &str, error: LobbyError) -> ApiError {
+    match error {
+        LobbyError::WrongPhase { .. } => ApiError::because(409, "BidBlockedError", "no-open-lot"),
+        LobbyError::Auction(AuctionError::NotBidding) => {
+            let full = lobby
+                .auction()
+                .and_then(|auction| {
+                    auction
+                        .owners()
+                        .iter()
+                        .find(|owner| owner.guest_id == guest_id)
+                })
+                .is_some_and(|owner| owner.squad.len() >= SQUAD_SIZE);
+            let reason = if full { "squad-full" } else { "not-an-owner" };
+            ApiError::because(409, "BidBlockedError", reason)
+        }
+        other => from_lobby(other),
+    }
+}
+
+/// Maps a starting-XI refusal, with the frontend's names for a locked or illegal XI.
+///
+/// @param error - The lobby refusal.
+/// @returns The HTTP refusal.
+fn xi_error(error: LobbyError) -> ApiError {
+    match error {
+        LobbyError::XiLocked => ApiError::new(409, "XiLockedError"),
+        LobbyError::InvalidXi(rule) => ApiError::because(409, "XiBlockedError", xi_reason(&rule)),
+        LobbyError::WrongPhase { .. } => ApiError::new(409, "SquadNotReadyError"),
+        other => from_lobby(other),
+    }
+}
+
+/// Maps a substitution refusal.
+///
+/// @param error - The lobby refusal.
+/// @returns The HTTP refusal.
+fn substitute_error(error: LobbyError) -> ApiError {
+    match error {
+        LobbyError::Substitution(reason) => ApiError::because(
+            409,
+            "SubstitutionBlockedError",
+            substitution_reason(&reason),
+        ),
+        other => from_lobby(other),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cricket_core::auction::BID_TIMER_MS;
 
     const PLAYERS: &str = include_str!("../../../../data/seeds/players.v1.json");
     const FRANCHISES: &str = include_str!("../../../../data/seeds/franchises.v1.json");
     const SCHEDULE: &str = include_str!("../../../../data/seeds/ipl-schedule.v1.json");
 
     fn seeds() -> Seeds {
-        Seeds::parse(PLAYERS, FRANCHISES, SCHEDULE).expect("seeds parse")
+        Seeds::parse(PLAYERS, FRANCHISES, SCHEDULE).expect("seed files parse")
     }
 
-    /// Runs alarms until the lobby stops asking for them, and returns every event from the run.
-    fn run_alarms(lobby: &mut Lobby, seeds: &Seeds, mut now: u64) -> Vec<LobbyEvent> {
-        let config = ModifierConfig::default();
-        let mut events = Vec::new();
-        for _ in 0..10_000 {
-            let outcome = apply(lobby, Command::Alarm, now, seeds, &config).expect("alarm applies");
-            events.extend(outcome.events);
-            match outcome.next_wake_ms {
-                Some(next) => now = next,
-                None => break,
-            }
+    fn run(lobby: &mut Lobby, operation: Operation, now_ms: u64) -> Result<String, ApiError> {
+        execute(
+            lobby,
+            operation,
+            now_ms,
+            &seeds(),
+            &ModifierConfig::default(),
+        )
+    }
+
+    fn join(guest: &str) -> Operation {
+        Operation::Join {
+            guest_id: guest.to_string(),
+            display_name: guest.to_string(),
         }
-        events
     }
 
-    #[test]
-    fn parsing_the_seeds_gives_ten_franchises_and_the_league_template() {
-        let seeds = seeds();
-        assert_eq!(seeds.franchise_ids.len(), 10);
-        assert_eq!(seeds.template.len(), 70);
-        assert_eq!(seeds.players.len(), 300);
+    fn claim(guest: &str, franchise: &str) -> Operation {
+        Operation::ClaimFranchise {
+            guest_id: guest.to_string(),
+            franchise_id: franchise.to_string(),
+        }
     }
 
-    #[test]
-    fn the_auction_alarm_follows_the_open_lot_deadline() {
-        let seeds = seeds();
-        let config = ModifierConfig::default();
-        let mut lobby = create_lobby("lobby-alarm", &seeds);
-        apply(
-            &mut lobby,
-            Command::ClaimFranchise {
-                guest_id: "g".into(),
-                franchise_id: "csk".into(),
-            },
-            0,
-            &seeds,
-            &config,
-        )
-        .expect("claim");
-        let started = apply(&mut lobby, Command::StartAuction, 1_000, &seeds, &config)
-            .expect("auction starts");
-        assert_eq!(started.next_wake_ms, Some(1_000 + 5_000));
-        assert!(matches!(
-            started.events.first(),
-            Some(LobbyEvent::PhaseChanged {
-                phase: Phase::Auction
-            })
-        ));
+    fn start(guest: &str) -> Operation {
+        Operation::StartAuction {
+            guest_id: guest.to_string(),
+        }
     }
 
-    #[test]
-    fn a_refused_command_leaves_the_lobby_unchanged() {
-        let seeds = seeds();
-        let config = ModifierConfig::default();
-        let mut lobby = create_lobby("lobby-refuse", &seeds);
-        apply(
-            &mut lobby,
-            Command::ClaimFranchise {
-                guest_id: "g".into(),
-                franchise_id: "csk".into(),
-            },
-            0,
-            &seeds,
-            &config,
-        )
-        .expect("claim");
-        let before = lobby.clone();
-        let refused = apply(
-            &mut lobby,
-            Command::PlaceBid {
-                guest_id: "g".into(),
-                amount: 1,
-            },
-            0,
-            &seeds,
-            &config,
-        );
-        assert!(refused.is_err());
-        assert_eq!(lobby, before);
+    /// A lobby with one guest who has claimed CSK.
+    fn lobby_with_one_owner() -> Lobby {
+        let mut lobby = create("ABC123", "Test", "a", "a", &seeds()).expect("creates");
+        run(&mut lobby, claim("a", "csk"), 0).expect("claims");
+        lobby
     }
 
-    #[test]
-    fn with_no_bids_the_whole_season_runs_on_alarms_to_a_champion() {
-        let seeds = seeds();
-        let config = ModifierConfig::default();
-        let mut lobby = create_lobby("lobby-season", &seeds);
-        apply(
-            &mut lobby,
-            Command::ClaimFranchise {
-                guest_id: "g".into(),
-                franchise_id: "csk".into(),
-            },
-            0,
-            &seeds,
-            &config,
-        )
-        .expect("claim");
-        apply(&mut lobby, Command::StartAuction, 0, &seeds, &config).expect("auction starts");
+    /// Runs the auction to its end. The guest bids the base price on every lot they can, as the
+    /// lot opens, and every timer is then run out in turn.
+    ///
+    /// @param lobby - A lobby whose auction has started.
+    /// @param guest - The guest who bids.
+    /// @returns The time the auction ended.
+    fn play_auction(lobby: &mut Lobby, guest: &str) -> u64 {
+        let mut now = 0;
+        while lobby.phase() == Phase::Auction {
+            let deadline = next_wake(lobby).expect("a timer runs");
+            let opened = deadline - BID_TIMER_MS;
+            if let Some(base) = lobby
+                .auction()
+                .and_then(|auction| auction.current_lot())
+                .map(|lot| lot.player.base_price)
+            {
+                let _ = run(
+                    lobby,
+                    Operation::PlaceBid {
+                        guest_id: guest.to_string(),
+                        amount_lakhs: base,
+                    },
+                    opened,
+                );
+            }
+            now = deadline;
+            run(lobby, Operation::GetAuction, now).expect("reads");
+        }
+        now
+    }
 
-        let auction_events = run_alarms(&mut lobby, &seeds, 5_000);
-        assert_eq!(lobby.phase(), Phase::Auction);
-        assert!(
-            auction_events
-                .iter()
-                .all(|event| matches!(event, LobbyEvent::LotClosed { .. }))
-        );
-
-        // Owners with no squad are removed when the pool runs out, so every franchise is a
-        // system squad with an XI. The league can start straight away.
-        apply(&mut lobby, Command::StartLeague, 1_000_000, &seeds, &config).expect("league starts");
-        let season_events = run_alarms(&mut lobby, &seeds, 1_000_000 + ROUND_INTERVAL_MS);
-
-        assert_eq!(lobby.phase(), Phase::Complete);
-        assert!(lobby.champion().is_some());
-        let played: usize = season_events
+    /// Sets the guest's XI to the strongest legal one from their squad, as an owner would.
+    /// A league round is blocked until every owner has an XI, so the season tests need one.
+    ///
+    /// @param lobby - A lobby whose auction has ended.
+    /// @param guest - The owner.
+    /// @param now - The current time.
+    fn set_strongest_xi(lobby: &mut Lobby, guest: &str, now: u64) {
+        let players: Vec<cricket_core::model::Player> = lobby
+            .squads()
             .iter()
-            .map(|event| match event {
-                LobbyEvent::MatchesPlayed { matches } => matches.len(),
-                _ => 0,
-            })
-            .sum();
-        assert_eq!(played, 70 + 4);
+            .find(|entry| entry.owner_guest_id.as_deref() == Some(guest))
+            .expect("the owner has a squad")
+            .players
+            .clone();
+        let legal = cricket_core::system_squad::strongest_legal_xi(&players)
+            .expect("the bought squad has a legal XI");
+        let captain = legal[0].clone();
+        let vice_captain = legal[1].clone();
+        run(
+            lobby,
+            Operation::SetStartingXi {
+                guest_id: guest.to_string(),
+                player_ids: legal,
+                captain_id: captain,
+                vice_captain_id: vice_captain,
+            },
+            now,
+        )
+        .expect("the legal XI is accepted");
     }
 
     #[test]
-    fn the_wake_time_is_none_once_the_season_is_over() {
-        let seeds = seeds();
-        let config = ModifierConfig::default();
-        let mut lobby = create_lobby("lobby-done", &seeds);
-        apply(
+    fn a_guest_must_join_before_claiming_and_the_auction_needs_every_claim() {
+        let mut lobby = create("ABC123", "Test", "a", "a", &seeds()).expect("creates");
+        run(&mut lobby, join("b"), 0).expect("joins");
+        let blocked = run(&mut lobby, start("a"), 0).unwrap_err();
+        assert_eq!(blocked.name, "AuctionStartBlockedError");
+        assert_eq!(blocked.reason, Some("unclaimed-franchise"));
+        assert_eq!(
+            run(&mut lobby, claim("zzz", "csk"), 0).unwrap_err().status,
+            403
+        );
+    }
+
+    #[test]
+    fn a_claim_or_join_after_the_auction_starts_is_refused_by_name() {
+        let mut lobby = lobby_with_one_owner();
+        run(&mut lobby, start("a"), 0).expect("starts");
+        assert_eq!(
+            run(&mut lobby, claim("a", "mi"), 0).unwrap_err().name,
+            "FranchiseClaimClosedError"
+        );
+        assert_eq!(
+            run(&mut lobby, join("late"), 0).unwrap_err().name,
+            "AuctionAlreadyStartedError"
+        );
+    }
+
+    #[test]
+    fn a_bid_is_refused_with_the_reason_the_frontend_shows() {
+        let mut lobby = lobby_with_one_owner();
+        run(&mut lobby, start("a"), 0).expect("starts");
+        let base = lobby
+            .auction()
+            .and_then(|auction| auction.current_lot())
+            .map(|lot| lot.player.base_price)
+            .expect("a lot is open");
+
+        let wrong = run(
             &mut lobby,
-            Command::ClaimFranchise {
-                guest_id: "g".into(),
-                franchise_id: "csk".into(),
+            Operation::PlaceBid {
+                guest_id: "a".to_string(),
+                amount_lakhs: base + 7,
             },
             0,
-            &seeds,
-            &config,
         )
-        .expect("claim");
-        apply(&mut lobby, Command::StartAuction, 0, &seeds, &config).expect("auction starts");
-        run_alarms(&mut lobby, &seeds, 5_000);
-        apply(&mut lobby, Command::StartLeague, 0, &seeds, &config).expect("league starts");
-        let last = run_alarms(&mut lobby, &seeds, ROUND_INTERVAL_MS);
-        assert!(!last.is_empty());
-        assert_eq!(lobby.phase(), Phase::Complete);
-        let outcome = apply(&mut lobby, Command::Alarm, 0, &seeds, &config)
-            .expect("alarm on a finished lobby");
-        assert_eq!(outcome.next_wake_ms, None);
+        .unwrap_err();
+        assert_eq!(wrong.name, "BidBlockedError");
+        assert_eq!(wrong.reason, Some("not-next-step"));
+
+        let stranger = run(
+            &mut lobby,
+            Operation::PlaceBid {
+                guest_id: "nobody".to_string(),
+                amount_lakhs: base,
+            },
+            0,
+        )
+        .unwrap_err();
+        assert_eq!(stranger.reason, Some("not-an-owner"));
     }
 
     #[test]
-    fn commands_round_trip_through_json_with_their_type_tag() {
-        let command = Command::PlaceBid {
-            guest_id: "g".into(),
-            amount: 200,
-        };
-        let json = serde_json::to_string(&command).expect("serialises");
-        assert_eq!(json, r#"{"type":"placeBid","guestId":"g","amount":200}"#);
-        let back: Command = serde_json::from_str(&json).expect("parses");
-        assert_eq!(back, command);
+    fn an_expired_lot_is_settled_before_a_read() {
+        let mut lobby = lobby_with_one_owner();
+        run(&mut lobby, start("a"), 0).expect("starts");
+        let deadline = next_wake(&lobby).expect("a timer runs");
+        let before = lobby.auction().expect("auction").remaining();
+        let body = run(&mut lobby, Operation::GetAuction, deadline).expect("reads");
+        assert!(
+            body.contains("\"log\":[]"),
+            "no bids, so the lot went unsold"
+        );
+        assert_eq!(lobby.auction().expect("auction").remaining(), before - 1);
+    }
+
+    #[test]
+    fn a_squad_read_before_the_auction_ends_is_not_ready() {
+        let mut lobby = lobby_with_one_owner();
+        let refused = run(
+            &mut lobby,
+            Operation::GetSquad {
+                guest_id: "a".to_string(),
+            },
+            0,
+        )
+        .unwrap_err();
+        assert_eq!(refused.name, "SquadNotReadyError");
+    }
+
+    #[test]
+    fn a_whole_season_is_played_through_the_operations_and_awards_name_winners() {
+        let mut lobby = lobby_with_one_owner();
+        run(&mut lobby, start("a"), 0).expect("starts");
+        let now = play_auction(&mut lobby, "a");
+        assert_eq!(lobby.phase(), Phase::League);
+        set_strongest_xi(&mut lobby, "a", now);
+
+        // Fourteen league rounds, then four playoff matches.
+        for _ in 0..18 {
+            run(
+                &mut lobby,
+                Operation::AdvanceRound {
+                    guest_id: "a".to_string(),
+                },
+                now,
+            )
+            .expect("the owner advances");
+        }
+        assert_eq!(lobby.phase(), Phase::Complete);
+        let refused = run(
+            &mut lobby,
+            Operation::AdvanceRound {
+                guest_id: "a".to_string(),
+            },
+            now,
+        )
+        .unwrap_err();
+        assert_eq!(refused.reason, Some("season-over"));
+
+        let awards: serde_json::Value =
+            serde_json::from_str(&run(&mut lobby, Operation::GetAwards, now).expect("awards"))
+                .expect("JSON");
+        assert_eq!(awards["seasonComplete"], true);
+        assert_eq!(awards["manOfTheMatch"].as_array().map(Vec::len), Some(74));
+        assert!(awards["orangeCap"]["winner"]["name"].is_string());
+        assert!(awards["fairPlay"]["winnerFranchiseId"].is_string());
+    }
+
+    #[test]
+    fn the_stored_season_stays_well_under_the_durable_object_value_limit() {
+        let mut lobby = lobby_with_one_owner();
+        run(&mut lobby, start("a"), 0).expect("starts");
+        let now = play_auction(&mut lobby, "a");
+        set_strongest_xi(&mut lobby, "a", now);
+        for _ in 0..18 {
+            run(
+                &mut lobby,
+                Operation::AdvanceRound {
+                    guest_id: "a".to_string(),
+                },
+                now,
+            )
+            .expect("advances");
+        }
+        let stored = serde_json::to_string(&lobby).expect("serialises");
+        // Durable Object values are capped at 2 MiB. A season should use a small fraction of it.
+        assert!(
+            stored.len() < 1_000_000,
+            "stored lobby is {} bytes",
+            stored.len()
+        );
+    }
+
+    #[test]
+    fn an_illegal_xi_names_the_rule_that_failed() {
+        let mut lobby = lobby_with_one_owner();
+        run(&mut lobby, start("a"), 0).expect("starts");
+        let now = play_auction(&mut lobby, "a");
+        let refused = run(
+            &mut lobby,
+            Operation::SetStartingXi {
+                guest_id: "a".to_string(),
+                player_ids: vec!["one".to_string()],
+                captain_id: "one".to_string(),
+                vice_captain_id: "two".to_string(),
+            },
+            now,
+        )
+        .unwrap_err();
+        assert_eq!(refused.name, "XiBlockedError");
+        assert_eq!(refused.reason, Some("wrong-size"));
     }
 }

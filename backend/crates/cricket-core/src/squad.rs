@@ -28,8 +28,12 @@ pub enum SquadError {
     WicketKeeperCount { found: usize },
     /// The starting XI has fewer than 4 bowling options.
     NotEnoughBowlingOptions { found: usize },
-    /// The captain or vice-captain is not in the starting XI, or they are the same player.
-    InvalidLeadership,
+    /// The captain is not in the starting XI.
+    CaptainNotInXi,
+    /// The vice-captain is not in the starting XI.
+    ViceCaptainNotInXi,
+    /// The captain and vice-captain are the same player.
+    SameCaptainAndViceCaptain,
 }
 
 /// Checks that a squad has 15 distinct players and fits within the purse.
@@ -89,9 +93,20 @@ pub fn validate_starting_xi(
         if xi_ids[..index].contains(id) {
             return Err(SquadError::DuplicatePlayer(id.clone()));
         }
+    }
+    for id in xi_ids {
         if !squad.iter().any(|player| &player.id == id) {
             return Err(SquadError::NotInSquad(id.clone()));
         }
+    }
+    if !xi_ids.iter().any(|id| id == captain_id) {
+        return Err(SquadError::CaptainNotInXi);
+    }
+    if !xi_ids.iter().any(|id| id == vice_captain_id) {
+        return Err(SquadError::ViceCaptainNotInXi);
+    }
+    if captain_id == vice_captain_id {
+        return Err(SquadError::SameCaptainAndViceCaptain);
     }
 
     let xi: Vec<&Player> = squad
@@ -115,12 +130,6 @@ pub fn validate_starting_xi(
         return Err(SquadError::NotEnoughBowlingOptions {
             found: bowling_options,
         });
-    }
-
-    let leaders_in_xi =
-        xi_ids.iter().any(|id| id == captain_id) && xi_ids.iter().any(|id| id == vice_captain_id);
-    if !leaders_in_xi || captain_id == vice_captain_id {
-        return Err(SquadError::InvalidLeadership);
     }
     Ok(())
 }
@@ -252,7 +261,7 @@ mod tests {
     fn rejects_a_captain_outside_the_xi() {
         assert_eq!(
             validate_starting_xi(&legal_squad(), &legal_xi_ids(), "nobody", "bat-1"),
-            Err(SquadError::InvalidLeadership)
+            Err(SquadError::CaptainNotInXi)
         );
     }
 
@@ -260,7 +269,7 @@ mod tests {
     fn rejects_captain_and_vice_captain_being_the_same() {
         assert_eq!(
             validate_starting_xi(&legal_squad(), &legal_xi_ids(), "bat-0", "bat-0"),
-            Err(SquadError::InvalidLeadership)
+            Err(SquadError::SameCaptainAndViceCaptain)
         );
     }
 }

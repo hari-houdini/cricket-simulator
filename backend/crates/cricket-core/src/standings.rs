@@ -1,6 +1,6 @@
 //! The league table: points, then net run rate (GLOSSARY.md, Standings and Points).
 
-use crate::model::Innings;
+use crate::model::InningsSummary;
 use crate::simulator::{BALLS_PER_OVER, INNINGS_WICKETS, MatchOutcome, OVERS_PER_INNINGS};
 
 /// Points for a win (GLOSSARY.md, Points).
@@ -70,7 +70,7 @@ impl TeamRecord {
 ///
 /// @param innings - The innings to measure.
 /// @returns The balls to use for the run rate.
-fn balls_for_run_rate(innings: &Innings) -> u32 {
+fn balls_for_run_rate(innings: &InningsSummary) -> u32 {
     if innings.total_wickets >= INNINGS_WICKETS {
         OVERS_PER_INNINGS * BALLS_PER_OVER
     } else {
@@ -162,10 +162,9 @@ mod tests {
         away_runs: u32,
         winner: Option<&str>,
     ) -> MatchOutcome {
-        let innings = |batting: &str, bowling: &str, runs: u32| Innings {
+        let innings = |batting: &str, bowling: &str, runs: u32| InningsSummary {
             batting_franchise_id: batting.to_string(),
             bowling_franchise_id: bowling.to_string(),
-            balls: Vec::new(),
             total_runs: runs,
             total_wickets: 5,
             legal_balls: 120,
@@ -183,6 +182,8 @@ mod tests {
             ],
             winner_id: winner.map(str::to_string),
             fair_play: Vec::new(),
+            performances: Vec::new(),
+            fall_of_wickets: Vec::new(),
         }
     }
 

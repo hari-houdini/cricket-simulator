@@ -1,5 +1,5 @@
-//! The lobby: one season from claiming franchises, through the auction, the league and the
-//! playoffs (GLOSSARY.md, Lobby; docs/game-design.md sections 2 to 5).
+//! The lobby: one season from joining, through the franchise claims, the auction, the league and
+//! the playoffs (GLOSSARY.md, Lobby; docs/game-design.md sections 2 to 5).
 //!
 //! The lobby is pure state. Time and seed data come in as arguments, and the caller (the
 //! Durable Object in `cricket-worker`) decides when to call `tick` and `advance`.
@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::auction::{Auction, AuctionError, LotOutcome, OwnerSeat, SeatStatus, lot_order};
 use crate::model::Player;
-use crate::playoffs::{PlayoffBracket, PlayoffError};
+use crate::playoffs::{FINAL_ROUND, PlayoffBracket, PlayoffError};
 use crate::schedule::{Fixture, ScheduleError, lobby_schedule};
 use crate::simulator::{MatchOutcome, ModifierConfig, Side};
 use crate::squad::{SQUAD_SIZE, SquadError, validate_starting_xi};
@@ -20,13 +20,16 @@ use crate::system_squad::{SystemSquadError, fill_system_squad, strongest_legal_x
 /// Rounds in the league phase.
 const LEAGUE_ROUNDS: u32 = 14;
 
+/// The most guests a lobby holds, one per IPL franchise.
+pub const MAX_OWNERS: usize = 10;
+
 /// Where the lobby is in the season (ARCHITECTURE.md, Lobby).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Phase {
-    /// Guests are claiming franchises. The auction has not started.
+    /// Guests are joining and claiming franchises. The auction has not started.
     Waiting,
-    /// The live auction is running, or has finished and squads are being set.
+    /// The live auction is running, or has finished and the season is being set up.
     Auction,
     /// The league is being played round by round.
     League,
@@ -34,6 +37,16 @@ pub enum Phase {
     Playoffs,
     /// The Final is played and the season is over.
     Complete,
+}
+
+/// A guest in the lobby, whether or not they have claimed a franchise yet.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Member {
+    /// The guest.
+    pub guest_id: String,
+    /// The name shown in the lobby.
+    pub display_name: String,
 }
 
 /// A guest's claim on a franchise (GLOSSARY.md, Owner).
@@ -67,6 +80,29 @@ pub struct SquadEntry {
     pub players: Vec<Player>,
     /// The XI, once chosen. Owners choose theirs; system squads get the strongest legal XI.
     pub starting_xi: Option<StartingXi>,
+    /// Whether the one free substitution has been spent (docs/game-design.md section 4).
+    pub substitution_used: bool,
+}
+
+/// Why a substitution was refused. The reasons match `SubstitutionBlock` in the frontend.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SubstitutionError {
+    /// The season has not started, so there is no first match to come after.
+    NotYetPlayed,
+    /// The owner has already used the free substitution.
+    AlreadyUsed,
+    /// The owner has no starting XI to substitute from.
+    NoStartingXi,
+    /// The player leaving is not in the starting XI.
+    OutNotInXi,
+    /// The captain and vice-captain cannot be substituted out.
+    CaptainOrViceCaptain,
+    /// The player coming in is not in the squad.
+    InNotInSquad,
+    /// The player coming in is already in the starting XI.
+    InAlreadyInXi,
+    /// The XI after the swap breaks a squad rule.
+    Xi(SquadError),
 }
 
 /// Why a lobby action was refused.
@@ -78,10 +114,14 @@ pub enum LobbyError {
     UnknownFranchise(String),
     /// Another guest already owns the franchise.
     FranchiseTaken(String),
-    /// The guest already owns a franchise.
-    AlreadyOwns(String),
-    /// The auction cannot start with no owners.
+    /// The guest has not joined this lobby.
+    NotAMember(String),
+    /// The lobby already holds {@link MAX_OWNERS} guests.
+    LobbyFull,
+    /// The auction cannot start with no guests.
     NoOwners,
+    /// These guests have not claimed a franchise, so the auction cannot start.
+    UnclaimedOwners(Vec<String>),
     /// The guest does not own a franchise in this lobby.
     NotAnOwner(String),
     /// The starting XI breaks a squad rule.
@@ -90,6 +130,8 @@ pub enum LobbyError {
     XiLocked,
     /// These franchises have no starting XI yet.
     XiMissing(Vec<String>),
+    /// The free substitution was refused.
+    Substitution(SubstitutionError),
     /// The auction refused the action.
     Auction(AuctionError),
     /// The league schedule could not be built from the template.
@@ -100,14 +142,19 @@ pub enum LobbyError {
     Playoff(PlayoffError),
 }
 
-/// One lobby: its franchises, owners, auction, squads, league and playoffs.
+/// One lobby: its members, claims, auction, squads, league and playoffs.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Lobby {
-    /// The lobby identifier. Part of every seed.
+    /// The lobby identifier, which is its shareable code. Part of every seed.
     pub id: String,
+    /// The name the creator gave the lobby.
+    pub name: String,
     /// The seed data version the lobby was created with (GLOSSARY.md, Seed file).
     pub seed_version: String,
     franchise_ids: Vec<String>,
+    template: Vec<Fixture>,
+    members: Vec<Member>,
     claims: Vec<Claim>,
     connected: BTreeSet<String>,
     phase: Phase,
@@ -122,15 +169,26 @@ pub struct Lobby {
 impl Lobby {
     /// Creates a lobby in the waiting phase.
     ///
-    /// @param id - The lobby identifier.
+    /// @param id - The lobby identifier, which is its code.
+    /// @param name - The lobby's name.
     /// @param seed_version - The seed data version to record.
     /// @param franchise_ids - The franchises in the lobby, normally all 10.
-    /// @returns A lobby waiting for owners to claim franchises.
-    pub fn new(id: &str, seed_version: &str, franchise_ids: Vec<String>) -> Self {
+    /// @param template - The league fixtures every lobby shuffles its own schedule from.
+    /// @returns A lobby waiting for guests to join and claim franchises.
+    pub fn new(
+        id: &str,
+        name: &str,
+        seed_version: &str,
+        franchise_ids: Vec<String>,
+        template: Vec<Fixture>,
+    ) -> Self {
         Self {
             id: id.to_string(),
+            name: name.to_string(),
             seed_version: seed_version.to_string(),
             franchise_ids,
+            template,
+            members: Vec::new(),
             claims: Vec::new(),
             connected: BTreeSet::new(),
             phase: Phase::Waiting,
@@ -148,6 +206,13 @@ impl Lobby {
     /// @returns The phase.
     pub fn phase(&self) -> Phase {
         self.phase
+    }
+
+    /// The guests in the lobby, in the order they joined.
+    ///
+    /// @returns Every member.
+    pub fn members(&self) -> &[Member] {
+        &self.members
     }
 
     /// The owners' claims.
@@ -171,6 +236,13 @@ impl Lobby {
         &self.squads
     }
 
+    /// The league schedule, built when the auction ends.
+    ///
+    /// @returns Every league fixture, or an empty list before the auction ends.
+    pub fn schedule(&self) -> &[Fixture] {
+        &self.schedule
+    }
+
     /// Every league match played so far.
     ///
     /// @returns The league matches in play order.
@@ -183,6 +255,17 @@ impl Lobby {
     /// @returns The bracket, or `None` before the playoffs.
     pub fn bracket(&self) -> Option<&PlayoffBracket> {
         self.bracket.as_ref()
+    }
+
+    /// Every played match, league then playoffs. Awards are computed from these.
+    ///
+    /// @returns Cloned matches in play order.
+    pub fn played_matches(&self) -> Vec<MatchOutcome> {
+        let mut matches = self.league.clone();
+        if let Some(bracket) = &self.bracket {
+            matches.extend(bracket.matches().iter().cloned());
+        }
+        matches
     }
 
     /// The league table so far.
@@ -199,20 +282,90 @@ impl Lobby {
         self.bracket.as_ref().and_then(PlayoffBracket::champion)
     }
 
-    /// Records a guest's claim on a franchise.
+    /// The season's round, as the frontend shows it: 0 before the first match, then the last
+    /// league round played, then the playoff rounds, and 18 once the season is over.
+    ///
+    /// @returns The round number.
+    pub fn round(&self) -> u32 {
+        match self.phase {
+            Phase::Waiting | Phase::Auction => 0,
+            Phase::League => self.next_round - 1,
+            Phase::Playoffs => {
+                LEAGUE_ROUNDS
+                    + self
+                        .bracket
+                        .as_ref()
+                        .map_or(0, |bracket| bracket.matches().len() as u32)
+            }
+            Phase::Complete => FINAL_ROUND,
+        }
+    }
+
+    /// Reports whether a guest is in the lobby.
+    ///
+    /// @param guest_id - The guest.
+    /// @returns `true` when the guest has joined.
+    pub fn is_member(&self, guest_id: &str) -> bool {
+        self.members
+            .iter()
+            .any(|member| member.guest_id == guest_id)
+    }
+
+    /// Reports whether a guest owns a franchise in this lobby.
+    ///
+    /// @param guest_id - The guest.
+    /// @returns `true` when the guest has claimed a franchise.
+    pub fn is_owner(&self, guest_id: &str) -> bool {
+        self.claims.iter().any(|claim| claim.guest_id == guest_id)
+    }
+
+    /// Adds a guest to the lobby. Joining again is a no-op.
+    ///
+    /// @param guest_id - The guest joining.
+    /// @param display_name - The name the guest shows.
+    /// @returns `Ok(())` when the guest is in the lobby.
+    /// @throws Returns a {@link LobbyError} if the lobby has started or already holds {@link MAX_OWNERS} guests.
+    pub fn join(&mut self, guest_id: &str, display_name: &str) -> Result<(), LobbyError> {
+        self.require_phase(Phase::Waiting)?;
+        if self.is_member(guest_id) {
+            return Ok(());
+        }
+        if self.members.len() >= MAX_OWNERS {
+            return Err(LobbyError::LobbyFull);
+        }
+        self.members.push(Member {
+            guest_id: guest_id.to_string(),
+            display_name: display_name.to_string(),
+        });
+        self.connected.insert(guest_id.to_string());
+        Ok(())
+    }
+
+    /// Records a guest's claim on a franchise. Claiming the franchise they already hold is a
+    /// no-op, and claiming a free one replaces their current claim.
     ///
     /// @param guest_id - The guest claiming.
     /// @param franchise_id - The franchise to claim.
     /// @returns `Ok(())` when the claim is recorded.
-    /// @throws Returns a {@link LobbyError} if the phase is wrong, the franchise is unknown or taken, or the guest already owns one.
+    /// @throws Returns a {@link LobbyError} if the phase is wrong, the franchise is unknown or taken, or the guest has not joined.
     pub fn claim_franchise(
         &mut self,
         guest_id: &str,
         franchise_id: &str,
     ) -> Result<(), LobbyError> {
         self.require_phase(Phase::Waiting)?;
+        if !self.is_member(guest_id) {
+            return Err(LobbyError::NotAMember(guest_id.to_string()));
+        }
         if !self.franchise_ids.iter().any(|id| id == franchise_id) {
             return Err(LobbyError::UnknownFranchise(franchise_id.to_string()));
+        }
+        if self
+            .claims
+            .iter()
+            .any(|claim| claim.guest_id == guest_id && claim.franchise_id == franchise_id)
+        {
+            return Ok(());
         }
         if self
             .claims
@@ -221,15 +374,11 @@ impl Lobby {
         {
             return Err(LobbyError::FranchiseTaken(franchise_id.to_string()));
         }
-        if self.claims.iter().any(|claim| claim.guest_id == guest_id) {
-            return Err(LobbyError::AlreadyOwns(guest_id.to_string()));
-        }
+        self.claims.retain(|claim| claim.guest_id != guest_id);
         self.claims.push(Claim {
             guest_id: guest_id.to_string(),
             franchise_id: franchise_id.to_string(),
         });
-        // A guest who has just claimed is in the lobby, so they start connected.
-        self.connected.insert(guest_id.to_string());
         Ok(())
     }
 
@@ -254,20 +403,29 @@ impl Lobby {
         }
     }
 
-    /// Starts the auction with the player pool.
+    /// Starts the auction with the player pool. Every guest must have claimed a franchise.
     ///
     /// @param players - The player pool, from the seed file.
     /// @param at_ms - The time the first lot opens, in milliseconds.
     /// @returns The lots closed by disconnect passes (usually none).
-    /// @throws Returns a {@link LobbyError} if the lobby is not waiting or has no owners.
+    /// @throws Returns a {@link LobbyError} if the lobby is not waiting, has no guests, or a guest has no franchise.
     pub fn start_auction(
         &mut self,
         players: Vec<Player>,
         at_ms: u64,
     ) -> Result<Vec<LotOutcome>, LobbyError> {
         self.require_phase(Phase::Waiting)?;
-        if self.claims.is_empty() {
+        if self.members.is_empty() {
             return Err(LobbyError::NoOwners);
+        }
+        let unclaimed: Vec<String> = self
+            .members
+            .iter()
+            .filter(|member| !self.is_owner(&member.guest_id))
+            .map(|member| member.guest_id.clone())
+            .collect();
+        if !unclaimed.is_empty() {
+            return Err(LobbyError::UnclaimedOwners(unclaimed));
         }
         let seats: Vec<OwnerSeat> = self
             .claims
@@ -297,7 +455,8 @@ impl Lobby {
         let auction = self.running_auction()?;
         auction
             .place_bid(guest_id, amount, at_ms)
-            .map_err(LobbyError::Auction)
+            .map_err(LobbyError::Auction)?;
+        self.finish_auction_if_complete()
     }
 
     /// Passes on the open lot.
@@ -351,17 +510,8 @@ impl Lobby {
         captain_id: &str,
         vice_captain_id: &str,
     ) -> Result<(), LobbyError> {
-        if !self.league.is_empty() {
-            return Err(LobbyError::XiLocked);
-        }
-        if !matches!(self.phase, Phase::Auction | Phase::League) {
-            return Err(LobbyError::WrongPhase { phase: self.phase });
-        }
-        let entry = self
-            .squads
-            .iter_mut()
-            .find(|entry| entry.owner_guest_id.as_deref() == Some(guest_id))
-            .ok_or_else(|| LobbyError::NotAnOwner(guest_id.to_string()))?;
+        self.require_squads_phase()?;
+        let entry = self.owner_entry_mut(guest_id)?;
         validate_starting_xi(&entry.players, &player_ids, captain_id, vice_captain_id)
             .map_err(LobbyError::InvalidXi)?;
         entry.starting_xi = Some(StartingXi {
@@ -372,29 +522,61 @@ impl Lobby {
         Ok(())
     }
 
-    /// Starts the league: builds the lobby's schedule from the template.
+    /// Makes the owner's one free substitution: `out_id` leaves the XI for `in_id`, in the same
+    /// batting place. Allowed once, after the first league match, and never for the captain or
+    /// vice-captain.
     ///
-    /// Every franchise must have a starting XI first.
-    ///
-    /// @param template - The league fixtures from `ipl-schedule.v1.json`.
-    /// @returns `Ok(())` when the league has started.
-    /// @throws Returns a {@link LobbyError} if the auction is not over, an XI is missing, or the template is invalid.
-    pub fn start_league(&mut self, template: &[Fixture]) -> Result<(), LobbyError> {
-        self.require_phase(Phase::Auction)?;
-        if self.squads.is_empty() {
-            return Err(LobbyError::WrongPhase { phase: self.phase });
+    /// @param guest_id - The owner.
+    /// @param out_id - The XI player leaving.
+    /// @param in_id - The squad player coming in.
+    /// @returns `Ok(())` when the swap is made.
+    /// @throws Returns a {@link LobbyError} if the guest is not an owner or the swap is refused.
+    pub fn substitute(
+        &mut self,
+        guest_id: &str,
+        out_id: &str,
+        in_id: &str,
+    ) -> Result<(), LobbyError> {
+        let played = !self.league.is_empty();
+        let entry = self.owner_entry_mut(guest_id)?;
+        let refuse = |reason: SubstitutionError| LobbyError::Substitution(reason);
+        if !played {
+            return Err(refuse(SubstitutionError::NotYetPlayed));
         }
-        let missing: Vec<String> = self
-            .squads
+        if entry.substitution_used {
+            return Err(refuse(SubstitutionError::AlreadyUsed));
+        }
+        let xi = entry
+            .starting_xi
+            .as_ref()
+            .ok_or_else(|| refuse(SubstitutionError::NoStartingXi))?;
+        let position = xi
+            .player_ids
             .iter()
-            .filter(|entry| entry.starting_xi.is_none())
-            .map(|entry| entry.franchise_id.clone())
-            .collect();
-        if !missing.is_empty() {
-            return Err(LobbyError::XiMissing(missing));
+            .position(|id| id == out_id)
+            .ok_or_else(|| refuse(SubstitutionError::OutNotInXi))?;
+        if out_id == xi.captain_id || out_id == xi.vice_captain_id {
+            return Err(refuse(SubstitutionError::CaptainOrViceCaptain));
         }
-        self.schedule = lobby_schedule(template, &self.id).map_err(LobbyError::Schedule)?;
-        self.phase = Phase::League;
+        if !entry.players.iter().any(|player| player.id == in_id) {
+            return Err(refuse(SubstitutionError::InNotInSquad));
+        }
+        if xi.player_ids.iter().any(|id| id == in_id) {
+            return Err(refuse(SubstitutionError::InAlreadyInXi));
+        }
+
+        let mut player_ids = xi.player_ids.clone();
+        player_ids[position] = in_id.to_string();
+        let captain_id = xi.captain_id.clone();
+        let vice_captain_id = xi.vice_captain_id.clone();
+        validate_starting_xi(&entry.players, &player_ids, &captain_id, &vice_captain_id)
+            .map_err(|error| refuse(SubstitutionError::Xi(error)))?;
+        entry.starting_xi = Some(StartingXi {
+            player_ids,
+            captain_id,
+            vice_captain_id,
+        });
+        entry.substitution_used = true;
         Ok(())
     }
 
@@ -568,13 +750,12 @@ impl Lobby {
             .map(|owner| owner.guest_id.clone())
     }
 
-    /// Ends the auction and builds every squad once no lot is left.
-    ///
-    /// Owners who are still active keep their squads. Every other franchise is a system squad,
-    /// filled from the unsold pool and the released players.
+    /// Ends the auction once no lot is left. Builds every squad, then builds the league schedule
+    /// and starts the league. Owners who are still active keep their squads. Every other
+    /// franchise is a system squad, filled from the unsold pool and the released players.
     ///
     /// @returns `Ok(())` once the squads are built, or immediately if the auction is still running.
-    /// @throws Returns a {@link LobbyError} if a system squad cannot be filled.
+    /// @throws Returns a {@link LobbyError} if a system squad cannot be filled or the schedule is invalid.
     fn finish_auction_if_complete(&mut self) -> Result<(), LobbyError> {
         let Some(auction) = self.auction.as_ref() else {
             return Ok(());
@@ -597,6 +778,7 @@ impl Lobby {
                     owner_guest_id: Some(owner.guest_id.clone()),
                     players: owner.squad.clone(),
                     starting_xi: None,
+                    substitution_used: false,
                 }),
                 _ => {
                     let players = fill_system_squad(&franchise_id, &mut pool)
@@ -611,11 +793,15 @@ impl Lobby {
                         owner_guest_id: None,
                         players,
                         starting_xi,
+                        substitution_used: false,
                     });
                 }
             }
         }
         self.squads = squads;
+        self.schedule = lobby_schedule(&self.template, &self.id).map_err(LobbyError::Schedule)?;
+        self.phase = Phase::League;
+        self.next_round = 1;
         Ok(())
     }
 
@@ -630,6 +816,32 @@ impl Lobby {
         } else {
             Err(LobbyError::WrongPhase { phase: self.phase })
         }
+    }
+
+    /// Checks the squads exist and the league has not started, which is when XIs can change.
+    ///
+    /// @returns `Ok(())` when XIs can be set.
+    /// @throws Returns {@link LobbyError::XiLocked} once the first league match is played, or {@link LobbyError::WrongPhase} before the auction ends.
+    fn require_squads_phase(&self) -> Result<(), LobbyError> {
+        if !self.league.is_empty() {
+            return Err(LobbyError::XiLocked);
+        }
+        if self.phase != Phase::League {
+            return Err(LobbyError::WrongPhase { phase: self.phase });
+        }
+        Ok(())
+    }
+
+    /// Finds the squad entry an owner holds.
+    ///
+    /// @param guest_id - The owner.
+    /// @returns The owner's squad entry, mutably.
+    /// @throws Returns {@link LobbyError::NotAnOwner} if the guest holds no squad.
+    fn owner_entry_mut(&mut self, guest_id: &str) -> Result<&mut SquadEntry, LobbyError> {
+        self.squads
+            .iter_mut()
+            .find(|entry| entry.owner_guest_id.as_deref() == Some(guest_id))
+            .ok_or_else(|| LobbyError::NotAnOwner(guest_id.to_string()))
     }
 
     /// The running auction.
@@ -683,8 +895,14 @@ mod tests {
         )
     }
 
-    fn new_lobby(franchise_ids: Vec<String>) -> Lobby {
-        Lobby::new("lobby-test", "1.1.0", franchise_ids)
+    fn new_lobby(franchise_ids: Vec<String>, template: Vec<Fixture>) -> Lobby {
+        Lobby::new("LOBBY1", "Test", "1.1.0", franchise_ids, template)
+    }
+
+    /// Joins a guest and claims a franchise for them.
+    fn seat(lobby: &mut Lobby, guest: &str, franchise: &str) {
+        lobby.join(guest, guest).expect("join");
+        lobby.claim_franchise(guest, franchise).expect("claim");
     }
 
     /// Runs the auction to the end. Each lot is either bid on by `bidder` (if they can afford
@@ -723,38 +941,75 @@ mod tests {
     }
 
     #[test]
-    fn a_franchise_can_be_claimed_once_and_a_guest_owns_one() {
-        let (ids, _, _) = seed();
-        let mut lobby = new_lobby(ids);
-        lobby
-            .claim_franchise("guest-a", "csk")
-            .expect("first claim");
+    fn a_guest_joins_then_claims_a_franchise_that_is_then_taken_for_others() {
+        let (ids, _, template) = seed();
+        let mut lobby = new_lobby(ids, template);
+        assert_eq!(
+            lobby.claim_franchise("guest-a", "csk"),
+            Err(LobbyError::NotAMember("guest-a".to_string()))
+        );
+        lobby.join("guest-a", "Asha").expect("join");
+        lobby.join("guest-b", "Ben").expect("join");
+        lobby.claim_franchise("guest-a", "csk").expect("claim");
         assert_eq!(
             lobby.claim_franchise("guest-b", "csk"),
             Err(LobbyError::FranchiseTaken("csk".to_string()))
         );
         assert_eq!(
-            lobby.claim_franchise("guest-a", "mi"),
-            Err(LobbyError::AlreadyOwns("guest-a".to_string()))
-        );
-        assert_eq!(
-            lobby.claim_franchise("guest-c", "nope"),
+            lobby.claim_franchise("guest-a", "nope"),
             Err(LobbyError::UnknownFranchise("nope".to_string()))
         );
     }
 
     #[test]
-    fn the_auction_needs_at_least_one_owner() {
-        let (ids, players, _) = seed();
-        let mut lobby = new_lobby(ids);
-        assert_eq!(lobby.start_auction(players, 0), Err(LobbyError::NoOwners));
+    fn claiming_again_replaces_a_claim_and_repeating_it_is_a_no_op() {
+        let (ids, _, template) = seed();
+        let mut lobby = new_lobby(ids, template);
+        seat(&mut lobby, "guest-a", "csk");
+        lobby
+            .claim_franchise("guest-a", "csk")
+            .expect("same franchise is a no-op");
+        lobby
+            .claim_franchise("guest-a", "mi")
+            .expect("switching to a free franchise");
+        assert_eq!(lobby.claims().len(), 1);
+        assert_eq!(lobby.claims()[0].franchise_id, "mi");
     }
 
     #[test]
-    fn with_no_owner_bidding_every_franchise_gets_a_system_squad_with_a_legal_xi() {
+    fn the_lobby_holds_ten_guests_and_joining_again_is_a_no_op() {
+        let (ids, _, template) = seed();
+        let mut lobby = new_lobby(ids, template);
+        for index in 0..MAX_OWNERS {
+            lobby.join(&format!("guest-{index}"), "x").expect("join");
+        }
+        lobby
+            .join("guest-0", "again")
+            .expect("rejoining is a no-op");
+        assert_eq!(lobby.join("late", "x"), Err(LobbyError::LobbyFull));
+    }
+
+    #[test]
+    fn the_auction_needs_at_least_one_guest_and_every_guest_needs_a_franchise() {
         let (ids, players, template) = seed();
-        let mut lobby = new_lobby(ids.clone());
-        lobby.claim_franchise("guest-a", "csk").expect("claim");
+        let mut lobby = new_lobby(ids.clone(), template.clone());
+        assert_eq!(
+            lobby.start_auction(players.clone(), 0),
+            Err(LobbyError::NoOwners)
+        );
+
+        lobby.join("guest-a", "a").expect("join");
+        assert_eq!(
+            lobby.start_auction(players, 0),
+            Err(LobbyError::UnclaimedOwners(vec!["guest-a".to_string()]))
+        );
+    }
+
+    #[test]
+    fn with_no_owner_bidding_every_franchise_gets_a_system_squad_and_the_league_starts() {
+        let (ids, players, template) = seed();
+        let mut lobby = new_lobby(ids, template);
+        seat(&mut lobby, "guest-a", "csk");
         lobby.start_auction(players, 0).expect("auction starts");
         run_auction(&mut lobby, None);
 
@@ -763,7 +1018,7 @@ mod tests {
             lobby
                 .squads()
                 .iter()
-                .all(|entry| entry.owner_guest_id.is_none())
+                .all(|entry| entry.owner_guest_id.is_none() || entry.franchise_id == "csk")
         );
         assert!(
             lobby
@@ -777,6 +1032,9 @@ mod tests {
                 .iter()
                 .all(|entry| entry.starting_xi.is_some())
         );
+        assert_eq!(lobby.phase(), Phase::League);
+        assert_eq!(lobby.schedule().len(), 70);
+        assert_eq!(lobby.round(), 0);
 
         let mut all_ids: Vec<&str> = lobby
             .squads()
@@ -787,16 +1045,13 @@ mod tests {
         let before = all_ids.len();
         all_ids.dedup();
         assert_eq!(all_ids.len(), before, "no player is in two squads");
-
-        lobby.start_league(&template).expect("league starts");
-        assert_eq!(lobby.phase(), Phase::League);
     }
 
     #[test]
     fn an_owner_who_buys_fifteen_keeps_the_squad_and_sets_an_xi() {
         let (ids, players, template) = seed();
-        let mut lobby = new_lobby(ids);
-        lobby.claim_franchise("guest-a", "csk").expect("claim");
+        let mut lobby = new_lobby(ids, template);
+        seat(&mut lobby, "guest-a", "csk");
         lobby.start_auction(players, 0).expect("auction starts");
         run_auction(&mut lobby, Some("guest-a"));
 
@@ -814,14 +1069,13 @@ mod tests {
         lobby
             .set_starting_xi("guest-a", legal, &captain, &vice)
             .expect("the legal XI is accepted");
-        lobby.start_league(&template).expect("league starts");
     }
 
     #[test]
     fn an_illegal_xi_is_refused() {
-        let (ids, players, _) = seed();
-        let mut lobby = new_lobby(ids);
-        lobby.claim_franchise("guest-a", "csk").expect("claim");
+        let (ids, players, template) = seed();
+        let mut lobby = new_lobby(ids, template);
+        seat(&mut lobby, "guest-a", "csk");
         lobby.start_auction(players, 0).expect("auction starts");
         run_auction(&mut lobby, Some("guest-a"));
         let result = lobby.set_starting_xi("guest-a", vec!["x".to_string()], "x", "x");
@@ -834,23 +1088,25 @@ mod tests {
     #[test]
     fn the_league_and_playoffs_play_to_a_champion() {
         let (ids, players, template) = seed();
-        let mut lobby = new_lobby(ids);
-        lobby.claim_franchise("guest-a", "csk").expect("claim");
+        let mut lobby = new_lobby(ids, template);
+        seat(&mut lobby, "guest-a", "csk");
         lobby.start_auction(players, 0).expect("auction starts");
         run_auction(&mut lobby, None);
-        lobby.start_league(&template).expect("league starts");
 
         let config = ModifierConfig::default();
-        for _ in 0..LEAGUE_ROUNDS {
+        for round in 1..=LEAGUE_ROUNDS {
             assert_eq!(lobby.advance(&config).expect("round plays").len(), 5);
+            assert_eq!(lobby.round(), round);
         }
         assert_eq!(lobby.league().len(), 70);
         assert_eq!(lobby.phase(), Phase::Playoffs);
+        assert_eq!(lobby.round(), 14);
 
         for _ in 0..4 {
             lobby.advance(&config).expect("playoff match plays");
         }
         assert_eq!(lobby.phase(), Phase::Complete);
+        assert_eq!(lobby.round(), FINAL_ROUND);
         let champion = lobby.champion().expect("champion crowned").to_string();
         assert!(
             lobby
@@ -859,22 +1115,24 @@ mod tests {
                 .take(4)
                 .any(|record| record.franchise_id == champion)
         );
+        assert_eq!(lobby.played_matches().len(), 74);
     }
 
     #[test]
-    fn the_league_cannot_start_while_an_xi_is_missing() {
+    fn a_round_is_blocked_while_an_owner_has_no_xi() {
         let (ids, players, template) = seed();
-        let mut lobby = new_lobby(ids);
-        lobby.claim_franchise("guest-a", "csk").expect("claim");
+        let mut lobby = new_lobby(ids, template);
+        seat(&mut lobby, "guest-a", "csk");
         lobby.start_auction(players, 0).expect("auction starts");
         run_auction(&mut lobby, Some("guest-a"));
-        if lobby
+        let owner_has_xi = lobby
             .squads()
             .iter()
-            .any(|entry| entry.owner_guest_id.is_some() && entry.starting_xi.is_none())
-        {
+            .find(|entry| entry.owner_guest_id.as_deref() == Some("guest-a"))
+            .is_some_and(|entry| entry.starting_xi.is_some());
+        if !owner_has_xi {
             assert!(matches!(
-                lobby.start_league(&template),
+                lobby.advance(&ModifierConfig::default()),
                 Err(LobbyError::XiMissing(_))
             ));
         }
@@ -882,10 +1140,10 @@ mod tests {
 
     #[test]
     fn a_disconnected_owner_is_passed_on_each_lot() {
-        let (ids, players, _) = seed();
-        let mut lobby = new_lobby(ids);
-        lobby.claim_franchise("guest-a", "csk").expect("claim");
-        lobby.claim_franchise("guest-b", "mi").expect("claim");
+        let (ids, players, template) = seed();
+        let mut lobby = new_lobby(ids, template);
+        seat(&mut lobby, "guest-a", "csk");
+        seat(&mut lobby, "guest-b", "mi");
         lobby.set_connected("guest-b", false).expect("disconnect");
         lobby.start_auction(players, 0).expect("auction starts");
 
@@ -907,10 +1165,10 @@ mod tests {
 
     #[test]
     fn a_reconnected_owner_bids_again_on_the_next_lot() {
-        let (ids, players, _) = seed();
-        let mut lobby = new_lobby(ids);
-        lobby.claim_franchise("guest-a", "csk").expect("claim");
-        lobby.claim_franchise("guest-b", "mi").expect("claim");
+        let (ids, players, template) = seed();
+        let mut lobby = new_lobby(ids, template);
+        seat(&mut lobby, "guest-a", "csk");
+        seat(&mut lobby, "guest-b", "mi");
         lobby.set_connected("guest-b", false).expect("disconnect");
         lobby.start_auction(players, 0).expect("auction starts");
         lobby.set_connected("guest-b", true).expect("reconnect");
@@ -933,6 +1191,70 @@ mod tests {
         assert_eq!(
             lobby.place_bid("guest-b", next.player.base_price, 5_000),
             Ok(())
+        );
+    }
+
+    #[test]
+    fn the_free_substitution_waits_for_the_first_match_and_is_used_once() {
+        let (ids, players, template) = seed();
+        let mut lobby = new_lobby(ids, template);
+        seat(&mut lobby, "guest-a", "csk");
+        lobby.start_auction(players, 0).expect("auction starts");
+        run_auction(&mut lobby, Some("guest-a"));
+
+        let squad = lobby
+            .squads()
+            .iter()
+            .find(|entry| entry.owner_guest_id.as_deref() == Some("guest-a"))
+            .expect("owner keeps a squad")
+            .clone();
+        let legal = strongest_legal_xi(&squad.players).expect("a legal XI");
+        lobby
+            .set_starting_xi("guest-a", legal.clone(), &legal[0], &legal[1])
+            .expect("XI saved");
+
+        // Same role as the player leaving, so the XI stays legal after the swap. Leadership is
+        // in the first two places, so the player leaving is taken from later in the order.
+        let role_of = |id: &str| {
+            squad
+                .players
+                .iter()
+                .find(|player| player.id == id)
+                .map(|player| player.role)
+        };
+        let (out, incoming) = legal
+            .iter()
+            .skip(2)
+            .find_map(|out| {
+                let role = role_of(out)?;
+                squad
+                    .players
+                    .iter()
+                    .find(|player| player.role == role && !legal.contains(&player.id))
+                    .map(|player| (out.clone(), player.id.clone()))
+            })
+            .expect("a bench player shares a role with someone in the XI");
+
+        assert_eq!(
+            lobby.substitute("guest-a", &out, &incoming),
+            Err(LobbyError::Substitution(SubstitutionError::NotYetPlayed))
+        );
+
+        lobby
+            .advance(&ModifierConfig::default())
+            .expect("first round plays");
+        assert_eq!(
+            lobby.substitute("guest-a", &legal[0], &incoming),
+            Err(LobbyError::Substitution(
+                SubstitutionError::CaptainOrViceCaptain
+            ))
+        );
+        lobby
+            .substitute("guest-a", &out, &incoming)
+            .expect("the free swap is made");
+        assert_eq!(
+            lobby.substitute("guest-a", &incoming, &out),
+            Err(LobbyError::Substitution(SubstitutionError::AlreadyUsed))
         );
     }
 }

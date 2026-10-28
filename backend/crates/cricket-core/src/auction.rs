@@ -168,6 +168,24 @@ pub enum AuctionError {
     },
 }
 
+/// One accepted bid, kept in the order bids were placed (docs/game-design.md section 3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BidLogEntry {
+    /// One-based position in the bid log.
+    pub sequence: u32,
+    /// The player the bid was for.
+    pub player_id: String,
+    /// The player's name at the time of the bid.
+    pub player_name: String,
+    /// The bidding guest.
+    pub guest_id: String,
+    /// The bid amount in lakhs.
+    pub amount: Lakhs,
+    /// When the bid was placed, in milliseconds.
+    pub at_ms: u64,
+}
+
 /// A live auction for one lobby.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Auction {
@@ -177,6 +195,7 @@ pub struct Auction {
     outcomes: Vec<LotOutcome>,
     unsold: Vec<Player>,
     released: Vec<Player>,
+    bid_log: Vec<BidLogEntry>,
 }
 
 impl Auction {
@@ -212,6 +231,7 @@ impl Auction {
             outcomes: Vec::new(),
             unsold: Vec::new(),
             released: Vec::new(),
+            bid_log: Vec::new(),
         }
     }
 
@@ -266,6 +286,14 @@ impl Auction {
                 purse: owner.purse_remaining,
             });
         }
+        self.bid_log.push(BidLogEntry {
+            sequence: self.bid_log.len() as u32 + 1,
+            player_id: lot.player.id.clone(),
+            player_name: lot.player.name.clone(),
+            guest_id: guest_id.to_string(),
+            amount,
+            at_ms,
+        });
         lot.leader = Some(Bid {
             guest_id: guest_id.to_string(),
             amount,
@@ -364,6 +392,20 @@ impl Auction {
     /// @returns The open lot, or `None` between lots and after the auction ends.
     pub fn current_lot(&self) -> Option<&Lot> {
         self.lot.as_ref()
+    }
+
+    /// Every accepted bid, in the order they were placed.
+    ///
+    /// @returns The bid log.
+    pub fn bid_log(&self) -> &[BidLogEntry] {
+        &self.bid_log
+    }
+
+    /// Players not yet on a lot. Players on the open lot are not counted.
+    ///
+    /// @returns The number of players still waiting in the pool.
+    pub fn remaining(&self) -> usize {
+        self.pool.len()
     }
 
     /// Every closed lot, in order.

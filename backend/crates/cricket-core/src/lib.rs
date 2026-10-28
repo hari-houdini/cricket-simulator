@@ -5,8 +5,10 @@
 
 pub mod auction;
 pub mod awards;
+pub mod fantasy;
 pub mod lobby;
 pub mod model;
+pub mod performance;
 pub mod playoffs;
 pub mod schedule;
 pub mod season;

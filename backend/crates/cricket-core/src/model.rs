@@ -145,3 +145,35 @@ pub struct Innings {
     /// Legal deliveries bowled. Equals `balls.len()`.
     pub legal_balls: u32,
 }
+
+impl Innings {
+    /// Keeps the totals of this innings and drops the deliveries. A finished match stores only
+    /// the summary, so a season stays small enough for one Durable Object value.
+    ///
+    /// @returns The innings totals.
+    pub fn summary(&self) -> InningsSummary {
+        InningsSummary {
+            batting_franchise_id: self.batting_franchise_id.clone(),
+            bowling_franchise_id: self.bowling_franchise_id.clone(),
+            total_runs: self.total_runs,
+            total_wickets: self.total_wickets,
+            legal_balls: self.legal_balls,
+        }
+    }
+}
+
+/// One innings as a finished match keeps it: the totals, without the deliveries.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InningsSummary {
+    /// Franchise batting in this innings.
+    pub batting_franchise_id: String,
+    /// Franchise bowling in this innings.
+    pub bowling_franchise_id: String,
+    /// Total runs scored.
+    pub total_runs: u32,
+    /// Total wickets lost.
+    pub total_wickets: u32,
+    /// Legal deliveries bowled.
+    pub legal_balls: u32,
+}

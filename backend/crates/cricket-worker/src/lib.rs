@@ -1,10 +1,14 @@
 //! The Cloudflare Worker adapter for the lobby (ARCHITECTURE.md, Cloudflare Workers).
 //!
-//! `service` holds the lobby commands as plain Rust. It is tested on the host. `durable`
-//! is the Cloudflare shell: it loads a lobby from Durable Object storage, applies a command,
-//! saves the result, and sets the alarm. Only that shell needs the wasm target.
+//! Everything except `durable` is plain Rust and runs on the host, so its tests run under
+//! `cargo test`. `durable` is the Cloudflare shell: the Durable Object and the entry Worker.
+//! It needs the wasm target and is the only module that touches the `worker` SDK.
 
-pub mod service;
-
+pub mod api;
 #[cfg(target_arch = "wasm32")]
 pub mod durable;
+pub mod errors;
+pub mod operation;
+pub mod route;
+pub mod service;
+pub mod views;

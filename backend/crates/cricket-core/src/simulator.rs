@@ -6,7 +6,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::{Ball, Innings, Player, WicketKind};
+use crate::model::{Ball, Innings, InningsSummary, Player, WicketKind};
+use crate::performance::{FallOfWicket, PlayerPerformance, tally};
 use crate::seed::{GameRng, seed_from};
 
 /// Overs in a league or playoff innings (GLOSSARY.md, Over; game-design section 1, T20).
@@ -133,12 +134,16 @@ pub struct MatchOutcome {
     pub toss_winner_id: String,
     /// The franchise that batted first.
     pub batting_first_id: String,
-    /// Regular innings, then any super-over innings.
-    pub innings: Vec<Innings>,
+    /// Regular innings, then any super-over innings. Totals only: the deliveries are not kept.
+    pub innings: Vec<InningsSummary>,
     /// The winner, or `None` for a league tie.
     pub winner_id: Option<String>,
     /// Fair-play scores for every starting-XI player.
     pub fair_play: Vec<PlayerFairPlay>,
+    /// Every starting-XI player's line, used for fantasy points and awards.
+    pub performances: Vec<PlayerPerformance>,
+    /// Every wicket, in order within its innings.
+    pub fall_of_wickets: Vec<FallOfWicket>,
 }
 
 /// The settings for one innings.
@@ -471,6 +476,7 @@ pub fn simulate_match(
         ))
     };
 
+    let (performances, fall_of_wickets) = tally(lobby_id, match_id, [home, away], &innings);
     MatchOutcome {
         id: match_id.to_string(),
         round,
@@ -478,9 +484,11 @@ pub fn simulate_match(
         away_id: away.franchise_id.clone(),
         toss_winner_id: toss_winner.franchise_id.clone(),
         batting_first_id: first.franchise_id.clone(),
-        innings,
+        innings: innings.iter().map(Innings::summary).collect(),
         winner_id,
         fair_play: score_fair_play(lobby_id, match_id, [home, away]),
+        performances,
+        fall_of_wickets,
     }
 }
 
