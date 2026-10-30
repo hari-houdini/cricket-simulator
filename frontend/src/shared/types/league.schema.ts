@@ -86,12 +86,6 @@ export const leagueSchema = object({
   leagueComplete: boolean(),
 });
 
-/** Input for playing the next league round. Only an owner may play it. */
-export const advanceRoundInputSchema = object({
-  code: lobbyCodeSchema,
-  guestId: guestIdSchema,
-});
-
 /**
  * Input for voting to skip the rest of the league, or withdrawing the vote. The skip plays out
  * on the next match once a majority of the owners have voted for it.

@@ -104,12 +104,6 @@ pub enum Operation {
         /// The match ID, such as `r03-csk-mi`.
         match_id: String,
     },
-    /// Plays the next league match, the rest of the league once the skip vote has passed, or the
-    /// next playoff match.
-    AdvanceRound {
-        /// The owner playing it.
-        guest_id: String,
-    },
     /// Reads the playoff bracket.
     GetPlayoffs,
     /// Reads the awards.

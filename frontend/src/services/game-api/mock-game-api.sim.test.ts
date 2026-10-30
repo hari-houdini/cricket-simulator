@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { BID_TIMER_MS, SQUAD_SIZE } from "../../shared/const/auction.const";
-import { LEAGUE_MATCHES } from "../../shared/const/league.const";
+import {
+  LEAGUE_MATCHES,
+  MATCH_INTERVAL_MS,
+} from "../../shared/const/league.const";
 import { XI_SIZE } from "../../shared/const/squad.const";
 import type { Player } from "../../shared/types/player.types";
 import type { Squad } from "../../shared/types/squad.types";
@@ -90,7 +93,13 @@ async function setUpTwoOwnerSeason() {
   }
   await saveLegalXi(api, created.code, asha.guestId);
   await saveLegalXi(api, created.code, ravi.guestId);
-  return { api, code: created.code };
+  return {
+    api,
+    code: created.code,
+    advance: (ms: number) => {
+      clock += ms;
+    },
+  };
 }
 
 /**
@@ -167,17 +176,19 @@ describe("mock sim control", () => {
   });
 
   it("pauses the sim for every guest while a substitution is open, and resumes when it is confirmed", async () => {
-    const { api, code } = await setUpTwoOwnerSeason();
-    await advanceMatches(api, code, asha.guestId, 1);
+    const { api, code, advance } = await setUpTwoOwnerSeason();
+    await advanceMatches(api, code, 1, advance);
     const squad = await api.getSquad({ code, guestId: asha.guestId });
     const swap = findSwap(squad);
 
     const paused = await api.beginSubstitution({ code, guestId: asha.guestId });
     expect(paused.simPaused).toBe(true);
     expect(paused.substituting).toEqual([asha.guestId]);
-    await expect(
-      api.advanceRound({ code, guestId: ravi.guestId }),
-    ).rejects.toMatchObject({ reason: "sim-paused" });
+    advance(MATCH_INTERVAL_MS * 4);
+    await api.getLobby(code);
+    expect(
+      (await api.getLeague(code)).fixtures.filter((f) => f.result),
+    ).toHaveLength(1);
 
     await api.substitute({
       code,
@@ -195,12 +206,16 @@ describe("mock sim control", () => {
         matchesPlayed: 1,
       },
     ]);
-    await api.advanceRound({ code, guestId: ravi.guestId });
+    advance(MATCH_INTERVAL_MS);
+    await api.getLobby(code);
+    expect(
+      (await api.getLeague(code)).fixtures.filter((f) => f.result),
+    ).toHaveLength(2);
   });
 
   it("keeps the sim paused while any owner's substitution is still open", async () => {
-    const { api, code } = await setUpTwoOwnerSeason();
-    await advanceMatches(api, code, asha.guestId, 1);
+    const { api, code, advance } = await setUpTwoOwnerSeason();
+    await advanceMatches(api, code, 1, advance);
     await api.beginSubstitution({ code, guestId: asha.guestId });
     await api.beginSubstitution({ code, guestId: ravi.guestId });
 
@@ -216,8 +231,8 @@ describe("mock sim control", () => {
   });
 
   it("does not use up a cancelled substitution", async () => {
-    const { api, code } = await setUpTwoOwnerSeason();
-    await advanceMatches(api, code, asha.guestId, 1);
+    const { api, code, advance } = await setUpTwoOwnerSeason();
+    await advanceMatches(api, code, 1, advance);
     const swap = findSwap(await api.getSquad({ code, guestId: asha.guestId }));
 
     await api.beginSubstitution({ code, guestId: asha.guestId });
@@ -236,8 +251,8 @@ describe("mock sim control", () => {
   });
 
   it("refuses a swap that was never opened, so the pause always comes first", async () => {
-    const { api, code } = await setUpTwoOwnerSeason();
-    await advanceMatches(api, code, asha.guestId, 1);
+    const { api, code, advance } = await setUpTwoOwnerSeason();
+    await advanceMatches(api, code, 1, advance);
     const swap = findSwap(await api.getSquad({ code, guestId: asha.guestId }));
 
     await expect(
@@ -251,8 +266,8 @@ describe("mock sim control", () => {
   });
 
   it("lets a strict majority of the owners skip the league, and not a tie", async () => {
-    const { api, code } = await setUpTwoOwnerSeason();
-    await advanceMatches(api, code, asha.guestId, 1);
+    const { api, code, advance } = await setUpTwoOwnerSeason();
+    await advanceMatches(api, code, 1, advance);
     expect((await api.getLobby(code)).skipThreshold).toBe(2);
 
     const oneVote = await api.setSkipVote({
@@ -261,13 +276,14 @@ describe("mock sim control", () => {
       vote: true,
     });
     expect(oneVote.skipVoters).toEqual([asha.guestId]);
-    await advanceMatches(api, code, asha.guestId, 1);
+    await advanceMatches(api, code, 1, advance);
     expect(
       (await api.getLeague(code)).fixtures.filter((f) => f.result).length,
     ).toBe(2);
 
+    // The vote passes on this call, and the rest of the league is played at once.
     await api.setSkipVote({ code, guestId: ravi.guestId, vote: true });
-    const league = await api.advanceRound({ code, guestId: asha.guestId });
+    const league = await api.getLeague(code);
     expect(league.leagueComplete).toBe(true);
     expect(league.fixtures.filter((f) => f.result).length).toBe(LEAGUE_MATCHES);
     const lobby = await api.getLobby(code);
@@ -294,19 +310,19 @@ describe("mock sim control", () => {
   });
 
   it("refuses a skip vote once the league is over", async () => {
-    const { api, code } = await setUpTwoOwnerSeason();
-    await advanceMatches(api, code, asha.guestId, LEAGUE_MATCHES);
+    const { api, code, advance } = await setUpTwoOwnerSeason();
+    await advanceMatches(api, code, LEAGUE_MATCHES, advance);
     await expect(
       api.setSkipVote({ code, guestId: asha.guestId, vote: true }),
     ).rejects.toBeInstanceOf(LeagueAdvanceBlockedError);
   });
 
   it("plays one playoff match per step once the league is over", async () => {
-    const { api, code } = await setUpTwoOwnerSeason();
-    await advanceMatches(api, code, asha.guestId, LEAGUE_MATCHES);
+    const { api, code, advance } = await setUpTwoOwnerSeason();
+    await advanceMatches(api, code, LEAGUE_MATCHES, advance);
     const before = await api.getLobby(code);
     expect(before.round).toBe(14);
-    await api.advanceRound({ code, guestId: asha.guestId });
+    await advanceMatches(api, code, 1, advance);
     expect((await api.getLobby(code)).round).toBe(15);
     expect(ROUND_MATCHES).toBe(5);
   });

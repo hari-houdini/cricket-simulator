@@ -120,7 +120,7 @@ async function saveLegalXi(game: Game) {
  * @param game - A lobby with a saved XI.
  */
 async function playLeague(game: Game) {
-  await advanceMatches(game.api, game.code, asha.guestId, LEAGUE_MATCHES);
+  await advanceMatches(game.api, game.code, LEAGUE_MATCHES, game.advance);
 }
 
 describe("mock playoffs", () => {
@@ -196,7 +196,7 @@ describe("mock playoffs", () => {
     await saveLegalXi(game);
     await playLeague(game);
 
-    await advanceMatches(game.api, game.code, asha.guestId, PLAYOFF_STEPS);
+    await advanceMatches(game.api, game.code, PLAYOFF_STEPS, game.advance);
 
     const bracket = await game.api.getPlayoffs(game.code);
     expect(bracket.matches.every((match) => match.result !== null)).toBe(true);
@@ -213,7 +213,7 @@ describe("mock playoffs", () => {
     await completeSoloAuction(game);
     await saveLegalXi(game);
     await playLeague(game);
-    await advanceMatches(game.api, game.code, asha.guestId, PLAYOFF_STEPS);
+    await advanceMatches(game.api, game.code, PLAYOFF_STEPS, game.advance);
 
     const bracket = await game.api.getPlayoffs(game.code);
     const slot = (name: string) =>
@@ -243,7 +243,7 @@ describe("mock playoffs", () => {
     await completeSoloAuction(game);
     await saveLegalXi(game);
     await playLeague(game);
-    await advanceMatches(game.api, game.code, asha.guestId, PLAYOFF_STEPS);
+    await advanceMatches(game.api, game.code, PLAYOFF_STEPS, game.advance);
 
     const bracket = await game.api.getPlayoffs(game.code);
     for (const match of bracket.matches) {
@@ -258,15 +258,16 @@ describe("mock playoffs", () => {
     }
   });
 
-  it("refuses to play past the Final", async () => {
+  it("plays nothing past the Final, however long the clock runs", async () => {
     const game = await setUpSoloLobby();
     await completeSoloAuction(game);
     await saveLegalXi(game);
-    await advanceMatches(game.api, game.code, asha.guestId, SEASON_STEPS);
+    await advanceMatches(game.api, game.code, SEASON_STEPS, game.advance);
+    const finished = await game.api.getPlayoffs(game.code);
 
-    await expect(
-      game.api.advanceRound({ code: game.code, guestId: asha.guestId }),
-    ).rejects.toMatchObject({ reason: "season-over" });
+    await advanceMatches(game.api, game.code, 2, game.advance);
+
+    expect(await game.api.getPlayoffs(game.code)).toEqual(finished);
   });
 
   it("gives the same bracket for the same lobby and seed", async () => {
@@ -276,7 +277,7 @@ describe("mock playoffs", () => {
       await completeSoloAuction(game);
       await saveLegalXi(game);
       await playLeague(game);
-      await advanceMatches(game.api, game.code, asha.guestId, PLAYOFF_STEPS);
+      await advanceMatches(game.api, game.code, PLAYOFF_STEPS, game.advance);
     }
 
     expect(await second.api.getPlayoffs(second.code)).toEqual(

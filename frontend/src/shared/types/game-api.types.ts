@@ -5,13 +5,7 @@ import type {
 } from "./auction.types";
 import type { Awards } from "./awards.types";
 import type { GameEventListener, Unsubscribe } from "./game-event.types";
-import type {
-  AdvanceRoundInput,
-  League,
-  Match,
-  SetSkipVoteInput,
-  Standing,
-} from "./league.types";
+import type { League, Match, SetSkipVoteInput, Standing } from "./league.types";
 import type { Lineup } from "./lineup.types";
 import type {
   ClaimFranchiseInput,
@@ -105,14 +99,8 @@ export type GameApi = {
    */
   readonly getLeague: (code: string) => Promise<League>;
   /**
-   * Plays the next league round and returns the league. Only an owner may play
-   * it. Rejects with `LeagueAdvanceBlockedError` when the season is over or an
-   * owner has no starting XI yet.
-   */
-  readonly advanceRound: (input: AdvanceRoundInput) => Promise<League>;
-  /**
    * Votes to skip the rest of the league, or withdraws the vote. A skip needs strictly more than
-   * half of the owners, and it is applied by the next match played.
+   * half of the owners, and it is applied as soon as the season is next read.
    */
   readonly setSkipVote: (input: SetSkipVoteInput) => Promise<Lobby>;
   /**

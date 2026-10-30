@@ -13,6 +13,12 @@ export const LEAGUE_MATCHES = (FRANCHISE_COUNT * MATCHES_PER_FRANCHISE) / 2;
 /** Playoff matches: Qualifier 1, Eliminator, Qualifier 2 and the Final. */
 export const PLAYOFF_MATCHES = 4;
 
+/**
+ * The gap between two steps of the season, in milliseconds. The server keeps the season clock, so
+ * every guest sees the same pace. It matches `MATCH_INTERVAL_MS` in the Rust core (ADR 0008).
+ */
+export const MATCH_INTERVAL_MS = 1500;
+
 /** Points for a league win (`docs/game-design.md` section 6). */
 export const POINTS_PER_WIN = 2;
 

@@ -1,4 +1,7 @@
-import { LEAGUE_ROUNDS } from "../../shared/const/league.const";
+import {
+  LEAGUE_ROUNDS,
+  MATCH_INTERVAL_MS,
+} from "../../shared/const/league.const";
 import {
   LAST_ROUND,
   LOBBY_CODE_LENGTH,
@@ -20,7 +23,6 @@ import type {
   GameEventListener,
 } from "../../shared/types/game-event.types";
 import {
-  advanceRoundInputSchema,
   leagueSchema,
   matchIdSchema,
   matchSchema,
@@ -83,7 +85,6 @@ import {
   XiBlockedError,
   XiLockedError,
 } from "../../shared/utils/game-api.errors";
-import { advanceBlock } from "../../shared/utils/league-rules";
 import { matchLogFor } from "../../shared/utils/match-log";
 import {
   allocateMatch,
@@ -169,11 +170,6 @@ type StoredSquadChoices = {
 };
 
 /**
- * A lobby's live sim state: the substitutions open right now, the owners voting to skip the
- * league, the substitutions made, and the match count when the league was skipped. The Rust
- * backend keeps the same record in `Lobby`, so the two agree on what the lobby reports.
- */
-/**
  * A lobby as the mock stores it. The live sim fields are not kept here: `lobbyResponse` fills them
  * from the sim state, so a stored lobby can never disagree with it.
  */
@@ -187,11 +183,21 @@ type StoredLobby = Omit<
   | "skippedAfterMatches"
 >;
 
+/**
+ * A lobby's live sim state: the substitutions open right now, the owners voting to skip the
+ * league, the substitutions made, the match count when the league was skipped, and the season
+ * clock. The Rust backend keeps the same record in `Lobby`, so the two agree on what the lobby
+ * reports.
+ */
 type StoredSim = {
   readonly substituting: Set<string>;
   readonly skipVotes: Set<string>;
   readonly substitutions: Substitution[];
   skippedAfter: number | null;
+  /** When the next season step is due, or `null` until the clock starts. */
+  nextMatchAtMs: number | null;
+  /** When the current pause began, or `null` while the sim runs. */
+  pausedAtMs: number | null;
 };
 
 /**
@@ -344,6 +350,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
     ) {
       throw new LeagueNotStartedError(code);
     }
+    settleSeason(code);
   }
 
   /**
@@ -360,6 +367,8 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         skipVotes: new Set(),
         substitutions: [],
         skippedAfter: null,
+        nextMatchAtMs: null,
+        pausedAtMs: null,
       };
       simByCode.set(code, sim);
     }
@@ -426,6 +435,118 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
     return (
       simFor(code).skipVotes.size >= Math.floor(lobby.owners.length / 2) + 1
     );
+  }
+
+  /**
+   * Plays the season's next step, as `Lobby::advance` does on the server: the next league match,
+   * the rest of the league once a skip has passed, or the next playoff match. The step is held back
+   * when the season is over, the sim is paused, or an owner has no XI that can field.
+   *
+   * @param code - A normalised lobby code.
+   * @returns `false` when the step is held back, so the clock keeps it due.
+   */
+  function playNextStep(code: string): boolean {
+    const lobby = findLobby(code);
+    if (lobby.phase === "complete" || simFor(code).substituting.size > 0) {
+      return false;
+    }
+    const everyOwnerCanField = lobby.owners.every(
+      (owner) =>
+        choicesFor(code, owner.guestId).startingXi !== null ||
+        defaultStartingXi(squadOf(code, owner.guestId)) !== null,
+    );
+    if (!everyOwnerCanField) {
+      return false;
+    }
+
+    // An owner who saved no XI plays with the default one. It is stored, so
+    // the owner can see it and it locks with the rest of the XI.
+    for (const owner of lobby.owners) {
+      const choices = choicesFor(code, owner.guestId);
+      if (choices.startingXi === null) {
+        choices.startingXi = defaultStartingXi(squadOf(code, owner.guestId));
+      }
+    }
+
+    if (lobby.phase === "playoffs") {
+      const round = lobby.round + 1;
+      playPlayoffRound(code, round);
+      lobby.round = round;
+      if (round === LAST_ROUND) {
+        lobby.phase = "complete";
+        const champion = playoffsView(code).champion;
+        if (champion !== null) {
+          emit({
+            type: "season_complete",
+            code,
+            championFranchiseId: champion,
+          });
+        }
+      }
+    } else if (skipPassed(code, lobby)) {
+      // The skip records how many league matches stood when it passed, then the rest play out.
+      const sim = simFor(code);
+      sim.skippedAfter ??= leagueMatchesPlayed(code);
+      for (let next = nextLeagueMatch(code); next; ) {
+        playLeagueMatch(code, lobby, next);
+        next = nextLeagueMatch(code);
+      }
+    } else {
+      const next = nextLeagueMatch(code);
+      if (next) {
+        playLeagueMatch(code, lobby, next);
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Brings the season clock up to the current time, as the server does on every call (ADR 0008).
+   * A pause is recorded when a substitution opens, and when it closes the next step is moved on by
+   * the pause's length. Then at most one step is played: the one that is due, or the rest of the
+   * league once a skip has passed.
+   *
+   * @param code - A normalised lobby code.
+   */
+  function settleSeason(code: string): void {
+    const lobby = lobbiesByCode.get(code);
+    if (!lobby) {
+      return;
+    }
+    const sim = simFor(code);
+    const at = now();
+    const paused = sim.substituting.size > 0;
+    if (paused && sim.pausedAtMs === null) {
+      sim.pausedAtMs = at;
+    }
+    if (!paused && sim.pausedAtMs !== null) {
+      if (sim.nextMatchAtMs !== null) {
+        sim.nextMatchAtMs += Math.max(0, at - sim.pausedAtMs);
+      }
+      sim.pausedAtMs = null;
+    }
+    if (paused || (lobby.phase !== "league" && lobby.phase !== "playoffs")) {
+      return;
+    }
+    if (sim.nextMatchAtMs === null) {
+      // The first step waits one interval after the season begins, so the sim visibly starts.
+      sim.nextMatchAtMs = at + MATCH_INTERVAL_MS;
+      return;
+    }
+    const due = sim.nextMatchAtMs;
+    const skipNow = lobby.phase === "league" && skipPassed(code, lobby);
+    if (at < due && !skipNow) {
+      return;
+    }
+    if (!playNextStep(code)) {
+      return;
+    }
+    // A step overdue by less than an interval keeps the schedule's rhythm. A longer gap restarts
+    // it from now, so the next step is not due straight away.
+    sim.nextMatchAtMs =
+      at - due < MATCH_INTERVAL_MS
+        ? due + MATCH_INTERVAL_MS
+        : at + MATCH_INTERVAL_MS;
   }
 
   /**
@@ -565,7 +686,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       );
     }
     const squad = squadOf(code, owner.guestId);
-    // Every owner has an XI here: advanceRound stores one before it plays.
+    // Every owner has an XI here: a season step stores one before it plays.
     // The XI's order is the batting order, so the saved order is kept.
     const xiIds = choicesFor(code, owner.guestId).startingXi?.playerIds ?? [];
     return xiIds.flatMap((id) => squad.filter((player) => player.id === id));
@@ -875,6 +996,10 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
 
     async getLobby(rawCode) {
       const code = normalizeCode(rawCode);
+      if (auctionsByCode.has(code)) {
+        settledAuction(code);
+      }
+      settleSeason(code);
       return lobbyResponse(findLobby(code));
     },
 
@@ -984,74 +1109,6 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       return leagueView(code);
     },
 
-    async advanceRound(rawInput) {
-      const input = advanceRoundInputSchema.parse({
-        ...rawInput,
-        code: normalizeCode(rawInput.code),
-      });
-      requireSeason(input.code);
-      const lobby = findLobby(input.code);
-      if (!lobby.owners.some((owner) => owner.guestId === input.guestId)) {
-        throw new NotAnOwnerError(input.guestId);
-      }
-
-      const everyOwnerCanField = lobby.owners.every(
-        (owner) =>
-          choicesFor(input.code, owner.guestId).startingXi !== null ||
-          defaultStartingXi(squadOf(input.code, owner.guestId)) !== null,
-      );
-      const block = advanceBlock({
-        round: lobby.round,
-        everyOwnerCanField,
-        paused: simFor(input.code).substituting.size > 0,
-      });
-      if (block !== null) {
-        throw new LeagueAdvanceBlockedError(block);
-      }
-
-      // An owner who saved no XI plays with the default one. It is stored, so
-      // the owner can see it and it locks with the rest of the XI.
-      for (const owner of lobby.owners) {
-        const choices = choicesFor(input.code, owner.guestId);
-        if (choices.startingXi === null) {
-          choices.startingXi = defaultStartingXi(
-            squadOf(input.code, owner.guestId),
-          );
-        }
-      }
-
-      if (lobby.phase === "playoffs" || lobby.phase === "complete") {
-        const round = lobby.round + 1;
-        playPlayoffRound(input.code, round);
-        lobby.round = round;
-        if (round === LAST_ROUND) {
-          lobby.phase = "complete";
-          const champion = playoffsView(input.code).champion;
-          if (champion !== null) {
-            emit({
-              type: "season_complete",
-              code: input.code,
-              championFranchiseId: champion,
-            });
-          }
-        }
-      } else if (skipPassed(input.code, lobby)) {
-        // The skip records how many league matches stood when it passed, then the rest play out.
-        const sim = simFor(input.code);
-        sim.skippedAfter ??= leagueMatchesPlayed(input.code);
-        for (let next = nextLeagueMatch(input.code); next; ) {
-          playLeagueMatch(input.code, lobby, next);
-          next = nextLeagueMatch(input.code);
-        }
-      } else {
-        const next = nextLeagueMatch(input.code);
-        if (next) {
-          playLeagueMatch(input.code, lobby, next);
-        }
-      }
-      return leagueView(input.code);
-    },
-
     async beginSubstitution(rawInput) {
       const input = beginSubstitutionInputSchema.parse({
         ...rawInput,
@@ -1074,7 +1131,9 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         throw new SubstitutionBlockedError("no-starting-xi");
       }
       simFor(input.code).substituting.add(input.guestId);
-      return lobbyResponse(lobby);
+      const response = lobbyResponse(lobby);
+      settleSeason(input.code);
+      return response;
     },
 
     async cancelSubstitution(rawInput) {
@@ -1084,7 +1143,9 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       });
       requireSeason(input.code);
       simFor(input.code).substituting.delete(input.guestId);
-      return lobbyResponse(findLobby(input.code));
+      const response = lobbyResponse(findLobby(input.code));
+      settleSeason(input.code);
+      return response;
     },
 
     async setSkipVote(rawInput) {
@@ -1106,7 +1167,9 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       } else {
         votes.delete(input.guestId);
       }
-      return lobbyResponse(lobby);
+      const response = lobbyResponse(lobby);
+      settleSeason(input.code);
+      return response;
     },
 
     async getStandings(rawCode) {
@@ -1277,7 +1340,9 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         inPlayerId: input.inPlayerId,
         matchesPlayed: matchesPlayedFor(input.code),
       });
-      return squadView(input.guestId, completed);
+      const response = squadView(input.guestId, completed);
+      settleSeason(input.code);
+      return response;
     },
   };
 }

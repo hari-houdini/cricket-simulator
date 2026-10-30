@@ -2,7 +2,7 @@
 //! the playoffs (GLOSSARY.md, Lobby; docs/game-design.md sections 2 to 5).
 //!
 //! The lobby is pure state. Time and seed data come in as arguments, and the caller (the
-//! Durable Object in `cricket-worker`) decides when to call `tick` and `advance`.
+//! Durable Object in `cricket-worker`) decides when to call `tick` and `advance_clock`.
 
 use std::collections::BTreeSet;
 
@@ -23,6 +23,10 @@ const LEAGUE_ROUNDS: u32 = 14;
 
 /// The most guests a lobby holds, one per IPL franchise.
 pub const MAX_OWNERS: usize = 10;
+
+/// The gap between two steps of the season, in milliseconds. Every guest sees the same pace, since
+/// the clock is kept on the server (ADR 0008).
+pub const MATCH_INTERVAL_MS: u64 = 1500;
 
 /// Where the lobby is in the season (ARCHITECTURE.md, Lobby).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -180,6 +184,12 @@ pub struct Lobby {
     /// How many matches had been played when the league was skipped, or `None` if it was not.
     #[serde(default)]
     skipped_after: Option<u32>,
+    /// When the next step of the season is due, in milliseconds, or `None` until the clock starts.
+    #[serde(default)]
+    next_match_at_ms: Option<u64>,
+    /// When the current pause began, so the clock can stand still for its length.
+    #[serde(default)]
+    paused_at_ms: Option<u64>,
 }
 
 /// A substitution as the season keeps it: who came off, who came on, and where in the season it
@@ -232,6 +242,8 @@ impl Lobby {
             skip_votes: BTreeSet::new(),
             substitutions: Vec::new(),
             skipped_after: None,
+            next_match_at_ms: None,
+            paused_at_ms: None,
         }
     }
 
@@ -704,7 +716,8 @@ impl Lobby {
     }
 
     /// Records or withdraws an owner's vote to skip the rest of the league. Votes can change until
-    /// the skip happens. The skip is applied by the next {@link Self::advance}.
+    /// the skip happens. The skip is applied the next time the season clock is brought up to date
+    /// (see {@link Self::advance_clock}).
     ///
     /// @param guest_id - The owner.
     /// @param vote - `true` to vote for the skip, `false` to withdraw the vote.
@@ -750,6 +763,69 @@ impl Lobby {
     /// @returns `true` once enough connected owners have voted to skip.
     pub fn skip_passed(&self) -> bool {
         self.skip_voters().len() >= self.skip_threshold()
+    }
+
+    /// When the next step of the season is due.
+    ///
+    /// @returns The due time in milliseconds, or `None` until the season clock has started.
+    pub fn next_match_at_ms(&self) -> Option<u64> {
+        self.next_match_at_ms
+    }
+
+    /// Brings the season clock up to `now_ms`. At most one step is played per call, the one that is
+    /// due, so the season moves only while someone reads it and a long idle gap does not play a
+    /// burst of matches. A passed skip vote is played at once. The clock stands still while a
+    /// substitution is open (ADR 0008).
+    ///
+    /// @param now_ms - The current time.
+    /// @param config - The ball model parameters.
+    /// @returns The matches played by this call, which is empty unless a step was due.
+    /// @throws Returns a {@link LobbyError} if the due step cannot be played, such as an owner with no legal XI.
+    pub fn advance_clock(
+        &mut self,
+        now_ms: u64,
+        config: &ModifierConfig,
+    ) -> Result<Vec<MatchOutcome>, LobbyError> {
+        self.sync_pause(now_ms);
+        if self.sim_paused() || !matches!(self.phase, Phase::League | Phase::Playoffs) {
+            return Ok(Vec::new());
+        }
+        let Some(due) = self.next_match_at_ms else {
+            // The first step waits one interval after the season begins, so the sim visibly starts.
+            self.next_match_at_ms = Some(now_ms + MATCH_INTERVAL_MS);
+            return Ok(Vec::new());
+        };
+        let skip_passed = self.phase == Phase::League && self.skip_passed();
+        if now_ms < due && !skip_passed {
+            return Ok(Vec::new());
+        }
+        let played = self.advance(config)?;
+        // A step that was overdue by less than an interval keeps the rhythm of the schedule. A longer
+        // gap restarts it from now, so the next step is not due straight away.
+        let overdue_by = now_ms.saturating_sub(due);
+        self.next_match_at_ms = Some(if overdue_by < MATCH_INTERVAL_MS {
+            due + MATCH_INTERVAL_MS
+        } else {
+            now_ms + MATCH_INTERVAL_MS
+        });
+        Ok(played)
+    }
+
+    /// Records when a pause begins and, once it ends, moves the next step back by its length, so
+    /// a substitution does not use up the time the sim spent waiting.
+    ///
+    /// @param now_ms - The current time.
+    fn sync_pause(&mut self, now_ms: u64) {
+        match (self.sim_paused(), self.paused_at_ms) {
+            (true, None) => self.paused_at_ms = Some(now_ms),
+            (false, Some(paused_at)) => {
+                self.paused_at_ms = None;
+                if let Some(next) = self.next_match_at_ms.as_mut() {
+                    *next += now_ms.saturating_sub(paused_at);
+                }
+            }
+            _ => {}
+        }
     }
 
     /// Plays the next step of the season: the next league match, every remaining league match when
@@ -1784,5 +1860,171 @@ mod tests {
             assert_eq!(played[0].away_id, fixture.away_franchise_id);
         }
         assert_eq!(lobby.phase(), Phase::Playoffs);
+    }
+
+    /// A lobby with one owner in the league, before any match has been played.
+    fn lobby_in_league() -> Lobby {
+        let (ids, players, template) = seed();
+        let mut lobby = new_lobby(ids, template);
+        seat(&mut lobby, "guest-a", "csk");
+        lobby.start_auction(players, 0).expect("auction starts");
+        run_auction(&mut lobby, &[]);
+        lobby
+    }
+
+    #[test]
+    fn the_first_season_step_waits_one_interval_and_then_one_step_is_due_each_interval() {
+        let mut lobby = lobby_in_league();
+        let config = ModifierConfig::default();
+
+        assert!(
+            lobby
+                .advance_clock(1_000, &config)
+                .expect("clock reads")
+                .is_empty()
+        );
+        assert_eq!(lobby.next_match_at_ms(), Some(2_500));
+        assert!(
+            lobby
+                .advance_clock(2_499, &config)
+                .expect("clock reads")
+                .is_empty()
+        );
+        assert_eq!(
+            lobby
+                .advance_clock(2_500, &config)
+                .expect("first match plays")
+                .len(),
+            1
+        );
+        assert_eq!(lobby.next_match_at_ms(), Some(4_000));
+        assert_eq!(lobby.matches_played(), 1);
+    }
+
+    #[test]
+    fn a_read_long_after_a_step_is_due_plays_one_step_and_schedules_from_now() {
+        let mut lobby = lobby_in_league();
+        let config = ModifierConfig::default();
+        lobby.advance_clock(0, &config).expect("clock starts");
+
+        let played = lobby
+            .advance_clock(10_000, &config)
+            .expect("the overdue step plays");
+        assert_eq!(played.len(), 1);
+        assert_eq!(lobby.next_match_at_ms(), Some(11_500));
+        assert!(
+            lobby
+                .advance_clock(10_100, &config)
+                .expect("clock reads")
+                .is_empty()
+        );
+        assert_eq!(lobby.matches_played(), 1);
+    }
+
+    #[test]
+    fn a_read_shortly_after_a_step_is_due_keeps_the_schedule_rhythm() {
+        let mut lobby = lobby_in_league();
+        let config = ModifierConfig::default();
+        lobby.advance_clock(0, &config).expect("clock starts");
+
+        lobby.advance_clock(1_600, &config).expect("the step plays");
+        assert_eq!(lobby.next_match_at_ms(), Some(3_000));
+    }
+
+    #[test]
+    fn the_clock_stands_still_outside_the_season() {
+        let (ids, players, template) = seed();
+        let mut lobby = new_lobby(ids, template);
+        seat(&mut lobby, "guest-a", "csk");
+        lobby.start_auction(players, 0).expect("auction starts");
+
+        assert!(
+            lobby
+                .advance_clock(60_000, &ModifierConfig::default())
+                .expect("clock reads")
+                .is_empty()
+        );
+        assert_eq!(lobby.next_match_at_ms(), None);
+    }
+
+    #[test]
+    fn a_substitution_holds_the_clock_and_the_pause_does_not_use_up_the_next_step() {
+        let mut lobby = lobby_after_first_match(&[("guest-a", "csk"), ("guest-b", "mi")]);
+        let config = ModifierConfig::default();
+        lobby.advance_clock(0, &config).expect("clock starts");
+        assert_eq!(lobby.next_match_at_ms(), Some(1_500));
+
+        lobby.begin_substitution("guest-a").expect("opens");
+        assert!(
+            lobby
+                .advance_clock(1_000, &config)
+                .expect("paused")
+                .is_empty()
+        );
+        assert!(
+            lobby
+                .advance_clock(9_000, &config)
+                .expect("still paused")
+                .is_empty()
+        );
+        assert_eq!(lobby.next_match_at_ms(), Some(1_500));
+
+        lobby.cancel_substitution("guest-a");
+        assert!(
+            lobby
+                .advance_clock(9_000, &config)
+                .expect("resumed")
+                .is_empty()
+        );
+        assert_eq!(lobby.next_match_at_ms(), Some(9_500));
+        assert_eq!(lobby.matches_played(), 1);
+
+        lobby
+            .advance_clock(9_500, &config)
+            .expect("the next step plays");
+        assert_eq!(lobby.matches_played(), 2);
+    }
+
+    #[test]
+    fn a_passed_skip_vote_is_played_at_once_without_waiting_for_the_clock() {
+        let mut lobby = lobby_after_first_match(&[("guest-a", "csk")]);
+        let config = ModifierConfig::default();
+        lobby.advance_clock(0, &config).expect("clock starts");
+        lobby.set_skip_vote("guest-a", true).expect("votes");
+
+        lobby
+            .advance_clock(1, &config)
+            .expect("the rest of the league plays");
+        assert_eq!(lobby.phase(), Phase::Playoffs);
+        assert_eq!(lobby.skipped_after(), Some(1));
+    }
+
+    #[test]
+    fn a_due_step_blocked_by_an_owner_without_a_legal_xi_stays_due_until_it_can_play() {
+        let (ids, players, template) = seed();
+        let mut lobby = new_lobby(ids, template);
+        seat(&mut lobby, "guest-a", "csk");
+        lobby.start_auction(players, 0).expect("auction starts");
+        run_auction(&mut lobby, &["guest-a"]);
+        let owned = lobby
+            .squads
+            .iter_mut()
+            .find(|entry| entry.owner_guest_id.as_deref() == Some("guest-a"))
+            .expect("owner keeps a squad");
+        owned
+            .players
+            .retain(|player| player.role != Role::WicketKeeper);
+        let config = ModifierConfig::default();
+        lobby.advance_clock(0, &config).expect("clock starts");
+
+        assert!(matches!(
+            lobby.advance_clock(1_500, &config),
+            Err(LobbyError::XiMissing(_))
+        ));
+        assert!(matches!(
+            lobby.advance_clock(9_000, &config),
+            Err(LobbyError::XiMissing(_))
+        ));
+        assert_eq!(lobby.matches_played(), 0);
     }
 }

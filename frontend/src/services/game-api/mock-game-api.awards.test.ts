@@ -116,7 +116,7 @@ async function saveLegalXi(game: Game) {
  */
 async function playTo(game: Game, round: number) {
   while ((await game.api.getLeague(game.code)).round < round) {
-    await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
+    await advanceMatches(game.api, game.code, 1, game.advance);
   }
 }
 
@@ -143,7 +143,7 @@ describe("mock awards", () => {
     const game = await setUpSoloLobby();
     await completeSoloAuction(game);
     await saveLegalXi(game);
-    await advanceMatches(game.api, game.code, asha.guestId, ROUND_MATCHES);
+    await advanceMatches(game.api, game.code, ROUND_MATCHES, game.advance);
 
     const awards = await game.api.getAwards(game.code);
 
@@ -160,7 +160,7 @@ describe("mock awards", () => {
     const game = await setUpSoloLobby();
     await completeSoloAuction(game);
     await saveLegalXi(game);
-    await advanceMatches(game.api, game.code, asha.guestId, ROUND_MATCHES);
+    await advanceMatches(game.api, game.code, ROUND_MATCHES, game.advance);
 
     const awards = await game.api.getAwards(game.code);
 

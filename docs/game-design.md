@@ -58,6 +58,7 @@ An **IPL T20 fantasy cricket game**. Guests join a lobby, each owns one IPL fran
 
 - Matches are **seeded and deterministic**: the seed comes from lobby ID and match ID, so every guest sees the same result ([ADR 0003](adr/0003-seeded-deterministic-simulation.md)).
 - **League matches** run in 1–2 seconds and show the final score, runs, wickets and winner.
+- **Pace**: the season moves on one shared clock, a match every 1.5 seconds. It moves while any guest has the lobby open, and it holds while a free substitution is open for everyone ([ADR 0008](adr/0008-season-clock.md)).
 - **Playoff matches** run within **5 seconds** and show a **match log** of key moments only: the toss, each innings' openers, wickets with the bowler, batter and any catcher, 30, 50 and 100 milestones, partnership milestones, 4-wicket hauls, the final over, each innings' total and the result. Both innings are covered, and a super over is logged as its own innings. Guests can skip to the result at any time. A match log is replayed from the match's seed ([ADR 0007](adr/0007-replay-key-moments-from-the-seed.md)).
 
 ### 6.1 Ball outcome model (engine parameters)

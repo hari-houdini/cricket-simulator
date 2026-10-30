@@ -1,16 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import { BID_TIMER_MS, SQUAD_SIZE } from "../../shared/const/auction.const";
-import { LEAGUE_MATCHES, LEAGUE_ROUNDS } from "../../shared/const/league.const";
+import {
+  LEAGUE_MATCHES,
+  LEAGUE_ROUNDS,
+  MATCH_INTERVAL_MS,
+} from "../../shared/const/league.const";
 import { LAST_ROUND } from "../../shared/const/lobby.const";
 import { XI_SIZE } from "../../shared/const/squad.const";
 import type { Player } from "../../shared/types/player.types";
-import {
-  LeagueAdvanceBlockedError,
-  LeagueNotStartedError,
-  NotAnOwnerError,
-} from "../../shared/utils/game-api.errors";
+import { LeagueNotStartedError } from "../../shared/utils/game-api.errors";
 import { startingXiBlock } from "../../shared/utils/squad-rules";
+import { advanceMatches } from "./advance-steps.mock";
 import { createMockGameApi } from "./mock-game-api";
 
 const asha = { guestId: "asha", displayName: "Asha" };
@@ -123,9 +124,6 @@ describe("mock league", () => {
     await expect(api.getLeague(created.code)).rejects.toBeInstanceOf(
       LeagueNotStartedError,
     );
-    await expect(
-      api.advanceRound({ code: created.code, guestId: asha.guestId }),
-    ).rejects.toBeInstanceOf(LeagueNotStartedError);
   });
 
   it("refuses the league while the auction is still running", async () => {
@@ -165,7 +163,7 @@ describe("mock league", () => {
     const game = await setUpSoloLobby();
     await completeSoloAuction(game);
 
-    await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
+    await advanceMatches(game.api, game.code, 1, game.advance);
     const squad = await game.api.getSquad({
       code: game.code,
       guestId: asha.guestId,
@@ -177,37 +175,20 @@ describe("mock league", () => {
     expect(xi && startingXiBlock(squad.players, xi)).toBeNull();
   });
 
-  it("refuses a round from a guest who is not an owner", async () => {
-    const game = await setUpSoloLobby();
-    await completeSoloAuction(game);
-    await saveLegalXi(game);
-
-    await expect(
-      game.api.advanceRound({ code: game.code, guestId: "stranger" }),
-    ).rejects.toBeInstanceOf(NotAnOwnerError);
-  });
-
   it("plays one match per step, and the round reached is the round of the last match played", async () => {
     const game = await setUpSoloLobby();
     await completeSoloAuction(game);
     await saveLegalXi(game);
 
-    const first = await game.api.advanceRound({
-      code: game.code,
-      guestId: asha.guestId,
-    });
+    await advanceMatches(game.api, game.code, 1, game.advance);
+    const first = await game.api.getLeague(game.code);
     expect(
       first.fixtures.filter((fixture) => fixture.result !== null),
     ).toHaveLength(1);
     expect(first.round).toBe(1);
 
-    let league = first;
-    for (let step = 1; step < 5; step += 1) {
-      league = await game.api.advanceRound({
-        code: game.code,
-        guestId: asha.guestId,
-      });
-    }
+    await advanceMatches(game.api, game.code, 4, game.advance);
+    const league = await game.api.getLeague(game.code);
 
     const played = league.fixtures.filter((fixture) => fixture.result !== null);
     expect(league.round).toBe(1);
@@ -229,31 +210,22 @@ describe("mock league", () => {
       await saveLegalXi(game);
     }
 
-    const playedFirst = await first.api.advanceRound({
-      code: first.code,
-      guestId: asha.guestId,
-    });
-    const playedSecond = await second.api.advanceRound({
-      code: second.code,
-      guestId: asha.guestId,
-    });
+    await advanceMatches(first.api, first.code, 3, first.advance);
+    await advanceMatches(second.api, second.code, 3, second.advance);
+    const playedFirst = await first.api.getLeague(first.code);
+    const playedSecond = await second.api.getLeague(second.code);
 
     expect(playedFirst.fixtures).toEqual(playedSecond.fixtures);
   });
 
-  it("plays the league and playoffs to the end of the season, then refuses another round", async () => {
+  it("plays the league and playoffs to the end of the season, then plays nothing more", async () => {
     const game = await setUpSoloLobby();
     await completeSoloAuction(game);
     await saveLegalXi(game);
 
-    let league = await game.api.getLeague(game.code);
     const steps = LEAGUE_MATCHES + (LAST_ROUND - LEAGUE_ROUNDS);
-    for (let step = 0; step < steps; step += 1) {
-      league = await game.api.advanceRound({
-        code: game.code,
-        guestId: asha.guestId,
-      });
-    }
+    await advanceMatches(game.api, game.code, steps, game.advance);
+    const league = await game.api.getLeague(game.code);
 
     expect(league.round).toBe(LAST_ROUND);
     expect(league.leagueComplete).toBe(true);
@@ -261,8 +233,8 @@ describe("mock league", () => {
       true,
     );
     expect(league.standings.every((row) => row.played === 14)).toBe(true);
-    await expect(
-      game.api.advanceRound({ code: game.code, guestId: asha.guestId }),
-    ).rejects.toBeInstanceOf(LeagueAdvanceBlockedError);
+    game.advance(MATCH_INTERVAL_MS * 3);
+    const after = await game.api.getLeague(game.code);
+    expect(after.fixtures).toEqual(league.fixtures);
   });
 });

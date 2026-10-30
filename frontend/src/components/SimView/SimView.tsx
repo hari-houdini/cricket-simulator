@@ -28,15 +28,9 @@ import type { SimViewProps } from "./SimView.types";
 const MATCH_REVEAL_MS = 1500;
 
 /**
- * How long the driver waits after a failed advance before it asks again. A blocked season,
- * such as an owner who has not saved an XI yet, clears on its own once that is fixed, so the
- * driver retries slowly rather than stopping for good.
- */
-const ADVANCE_RETRY_MS = 5000;
-
-/**
- * How often the league is read while the sim is on screen. The lobby's round moves only once
- * every few matches, so the league is read on its own clock to show each match as it is played.
+ * How often the league is read while the sim is on screen. Each read is also what moves the
+ * server's season clock, so the sim keeps moving while any guest has it open. The reads are a
+ * second apart, shorter than the clock's interval, so a due match is played on time.
  */
 const LEAGUE_POLL_MS = 1000;
 
@@ -81,9 +75,10 @@ function newerLeague(current: League | null, next: League): League {
 /**
  * The sim: the match stack, the owners' controls, and the season's nav. Every guest sees the
  * stack, and each match appears in it once its turn has come, one at a time, so no one sees a
- * result before the sim has finished it. An owner's client also drives the sim, asking the
- * server for the next match once the last one has been shown. The server holds the pause: while
- * a substitution is open it plays nothing, and the stack shows the pause to every guest.
+ * result before the sim has finished it. The server keeps the season clock: a read of the league
+ * plays the match that has come due, so no client has to drive the sim. The server holds the
+ * pause: while a substitution is open it plays nothing, and the stack shows the pause to every
+ * guest.
  *
  * @param props - The lobby code, the lobby, the viewing guest, and the lobby update callback.
  * @returns The sim, or a loading or error message while the league is read.
@@ -100,8 +95,6 @@ export function SimView({
   const [revealed, setRevealed] = useState<number | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [retry, setRetry] = useState(0);
-  const [advancing, setAdvancing] = useState(false);
   const [awards, setAwards] = useState<Awards | null>(null);
   const [lineups, setLineups] = useState<Lineup[] | null>(null);
   const [squad, setSquad] = useState<Squad | null>(null);
@@ -223,60 +216,6 @@ export function SimView({
     }, delay);
     return () => window.clearTimeout(timer);
   }, [leagueLoaded, revealed, played, lobby.skippedAfterMatches]);
-
-  // The owner's client drives the sim: once the stack has caught up, it asks for the next match.
-  // It waits while a substitution is open. A failed advance shows its error and asks again after
-  // ADVANCE_RETRY_MS. Playoff matches have no stack to pace them, so they wait the same reveal
-  // time between matches.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the retry count is a trigger; a failed advance is tried again after its delay
-  useEffect(() => {
-    if (!isOwner || !leagueLoaded || revealed === null) {
-      return;
-    }
-    if (
-      lobby.simPaused ||
-      revealed < played ||
-      lobby.phase === "auction" ||
-      lobby.phase === "complete" ||
-      advancing
-    ) {
-      return;
-    }
-    const wait =
-      lobby.phase === "playoffs" && !prefersReducedMotion()
-        ? MATCH_REVEAL_MS
-        : 0;
-    const timer = window.setTimeout(() => {
-      setAdvancing(true);
-      api
-        .advanceRound({ code, guestId })
-        .then((next) => {
-          setLeague((current) => newerLeague(current, next));
-          setError(null);
-        })
-        .catch((caught: unknown) => {
-          setError(describeApiError(caught));
-          window.setTimeout(
-            () => setRetry((current) => current + 1),
-            ADVANCE_RETRY_MS,
-          );
-        })
-        .finally(() => setAdvancing(false));
-    }, wait);
-    return () => window.clearTimeout(timer);
-  }, [
-    api,
-    code,
-    guestId,
-    isOwner,
-    leagueLoaded,
-    revealed,
-    played,
-    lobby.simPaused,
-    lobby.phase,
-    retry,
-    advancing,
-  ]);
 
   const playerNames = useMemo(
     () =>

@@ -136,11 +136,32 @@ fn overdue(lobby: &Lobby, now_ms: u64) -> bool {
         .is_some_and(|lot| now_ms >= lot.deadline_ms)
 }
 
+/// Brings the lobby up to date with the clock: settles overdue auction lots, then plays the season
+/// step that is due (ADR 0008). Every operation and read runs this before and after it, so the
+/// season moves only while the lobby is being used.
+///
+/// A step blocked by an owner with no legal XI is left in place rather than failing the call, so
+/// reads of the lobby still work while the owner resolves it.
+///
+/// @param lobby - The lobby, changed in place.
+/// @param now_ms - The current time.
+/// @param config - The ball model parameters.
+/// @returns `Ok(())` once the lobby is up to date.
+/// @throws Returns an {@link ApiError} if a season step fails for any other reason.
+fn settle(lobby: &mut Lobby, now_ms: u64, config: &ModifierConfig) -> Result<(), ApiError> {
+    catch_up(lobby, now_ms)?;
+    match lobby.advance_clock(now_ms, config) {
+        Ok(_) | Err(LobbyError::XiMissing(_)) => Ok(()),
+        Err(error) => Err(from_lobby(error)),
+    }
+}
+
 /// Runs one operation on a lobby.
 ///
-/// The lobby is brought up to date first, so an auction lot that has run out is settled before
-/// the operation sees it. A refused operation can still have changed the lobby by that step,
-/// which is why the caller saves whenever the lobby differs.
+/// The lobby is brought up to date before and after the operation. Before, so the operation sees
+/// the season as it stands now. After, so a pause or skip it causes takes effect in the same call.
+/// A refused operation can still have changed the lobby by the first step, which is why the caller
+/// saves whenever the lobby differs.
 ///
 /// @param lobby - The lobby, changed in place.
 /// @param operation - The action.
@@ -156,7 +177,7 @@ pub fn execute(
     seeds: &Seeds,
     config: &ModifierConfig,
 ) -> Result<String, ApiError> {
-    catch_up(lobby, now_ms)?;
+    settle(lobby, now_ms, config)?;
     let body = match operation {
         // Creation happens before a lobby exists, in `create`, so reaching here means the code is taken.
         Operation::CreateLobby { .. } => return Err(ApiError::new(409, "LobbyCodeTakenError")),
@@ -236,49 +257,11 @@ pub fn execute(
         Operation::GetLeague => to_json(&views::league(lobby)?),
         Operation::GetStandings => to_json(&views::standings(lobby)?),
         Operation::GetMatch { match_id } => to_json(&views::played_match(lobby, &match_id)?),
-        Operation::AdvanceRound { guest_id } => {
-            advance(lobby, &guest_id, config)?;
-            to_json(&views::league(lobby)?)
-        }
         Operation::GetPlayoffs => to_json(&views::playoffs(lobby, config)?),
         Operation::GetAwards => to_json(&views::awards(lobby)?),
     };
+    settle(lobby, now_ms, config)?;
     Ok(body)
-}
-
-/// Plays the next league round or playoff match for an owner.
-///
-/// @param lobby - The lobby.
-/// @param guest_id - The guest asking.
-/// @param config - The ball model parameters.
-/// @returns `Ok(())` when the step is played.
-/// @throws Returns an {@link ApiError} naming the block: season over, not started, not an owner, or an owner with no XI.
-fn advance(lobby: &mut Lobby, guest_id: &str, config: &ModifierConfig) -> Result<(), ApiError> {
-    match lobby.phase() {
-        Phase::Complete => {
-            return Err(ApiError::because(
-                409,
-                "LeagueAdvanceBlockedError",
-                "season-over",
-            ));
-        }
-        Phase::Waiting | Phase::Auction => {
-            return Err(ApiError::new(409, "LeagueNotStartedError"));
-        }
-        Phase::League | Phase::Playoffs => {}
-    }
-    if !lobby.is_owner(guest_id) {
-        return Err(ApiError::new(403, "NotAnOwnerError"));
-    }
-    lobby
-        .advance(config)
-        .map(drop)
-        .map_err(|error| match error {
-            LobbyError::XiMissing(_) => {
-                ApiError::because(409, "LeagueAdvanceBlockedError", "no-legal-starting-xi")
-            }
-            other => from_lobby(other),
-        })
 }
 
 /// Serialises a response body.
@@ -381,6 +364,7 @@ fn substitute_error(error: LobbyError) -> ApiError {
 mod tests {
     use super::*;
     use cricket_core::auction::BID_TIMER_MS;
+    use cricket_core::lobby::MATCH_INTERVAL_MS;
 
     const PLAYERS: &str = include_str!("../../../../data/seeds/players.v1.json");
     const FRANCHISES: &str = include_str!("../../../../data/seeds/franchises.v1.json");
@@ -609,27 +593,9 @@ mod tests {
         assert_eq!(lobby.phase(), Phase::League);
         set_strongest_xi(&mut lobby, "a", now);
 
-        // Seventy league matches, then four playoff matches.
-        for _ in 0..74 {
-            run(
-                &mut lobby,
-                Operation::AdvanceRound {
-                    guest_id: "a".to_string(),
-                },
-                now,
-            )
-            .expect("the owner advances");
-        }
+        // Seventy league matches, then four playoff matches, one per read of the clock.
+        let now = play_out_season(&mut lobby, now);
         assert_eq!(lobby.phase(), Phase::Complete);
-        let refused = run(
-            &mut lobby,
-            Operation::AdvanceRound {
-                guest_id: "a".to_string(),
-            },
-            now,
-        )
-        .unwrap_err();
-        assert_eq!(refused.reason, Some("season-over"));
 
         let awards: serde_json::Value =
             serde_json::from_str(&run(&mut lobby, Operation::GetAwards, now).expect("awards"))
@@ -646,16 +612,7 @@ mod tests {
         run(&mut lobby, start("a"), 0).expect("starts");
         let now = play_auction(&mut lobby, "a");
         set_strongest_xi(&mut lobby, "a", now);
-        for _ in 0..74 {
-            run(
-                &mut lobby,
-                Operation::AdvanceRound {
-                    guest_id: "a".to_string(),
-                },
-                now,
-            )
-            .expect("advances");
-        }
+        let now = play_out_season(&mut lobby, now);
 
         let body = run(&mut lobby, Operation::GetPlayoffs, now).expect("the playoffs read");
         let bracket: serde_json::Value = serde_json::from_str(&body).expect("JSON");
@@ -680,16 +637,7 @@ mod tests {
         run(&mut lobby, start("a"), 0).expect("starts");
         let now = play_auction(&mut lobby, "a");
         set_strongest_xi(&mut lobby, "a", now);
-        for _ in 0..74 {
-            run(
-                &mut lobby,
-                Operation::AdvanceRound {
-                    guest_id: "a".to_string(),
-                },
-                now,
-            )
-            .expect("advances");
-        }
+        play_out_season(&mut lobby, now);
         let stored = serde_json::to_string(&lobby).expect("serialises");
         // Durable Object values are capped at 2 MiB. A season should use a small fraction of it.
         assert!(
@@ -697,6 +645,84 @@ mod tests {
             "stored lobby is {} bytes",
             stored.len()
         );
+    }
+
+    /// Reads the lobby once per interval until the season is complete, so each read is one step of
+    /// the clock. Returns the time of the last read.
+    ///
+    /// @param lobby - The lobby with a running season.
+    /// @param now - The time the season was last touched.
+    /// @returns The time of the last read.
+    fn play_out_season(lobby: &mut Lobby, now: u64) -> u64 {
+        let mut at = now;
+        // A season is 74 steps, and the clock needs one extra read to start.
+        for _ in 0..200 {
+            if lobby.phase() == Phase::Complete {
+                return at;
+            }
+            at += MATCH_INTERVAL_MS;
+            run(lobby, Operation::GetLobby, at).expect("the clock reads");
+        }
+        panic!("the season did not finish");
+    }
+
+    #[test]
+    fn the_season_moves_only_as_the_clock_is_read() {
+        let mut lobby = lobby_with_one_owner();
+        run(&mut lobby, start("a"), 0).expect("starts");
+        let now = play_auction(&mut lobby, "a");
+        set_strongest_xi(&mut lobby, "a", now);
+        let due = lobby
+            .next_match_at_ms()
+            .expect("the clock starts with the league");
+
+        run(&mut lobby, Operation::GetLobby, due - 1).expect("reads");
+        assert_eq!(lobby.matches_played(), 0);
+        run(&mut lobby, Operation::GetLobby, due).expect("reads");
+        assert_eq!(lobby.matches_played(), 1);
+    }
+
+    #[test]
+    fn a_substitution_holds_the_season_for_every_read_until_it_is_cancelled() {
+        let mut lobby = lobby_with_one_owner();
+        run(&mut lobby, start("a"), 0).expect("starts");
+        let now = play_auction(&mut lobby, "a");
+        set_strongest_xi(&mut lobby, "a", now);
+        let first = lobby
+            .next_match_at_ms()
+            .expect("the clock starts with the league");
+        run(&mut lobby, Operation::GetLobby, first).expect("the first match plays");
+        assert_eq!(lobby.matches_played(), 1);
+
+        let due = lobby
+            .next_match_at_ms()
+            .expect("the clock is running again");
+        run(
+            &mut lobby,
+            Operation::BeginSubstitution {
+                guest_id: "a".to_string(),
+            },
+            due - 1,
+        )
+        .expect("the substitution opens");
+        run(&mut lobby, Operation::GetLobby, due + 10_000).expect("reads");
+        assert_eq!(lobby.matches_played(), 1, "nothing is played while paused");
+
+        run(
+            &mut lobby,
+            Operation::CancelSubstitution {
+                guest_id: "a".to_string(),
+            },
+            due + 10_000,
+        )
+        .expect("the substitution is cancelled");
+        assert_eq!(
+            lobby.next_match_at_ms(),
+            Some(due + 10_001),
+            "the pause is not charged to the next match"
+        );
+        run(&mut lobby, Operation::GetLobby, due + 10_001).expect("reads");
+        assert_eq!(lobby.matches_played(), 2);
     }
 
     #[test]

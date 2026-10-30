@@ -8,7 +8,6 @@ import {
 import { awardsSchema } from "../../shared/types/awards.schema";
 import type { GameApi } from "../../shared/types/game-api.types";
 import {
-  advanceRoundInputSchema,
   leagueSchema,
   matchIdSchema,
   matchSchema,
@@ -344,20 +343,6 @@ export function createHttpGameApi(options: HttpGameApiOptions): GameApi {
           matchId: id,
         },
         matchSchema,
-      );
-    },
-
-    advanceRound: async (input) => {
-      const parsed = parseLobbyInput(advanceRoundInputSchema, input);
-      return lobbyCall(
-        parsed.code,
-        {
-          method: "POST",
-          suffix: "/league/advance",
-          body: { guestId: parsed.guestId },
-          guestId: parsed.guestId,
-        },
-        leagueSchema,
       );
     },
 

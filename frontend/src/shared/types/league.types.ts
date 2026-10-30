@@ -1,7 +1,6 @@
 import type { z } from "zod";
 
 import type {
-  advanceRoundInputSchema,
   fixtureSchema,
   leagueSchema,
   matchSchema,
@@ -21,9 +20,6 @@ export type Standing = z.infer<typeof standingSchema>;
 
 /** The league view, derived from {@link leagueSchema}. */
 export type League = z.infer<typeof leagueSchema>;
-
-/** Input for playing the next round, derived from {@link advanceRoundInputSchema}. */
-export type AdvanceRoundInput = z.infer<typeof advanceRoundInputSchema>;
 
 /** One played league match, derived from {@link matchSchema}. */
 export type Match = z.infer<typeof matchSchema>;

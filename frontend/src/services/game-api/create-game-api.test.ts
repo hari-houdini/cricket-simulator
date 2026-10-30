@@ -59,6 +59,6 @@ describe("createGameApi", () => {
     const api = createGameApi("http", "http://localhost:8787");
 
     expect(typeof api.getLobby).toBe("function");
-    expect(typeof api.advanceRound).toBe("function");
+    expect(typeof api.getLeague).toBe("function");
   });
 });

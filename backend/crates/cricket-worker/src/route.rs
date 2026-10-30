@@ -189,15 +189,6 @@ pub fn parse(
                 match_id: match_id(segment)?,
             },
         ),
-        ("POST", ["api", "lobbies", code, "league", "advance"]) => {
-            let input: GuestBody = parse_body(body)?;
-            lobby(
-                code,
-                Operation::AdvanceRound {
-                    guest_id: guest_id(&input.guest_id)?,
-                },
-            )
-        }
         ("GET", ["api", "lobbies", code, "playoffs"]) => lobby(code, Operation::GetPlayoffs),
         ("GET", ["api", "lobbies", code, "awards"]) => lobby(code, Operation::GetAwards),
         _ => Err(ApiError::new(404, "NotFoundError")),

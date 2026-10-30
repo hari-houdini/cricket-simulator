@@ -344,7 +344,6 @@ POST   /api/lobbies/:code/squad/substitution  The one free substitution, after t
 **League and playoffs**
 ```
 GET    /api/lobbies/:code/league             Fixtures, results and standings
-POST   /api/lobbies/:code/league/advance     Play the next round (league) or match (playoffs)
 GET    /api/lobbies/:code/playoffs           Bracket and results
 GET    /api/lobbies/:code/awards             Season awards, Man of the Match and Fair Play
 ```
@@ -352,6 +351,8 @@ GET    /api/lobbies/:code/awards             Season awards, Man of the Match and
 The frontend runs on its own origin. The Worker answers preflight requests and sends CORS headers only to the origins listed in `ALLOWED_ORIGINS` in `backend/wrangler.toml`. Before deploying, add the deployed frontend origin there. The frontend selects this API with `NEXT_PUBLIC_API_MODE=http` and `NEXT_PUBLIC_API_URL` set to the Worker's origin.
 
 The auction timer is a Durable Object alarm. Overdue lots are settled before any request reads or changes the lobby, so a read after the deadline shows the settled state.
+
+The season moves on a clock the lobby keeps, not on an alarm. Each request plays the match that has come due, one per request, and the lobby screen's poll keeps it moving while a guest has the lobby open ([ADR 0008](docs/adr/0008-season-clock.md)).
 
 ### 4. WebSocket Events
 
