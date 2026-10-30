@@ -14,12 +14,28 @@ IPL cricket fantasy simulator. Guests own IPL franchises. Owners bid for 15 play
 ## Repository layout
 
 - `frontend/`: Next.js 16 + React 19 app using the App Router (`src/app/`). Package manager: pnpm.
-- `backend/`: Rust service targeting Cloudflare Workers (see `ARCHITECTURE.md`). Currently empty.
+- `backend/`: Rust service targeting Cloudflare Workers (see `ARCHITECTURE.md`). Two crates: `cricket-core` (pure game rules, no I/O) and `cricket-worker` (the Worker adapter: routes, Durable Object, JSON views). Wrangler and `worker-build` build and serve it. The frontend's HTTP client calls it in `http` mode.
 - `docs/`, `research/`: design documents and analysis.
 - `docs/adr/`: accepted architecture decisions. Check them before reversing a design choice.
 - `GLOSSARY.md`: the project's domain vocabulary. Use its terms in code, comments and UI copy, and avoid the synonyms it lists.
 
 ## Commands
+
+From the repo root, `scripts/tasks.mjs` runs the whole stack on macOS and Windows. It needs only Node and pnpm. Run `node scripts/tasks.mjs help` for the full list.
+
+| Task | Command |
+|------|---------|
+| Install everything, plus `worker-build` 0.8.7 if missing | `node scripts/tasks.mjs install` |
+| Frontend and Worker together, live (Ctrl-C stops both) | `node scripts/tasks.mjs dev` |
+| Frontend alone, on mock data | `node scripts/tasks.mjs dev-mock` |
+| Worker alone | `node scripts/tasks.mjs backend-dev` |
+| Frontend alone, pointed at the Worker | `node scripts/tasks.mjs frontend-dev` |
+| Vitest and `cargo test` | `node scripts/tasks.mjs test` |
+| Every check below, stopping at the first failure | `node scripts/tasks.mjs check` |
+| Contract suite against the Worker (reuses a running one) | `node scripts/tasks.mjs test-contract` |
+| Production frontend build | `node scripts/tasks.mjs build` |
+
+`dev`, `dev-mock` and `frontend-dev` need port 3000 free. `dev`, `backend-dev` and `test-contract` need port 8787 free. The script fails with a message rather than choosing another port.
 
 Frontend, run from `frontend/`:
 
