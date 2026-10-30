@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { BID_TIMER_MS, SQUAD_SIZE } from "../../shared/const/auction.const";
-import { LEAGUE_MATCHES } from "../../shared/const/league.const";
+import { LEAGUE_MATCHES, LEAGUE_ROUNDS } from "../../shared/const/league.const";
 import { LAST_ROUND } from "../../shared/const/lobby.const";
 import { XI_SIZE } from "../../shared/const/squad.const";
 import type { Player } from "../../shared/types/player.types";
@@ -187,15 +187,27 @@ describe("mock league", () => {
     ).rejects.toBeInstanceOf(NotAnOwnerError);
   });
 
-  it("plays round one: five results, the round reached, and points that add up", async () => {
+  it("plays one match per step, and the round reached is the round of the last match played", async () => {
     const game = await setUpSoloLobby();
     await completeSoloAuction(game);
     await saveLegalXi(game);
 
-    const league = await game.api.advanceRound({
+    const first = await game.api.advanceRound({
       code: game.code,
       guestId: asha.guestId,
     });
+    expect(
+      first.fixtures.filter((fixture) => fixture.result !== null),
+    ).toHaveLength(1);
+    expect(first.round).toBe(1);
+
+    let league = first;
+    for (let step = 1; step < 5; step += 1) {
+      league = await game.api.advanceRound({
+        code: game.code,
+        guestId: asha.guestId,
+      });
+    }
 
     const played = league.fixtures.filter((fixture) => fixture.result !== null);
     expect(league.round).toBe(1);
@@ -235,7 +247,8 @@ describe("mock league", () => {
     await saveLegalXi(game);
 
     let league = await game.api.getLeague(game.code);
-    for (let round = 1; round <= LAST_ROUND; round += 1) {
+    const steps = LEAGUE_MATCHES + (LAST_ROUND - LEAGUE_ROUNDS);
+    for (let step = 0; step < steps; step += 1) {
       league = await game.api.advanceRound({
         code: game.code,
         guestId: asha.guestId,

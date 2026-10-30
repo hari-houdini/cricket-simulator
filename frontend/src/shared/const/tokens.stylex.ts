@@ -115,6 +115,8 @@ export const tokens = stylex.defineVars({
   widthShell: "1024px",
   /** Hairline rule under the app header. */
   borderWidthHairline: "1px",
+  /** The thick edge that marks a match with an owner in it. */
+  borderWidthAccent: "4px",
   /** Width of the keyboard focus ring. */
   widthFocusRing: "2px",
   /** Gap between the focus ring and the element it marks. */

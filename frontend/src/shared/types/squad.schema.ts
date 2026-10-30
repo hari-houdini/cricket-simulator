@@ -57,3 +57,18 @@ export const substituteInputSchema = object({
   outPlayerId: playerIdSchema,
   inPlayerId: playerIdSchema,
 });
+
+/**
+ * Input for opening the owner's free substitution. Opening it pauses the sim for every guest
+ * until the swap is confirmed or the opening is cancelled.
+ */
+export const beginSubstitutionInputSchema = object({
+  code: lobbyCodeSchema,
+  guestId: guestIdSchema,
+});
+
+/** Input for cancelling an open substitution, which resumes the sim without using it up. */
+export const cancelSubstitutionInputSchema = object({
+  code: lobbyCodeSchema,
+  guestId: guestIdSchema,
+});

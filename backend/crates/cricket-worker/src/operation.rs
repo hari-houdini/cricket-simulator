@@ -56,6 +56,8 @@ pub enum Operation {
         /// The owner.
         guest_id: String,
     },
+    /// Reads every owner's lineup. Public once the auction has ended.
+    GetLineups,
     /// Saves an owner's starting XI.
     SetStartingXi {
         /// The owner.

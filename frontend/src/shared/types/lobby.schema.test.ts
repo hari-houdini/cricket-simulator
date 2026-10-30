@@ -17,6 +17,12 @@ const validLobby = {
   round: 0,
   owners: [owner],
   seedVersion: "1.0.0",
+  simPaused: false,
+  substituting: [],
+  skipVoters: [],
+  skipThreshold: 1,
+  substitutions: [],
+  skippedAfterMatches: null,
 };
 
 describe("lobbySchema", () => {

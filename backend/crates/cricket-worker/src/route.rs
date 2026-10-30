@@ -129,6 +129,7 @@ pub fn parse(
                 },
             )
         }
+        ("GET", ["api", "lobbies", code, "lineups"]) => lobby(code, Operation::GetLineups),
         ("POST", ["api", "lobbies", code, "squad", "xi"]) => {
             let input: SetXiBody = parse_body(body)?;
             lobby(
@@ -476,6 +477,18 @@ mod tests {
         ));
         let missing = parse("GET", "/api/lobbies/ABC123/squad", None, "").unwrap_err();
         assert_eq!(missing.status, 400);
+    }
+
+    #[test]
+    fn the_lineups_read_needs_no_guest() {
+        let routed = parse("GET", "/api/lobbies/ABC123/lineups", None, "").expect("routes");
+        assert!(matches!(
+            routed,
+            Routed::Lobby {
+                operation: Operation::GetLineups,
+                ..
+            }
+        ));
     }
 
     #[test]

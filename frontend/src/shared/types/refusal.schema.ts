@@ -48,6 +48,7 @@ export const xiBlockSchema = zodEnum([
  */
 export const substitutionBlockSchema = zodEnum([
   "not-yet-played",
+  "not-in-progress",
   "already-used",
   "no-starting-xi",
   "out-not-in-xi",
@@ -57,8 +58,12 @@ export const substitutionBlockSchema = zodEnum([
   ...xiBlockSchema.options,
 ]);
 
-/** Reasons a round is not played: the season is over, or an owner has no legal XI. */
+/**
+ * Reasons a match is not played: the season is over, an owner has no legal XI, or a
+ * substitution is open and the sim is paused for it.
+ */
 export const advanceBlockSchema = zodEnum([
   "season-over",
   "no-legal-starting-xi",
+  "sim-paused",
 ]);

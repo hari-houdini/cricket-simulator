@@ -8,7 +8,7 @@ import {
   lobbyCodeSchema,
 } from "./lobby.schema";
 import { playerIdSchema } from "./player.schema";
-import { keyMomentSchema } from "./playoffs.schema";
+import { matchEventSchema } from "./playoffs.schema";
 
 /**
  * A live event in a lobby. The mock sends these now; the WebSocket transport
@@ -42,7 +42,7 @@ export const gameEventSchema = discriminatedUnion("type", [
     type: literal("key_moment"),
     code: lobbyCodeSchema,
     matchId: matchIdSchema,
-    moment: keyMomentSchema,
+    moment: matchEventSchema,
   }),
   object({
     type: literal("match_complete"),

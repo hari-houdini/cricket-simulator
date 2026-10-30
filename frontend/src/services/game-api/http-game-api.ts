@@ -12,8 +12,10 @@ import {
   leagueSchema,
   matchIdSchema,
   matchSchema,
+  setSkipVoteInputSchema,
   standingsSchema,
 } from "../../shared/types/league.schema";
+import { lineupsSchema } from "../../shared/types/lineup.schema";
 import {
   claimFranchiseInputSchema,
   createLobbyInputSchema,
@@ -24,6 +26,8 @@ import {
 import { playoffsSchema } from "../../shared/types/playoffs.schema";
 import { refusalSchema } from "../../shared/types/refusal.schema";
 import {
+  beginSubstitutionInputSchema,
+  cancelSubstitutionInputSchema,
   getSquadInputSchema,
   setStartingXiInputSchema,
   squadSchema,
@@ -321,6 +325,9 @@ export function createHttpGameApi(options: HttpGameApiOptions): GameApi {
       );
     },
 
+    getLineups: (code) =>
+      lobbyCall(code, { method: "GET", suffix: "/lineups" }, lineupsSchema),
+
     getLeague: (code) =>
       lobbyCall(code, { method: "GET", suffix: "/league" }, leagueSchema),
 
@@ -351,6 +358,48 @@ export function createHttpGameApi(options: HttpGameApiOptions): GameApi {
           guestId: parsed.guestId,
         },
         leagueSchema,
+      );
+    },
+
+    beginSubstitution: async (input) => {
+      const parsed = parseLobbyInput(beginSubstitutionInputSchema, input);
+      return lobbyCall(
+        parsed.code,
+        {
+          method: "POST",
+          suffix: "/squad/substitution/begin",
+          body: { guestId: parsed.guestId },
+          guestId: parsed.guestId,
+        },
+        lobbySchema,
+      );
+    },
+
+    cancelSubstitution: async (input) => {
+      const parsed = parseLobbyInput(cancelSubstitutionInputSchema, input);
+      return lobbyCall(
+        parsed.code,
+        {
+          method: "POST",
+          suffix: "/squad/substitution/cancel",
+          body: { guestId: parsed.guestId },
+          guestId: parsed.guestId,
+        },
+        lobbySchema,
+      );
+    },
+
+    setSkipVote: async (input) => {
+      const parsed = parseLobbyInput(setSkipVoteInputSchema, input);
+      return lobbyCall(
+        parsed.code,
+        {
+          method: "POST",
+          suffix: "/league/skip-vote",
+          body: { guestId: parsed.guestId, vote: parsed.vote },
+          guestId: parsed.guestId,
+        },
+        lobbySchema,
       );
     },
 

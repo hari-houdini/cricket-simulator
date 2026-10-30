@@ -51,8 +51,14 @@ function createLazyMockGameApi(): GameApi {
     getSquad: async (input) => (await loaded()).getSquad(input),
     setStartingXi: async (input) => (await loaded()).setStartingXi(input),
     substitute: async (input) => (await loaded()).substitute(input),
+    beginSubstitution: async (input) =>
+      (await loaded()).beginSubstitution(input),
+    cancelSubstitution: async (input) =>
+      (await loaded()).cancelSubstitution(input),
+    getLineups: async (code) => (await loaded()).getLineups(code),
     getLeague: async (code) => (await loaded()).getLeague(code),
     advanceRound: async (input) => (await loaded()).advanceRound(input),
+    setSkipVote: async (input) => (await loaded()).setSkipVote(input),
     getStandings: async (code) => (await loaded()).getStandings(code),
     getMatch: async (code, matchId) => (await loaded()).getMatch(code, matchId),
     getPlayoffs: async (code) => (await loaded()).getPlayoffs(code),

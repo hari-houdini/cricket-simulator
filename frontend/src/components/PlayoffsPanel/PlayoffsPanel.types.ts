@@ -1,9 +1,9 @@
 /** Props for {@link PlayoffsPanel}. */
 export type PlayoffsPanelProps = {
-  /** The lobby whose playoffs are running or finished. */
+  /** The lobby whose playoffs are running. */
   readonly code: string;
-  /** Whether the viewer may play the next playoff match. Only owners may. */
-  readonly canAdvance: boolean;
-  /** Called after a playoff match is played, so the lobby can re-read its phase. */
-  readonly onRoundAdvanced?: () => void;
+  /** The lobby's current round. The bracket is read again each time it moves. */
+  readonly round: number;
+  /** Called once the Final's match log has finished, when the champion is decided. */
+  readonly onFinished: () => void;
 };

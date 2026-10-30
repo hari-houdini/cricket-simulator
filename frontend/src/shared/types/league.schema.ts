@@ -91,3 +91,13 @@ export const advanceRoundInputSchema = object({
   code: lobbyCodeSchema,
   guestId: guestIdSchema,
 });
+
+/**
+ * Input for voting to skip the rest of the league, or withdrawing the vote. The skip plays out
+ * on the next match once a majority of the owners have voted for it.
+ */
+export const setSkipVoteInputSchema = object({
+  code: lobbyCodeSchema,
+  guestId: guestIdSchema,
+  vote: boolean(),
+});

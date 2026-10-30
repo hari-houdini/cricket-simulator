@@ -40,6 +40,7 @@ An **IPL T20 fantasy cricket game**. Guests join a lobby, each owns one IPL fran
 - The starting XI **locks after the first match**. An owner who has saved no XI when the first round is played gets the strongest legal XI from their squad, which is stored and locked with the rest. A squad with no legal XI blocks the round (see Open Items).
 - Each owner gets **one free substitution per season**: one starting-XI player swapped for a squad player outside the XI. The swap is offered only after the first match.
 - The **captain and vice-captain cannot be substituted out**. Leadership stays with the same players for the whole season.
+- The swap can be made at any point once the first match has been played. Opening it pauses the sim for every owner until it is confirmed or cancelled. Cancelling does not use it up.
 
 ## 5. Season Structure
 
@@ -57,7 +58,7 @@ An **IPL T20 fantasy cricket game**. Guests join a lobby, each owns one IPL fran
 
 - Matches are **seeded and deterministic**: the seed comes from lobby ID and match ID, so every guest sees the same result ([ADR 0003](adr/0003-seeded-deterministic-simulation.md)).
 - **League matches** run in 1–2 seconds and show the final score, runs, wickets and winner.
-- **Playoff matches** run within **5 seconds** and show **key moments** only: wickets, 50 and 100 milestones, 4-wicket hauls, the final over and the result. Guests can skip to the result at any time.
+- **Playoff matches** run within **5 seconds** and show a **match log** of key moments only: the toss, each innings' openers, wickets with the bowler, batter and any catcher, 30, 50 and 100 milestones, partnership milestones, 4-wicket hauls, the final over, each innings' total and the result. Both innings are covered, and a super over is logged as its own innings. Guests can skip to the result at any time. A match log is replayed from the match's seed ([ADR 0007](adr/0007-replay-key-moments-from-the-seed.md)).
 
 ### 6.1 Ball outcome model (engine parameters)
 

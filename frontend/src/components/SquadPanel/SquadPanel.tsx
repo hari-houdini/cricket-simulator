@@ -17,9 +17,11 @@ import type { SquadPanelProps } from "./SquadPanel.types";
  * checking and the display; this component does the calls and holds the result.
  *
  * @param props.code - The lobby whose auction has finished.
+ * @param props.onSaved - Called once the starting XI is saved.
+ * @param props.onSubstituted - Called once the free substitution is made.
  * @returns The squad picker, or a loading or error message while it loads.
  */
-export function SquadPanel({ code }: SquadPanelProps) {
+export function SquadPanel({ code, onSaved, onSubstituted }: SquadPanelProps) {
   const { api, guestId } = useGuestSession();
   const [squad, setSquad] = useState<Squad | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -52,14 +54,17 @@ export function SquadPanel({ code }: SquadPanelProps) {
    * Runs a squad action and shows the squad it returns, or the error it raised.
    *
    * @param action - The API call that returns the squad.
+   * @returns True when the action succeeded, so the caller can move on.
    */
   const run = useCallback(async (action: () => Promise<Squad>) => {
     setActionError(null);
     setPending(true);
     try {
       setSquad(await action());
+      return true;
     } catch (caught) {
       setActionError(describeApiError(caught));
+      return false;
     } finally {
       setPending(false);
     }
@@ -91,12 +96,22 @@ export function SquadPanel({ code }: SquadPanelProps) {
         pending={pending}
         error={actionError}
         onSave={(selection: StartingXiSelection) =>
-          void run(() => api.setStartingXi({ code, guestId, ...selection }))
+          void run(() =>
+            api.setStartingXi({ code, guestId, ...selection }),
+          ).then((saved) => {
+            if (saved) {
+              onSaved?.();
+            }
+          })
         }
         onSubstitute={(outPlayerId, inPlayerId) =>
           void run(() =>
             api.substitute({ code, guestId, outPlayerId, inPlayerId }),
-          )
+          ).then((done) => {
+            if (done) {
+              onSubstituted?.();
+            }
+          })
         }
       />
     </section>

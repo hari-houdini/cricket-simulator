@@ -8,7 +8,9 @@ import type {
   OwnerAwardLine,
   PlayerAwardLine,
 } from "../../shared/types/awards.types";
+import type { Standing } from "../../shared/types/league.types";
 import { describeApiError } from "../../shared/utils/describe-api-error";
+import { rankFairPlay } from "../../shared/utils/fair-play-ranking";
 import { franchiseName } from "../../shared/utils/franchise-label";
 import { AwardCard } from "../AwardCard/AwardCard";
 import type { AwardEntry } from "../AwardCard/AwardCard.types";
@@ -63,15 +65,16 @@ function ownerPlace(line: OwnerAwardLine | null): AwardEntry | null {
 export function AwardsPanel({ code }: AwardsPanelProps) {
   const { api } = useGuestSession();
   const [awards, setAwards] = useState<Awards | null>(null);
+  const [standings, setStandings] = useState<Standing[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    api
-      .getAwards(code)
-      .then((loaded) => {
+    Promise.all([api.getAwards(code), api.getStandings(code)])
+      .then(([loadedAwards, loadedStandings]) => {
         if (!cancelled) {
-          setAwards(loaded);
+          setAwards(loadedAwards);
+          setStandings(loadedStandings);
         }
       })
       .catch((caught: unknown) => {
@@ -93,7 +96,7 @@ export function AwardsPanel({ code }: AwardsPanelProps) {
       </section>
     );
   }
-  if (!awards) {
+  if (!awards || !standings) {
     return (
       <section aria-label="Awards" {...stylex.props(styles.panel)}>
         <p aria-busy="true" {...stylex.props(styles.loading)}>
@@ -190,7 +193,7 @@ export function AwardsPanel({ code }: AwardsPanelProps) {
           Fair Play
         </h3>
         <FairPlayScreen
-          franchises={awards.fairPlay.franchises}
+          franchises={rankFairPlay(awards.fairPlay.franchises, standings)}
           winnerFranchiseId={awards.fairPlay.winnerFranchiseId}
         />
       </section>

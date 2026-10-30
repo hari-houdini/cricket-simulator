@@ -197,6 +197,7 @@ pub fn execute(
             to_json(&views::auction(lobby)?)
         }
         Operation::GetSquad { guest_id } => to_json(&views::squad(lobby, &guest_id)?),
+        Operation::GetLineups => to_json(&views::lineups(lobby)?),
         Operation::SetStartingXi {
             guest_id,
             player_ids,
@@ -239,7 +240,7 @@ pub fn execute(
             advance(lobby, &guest_id, config)?;
             to_json(&views::league(lobby)?)
         }
-        Operation::GetPlayoffs => to_json(&views::playoffs(lobby)?),
+        Operation::GetPlayoffs => to_json(&views::playoffs(lobby, config)?),
         Operation::GetAwards => to_json(&views::awards(lobby)?),
     };
     Ok(body)
@@ -578,6 +579,29 @@ mod tests {
     }
 
     #[test]
+    fn lineups_are_public_once_the_auction_ends_and_list_only_the_owners() {
+        let mut lobby = lobby_with_one_owner();
+        let refused = run(&mut lobby, Operation::GetLineups, 0).unwrap_err();
+        assert_eq!(refused.name, "SquadNotReadyError");
+
+        run(&mut lobby, start("a"), 0).expect("starts");
+        let now = play_auction(&mut lobby, "a");
+        let body = run(&mut lobby, Operation::GetLineups, now).expect("the lineups read");
+        let lineups: serde_json::Value = serde_json::from_str(&body).expect("JSON");
+        assert_eq!(
+            lineups.as_array().map(Vec::len),
+            Some(1),
+            "system squads are left out"
+        );
+        assert_eq!(lineups[0]["guestId"], "a");
+        assert_eq!(lineups[0]["players"].as_array().map(Vec::len), Some(15));
+        assert!(
+            lineups[0]["startingXi"].is_null(),
+            "no XI is saved until the owner saves one"
+        );
+    }
+
+    #[test]
     fn a_whole_season_is_played_through_the_operations_and_awards_name_winners() {
         let mut lobby = lobby_with_one_owner();
         run(&mut lobby, start("a"), 0).expect("starts");
@@ -614,6 +638,40 @@ mod tests {
         assert_eq!(awards["manOfTheMatch"].as_array().map(Vec::len), Some(74));
         assert!(awards["orangeCap"]["winner"]["name"].is_string());
         assert!(awards["fairPlay"]["winnerFranchiseId"].is_string());
+    }
+
+    #[test]
+    fn the_playoffs_read_replays_each_match_log_to_its_result() {
+        let mut lobby = lobby_with_one_owner();
+        run(&mut lobby, start("a"), 0).expect("starts");
+        let now = play_auction(&mut lobby, "a");
+        set_strongest_xi(&mut lobby, "a", now);
+        for _ in 0..74 {
+            run(
+                &mut lobby,
+                Operation::AdvanceRound {
+                    guest_id: "a".to_string(),
+                },
+                now,
+            )
+            .expect("advances");
+        }
+
+        let body = run(&mut lobby, Operation::GetPlayoffs, now).expect("the playoffs read");
+        let bracket: serde_json::Value = serde_json::from_str(&body).expect("JSON");
+        let matches = bracket["matches"].as_array().expect("four slots");
+        assert_eq!(matches.len(), 4);
+        for slot in matches {
+            let result = &slot["result"];
+            let log = result["matchLog"].as_array().expect("a match log");
+            let first = log.first().expect("a toss");
+            let last = log.last().expect("a result");
+            assert_eq!(first["kind"], "toss");
+            assert_eq!(last["kind"], "result");
+            assert_eq!(last["winnerFranchiseId"], result["winnerFranchiseId"]);
+            assert!(log.iter().any(|event| event["kind"] == "wicket"));
+            assert!(result["manOfTheMatch"]["name"].is_string());
+        }
     }
 
     #[test]

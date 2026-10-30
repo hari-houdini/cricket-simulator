@@ -14,7 +14,7 @@ const meta = {
     onClaim: fn(),
     onJoin: fn(),
     onStart: fn(),
-    onRoundAdvanced: fn(),
+    onLobbyUpdated: fn(),
   },
 } satisfies Meta<typeof LobbyView>;
 

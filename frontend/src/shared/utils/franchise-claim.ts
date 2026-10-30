@@ -30,7 +30,7 @@ export type FranchiseStatus =
  * @returns The reason the claim is refused, or `null` when it is allowed.
  */
 export function franchiseClaimBlock(
-  lobby: Lobby,
+  lobby: Pick<Lobby, "phase" | "auctionStatus" | "owners">,
   guestId: string,
   franchiseId: string,
 ): FranchiseClaimBlock | null {
@@ -58,7 +58,7 @@ export function franchiseClaimBlock(
  * @returns `available` when no owner holds it, otherwise `owned` with the owner.
  */
 export function franchiseStatus(
-  lobby: Lobby,
+  lobby: Pick<Lobby, "phase" | "auctionStatus" | "owners">,
   guestId: string,
   franchiseId: string,
 ): FranchiseStatus {

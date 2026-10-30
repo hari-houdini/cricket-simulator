@@ -9,8 +9,10 @@ import type {
   AdvanceRoundInput,
   League,
   Match,
+  SetSkipVoteInput,
   Standing,
 } from "./league.types";
+import type { Lineup } from "./lineup.types";
 import type {
   ClaimFranchiseInput,
   CreateLobbyInput,
@@ -19,6 +21,8 @@ import type {
 } from "./lobby.types";
 import type { Playoffs } from "./playoffs.types";
 import type {
+  BeginSubstitutionInput,
+  CancelSubstitutionInput,
   GetSquadInput,
   SetStartingXiInput,
   Squad,
@@ -79,6 +83,23 @@ export type GameApi = {
    */
   readonly substitute: (input: SubstituteInput) => Promise<Squad>;
   /**
+   * Opens the owner's free substitution. The sim pauses for every guest until the swap is
+   * confirmed or cancelled. Rejects with `SubstitutionBlockedError` before the first match, after
+   * the swap is used, or while another substitution by this owner is already open.
+   */
+  readonly beginSubstitution: (input: BeginSubstitutionInput) => Promise<Lobby>;
+  /**
+   * Cancels an open substitution. The sim resumes and the swap is not used up.
+   */
+  readonly cancelSubstitution: (
+    input: CancelSubstitutionInput,
+  ) => Promise<Lobby>;
+  /**
+   * Reads every owner's lineup: the squad and the saved XI. Public from the end of the auction, so
+   * any guest can read the teams. Rejects with `SquadNotReadyError` until then.
+   */
+  readonly getLineups: (code: string) => Promise<Lineup[]>;
+  /**
    * Reads the league: every fixture in round order, the table, and the round
    * reached. Rejects with `LeagueNotStartedError` until the auction has finished.
    */
@@ -89,6 +110,11 @@ export type GameApi = {
    * owner has no starting XI yet.
    */
   readonly advanceRound: (input: AdvanceRoundInput) => Promise<League>;
+  /**
+   * Votes to skip the rest of the league, or withdraws the vote. A skip needs strictly more than
+   * half of the owners, and it is applied by the next match played.
+   */
+  readonly setSkipVote: (input: SetSkipVoteInput) => Promise<Lobby>;
   /**
    * Reads the league table, best first. Rejects with `LeagueNotStartedError`
    * until the auction has finished.

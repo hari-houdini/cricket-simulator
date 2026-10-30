@@ -31,4 +31,10 @@ export const styles = stylex.create({
     margin: 0,
     color: tokens.colorText,
   },
+  /** The match logs, one per playoff match, in the order they are played. */
+  logs: {
+    display: "flex",
+    flexDirection: "column",
+    gap: tokens.spaceMd,
+  },
 });

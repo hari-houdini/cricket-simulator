@@ -4,6 +4,7 @@ import { BID_TIMER_MS, SQUAD_SIZE } from "../../shared/const/auction.const";
 import { LAST_ROUND } from "../../shared/const/lobby.const";
 import { XI_SIZE } from "../../shared/const/squad.const";
 import type { Player } from "../../shared/types/player.types";
+import { advanceMatches, ROUND_MATCHES } from "./advance-steps.mock";
 import { createMockGameApi } from "./mock-game-api";
 
 const asha = { guestId: "asha", displayName: "Asha" };
@@ -142,7 +143,7 @@ describe("mock awards", () => {
     const game = await setUpSoloLobby();
     await completeSoloAuction(game);
     await saveLegalXi(game);
-    await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
+    await advanceMatches(game.api, game.code, asha.guestId, ROUND_MATCHES);
 
     const awards = await game.api.getAwards(game.code);
 
@@ -159,7 +160,7 @@ describe("mock awards", () => {
     const game = await setUpSoloLobby();
     await completeSoloAuction(game);
     await saveLegalXi(game);
-    await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
+    await advanceMatches(game.api, game.code, asha.guestId, ROUND_MATCHES);
 
     const awards = await game.api.getAwards(game.code);
 

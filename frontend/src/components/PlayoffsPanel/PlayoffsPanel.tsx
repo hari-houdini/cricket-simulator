@@ -1,64 +1,40 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-import { useEffect, useState } from "react";
-
-import {
-  KEY_MOMENTS_TOTAL_MS,
-  PLAYOFF_SLOT_LABELS,
-} from "../../shared/const/playoffs.const";
+import { useCallback, useEffect, useState } from "react";
+import { PLAYOFF_MATCHES } from "../../shared/const/league.const";
+import { PLAYOFF_SLOT_LABELS } from "../../shared/const/playoffs.const";
 import type { Playoffs } from "../../shared/types/playoffs.types";
-import type { PlayoffSlot } from "../../shared/types/schedule.types";
 import { describeApiError } from "../../shared/utils/describe-api-error";
-import { franchiseName } from "../../shared/utils/franchise-label";
-import { Button } from "../Button/Button";
-import { ErrorBanner } from "../ErrorBanner/ErrorBanner";
+import {
+  franchiseAbbreviation,
+  franchiseName,
+} from "../../shared/utils/franchise-label";
 import { useGuestSession } from "../GuestSessionProvider/GuestSessionProvider";
-import { KeyMomentView } from "../KeyMomentView/KeyMomentView";
+import { MatchLogView } from "../MatchLogView/MatchLogView";
 import { PlayoffBracket } from "../PlayoffBracket/PlayoffBracket";
 import { styles } from "./PlayoffsPanel.styles";
 import type { PlayoffsPanelProps } from "./PlayoffsPanel.types";
 
 /**
- * Which playoff match is showing its key moments, and how many have shown.
- */
-type MomentReveal = {
-  readonly slot: PlayoffSlot;
-  readonly shown: number;
-};
-
-/**
- * Whether the guest has asked for less motion. A guest who has sees the key
- * moments at once, with no pause between them.
- *
- * @returns True when the browser reports reduced motion.
- */
-function prefersReducedMotion(): boolean {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-/**
- * The playoffs: the bracket, and the control that plays the next match. A match
- * shows its key moments one at a time within five seconds, and a guest can skip
- * to the result at any point.
+ * The playoffs, revealed one match at a time. The sim plays each match on the server, but a guest
+ * sees a match only after the one before it has finished on their screen. The bracket shows only
+ * the teams and results the guest has already watched, so nothing is given away early.
  *
  * @param props.code - The lobby whose playoffs are running.
- * @param props.canAdvance - Whether the viewer may play the next match.
- * @param props.onRoundAdvanced - Called once a match has been played.
- * @returns The bracket, with the key-moment view while a match is shown.
+ * @param props.round - The lobby's current round, which moves as each match is played.
+ * @param props.onFinished - Called once the Final's log has finished and the champion is decided.
+ * @returns The bracket and the match logs, or a loading or error line while the bracket is read.
  */
-export function PlayoffsPanel({
-  code,
-  canAdvance,
-  onRoundAdvanced,
-}: PlayoffsPanelProps) {
-  const { api, guestId } = useGuestSession();
+export function PlayoffsPanel({ code, round, onFinished }: PlayoffsPanelProps) {
+  const { api } = useGuestSession();
   const [bracket, setBracket] = useState<Playoffs | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-  const [reveal, setReveal] = useState<MomentReveal | null>(null);
+  // How many playoff matches have finished on this guest's screen.
+  const [watched, setWatched] = useState(0);
 
+  // The bracket changes only when the round moves, so it is read again on each round.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the round is the refresh trigger
   useEffect(() => {
     let cancelled = false;
     api
@@ -76,54 +52,17 @@ export function PlayoffsPanel({
     return () => {
       cancelled = true;
     };
-  }, [api, code]);
+  }, [api, code, round]);
 
-  const revealedResult =
-    reveal && bracket
-      ? (bracket.matches.find((match) => match.slot === reveal.slot)?.result ??
-        null)
-      : null;
-  const momentCount = revealedResult?.keyMoments.length ?? 0;
-  const revealing = reveal !== null && reveal.shown < momentCount;
-
-  // Shows the next key moment once the last one's time is up.
-  useEffect(() => {
-    if (reveal === null || !revealing) {
-      return;
-    }
-    const delay = prefersReducedMotion()
-      ? 0
-      : KEY_MOMENTS_TOTAL_MS / momentCount;
-    const timer = window.setTimeout(() => {
-      setReveal({ slot: reveal.slot, shown: reveal.shown + 1 });
-    }, delay);
-    return () => window.clearTimeout(timer);
-  }, [reveal, revealing, momentCount]);
-
-  /**
-   * Plays the next playoff match, then reads the bracket and reveals the match.
-   */
-  async function playNext() {
-    if (!guestId) {
-      return;
-    }
-    setActionError(null);
-    setPending(true);
-    try {
-      const league = await api.advanceRound({ code, guestId });
-      const next = await api.getPlayoffs(code);
-      setBracket(next);
-      const played = next.matches.find((match) => match.round === league.round);
-      if (played) {
-        setReveal({ slot: played.slot, shown: 0 });
+  const handleDone = useCallback(
+    (index: number) => {
+      setWatched(index + 1);
+      if (index === PLAYOFF_MATCHES - 1) {
+        onFinished();
       }
-      onRoundAdvanced?.();
-    } catch (caught) {
-      setActionError(describeApiError(caught));
-    } finally {
-      setPending(false);
-    }
-  }
+    },
+    [onFinished],
+  );
 
   if (loadError) {
     return (
@@ -144,37 +83,42 @@ export function PlayoffsPanel({
     );
   }
 
-  const next = bracket.matches.find((match) => match.result === null);
+  // A team is known once the matches before it have been watched, so a slot shows its teams only
+  // up to the one being watched, and its result only once that match has finished.
+  const masked = bracket.matches.map((match, index) => ({
+    ...match,
+    homeFranchiseId: index <= watched ? match.homeFranchiseId : null,
+    awayFranchiseId: index <= watched ? match.awayFranchiseId : null,
+    result: index < watched ? match.result : null,
+  }));
+  const champion = watched >= PLAYOFF_MATCHES ? bracket.champion : null;
 
   return (
     <section aria-label="Playoffs" {...stylex.props(styles.panel)}>
       <header {...stylex.props(styles.stack)}>
         <h2 {...stylex.props(styles.heading)}>Playoffs</h2>
         <p {...stylex.props(styles.note)}>
-          {bracket.champion
-            ? `${franchiseName(bracket.champion)} are the champions.`
+          {champion
+            ? `${franchiseName(champion)} are the champions.`
             : "The top four of the league qualify, in IPL format."}
         </p>
-        {actionError ? <ErrorBanner message={actionError} /> : null}
-        {canAdvance && next ? (
-          <Button
-            disabled={pending || revealing}
-            onClick={() => void playNext()}
-          >
-            Play {PLAYOFF_SLOT_LABELS[next.slot]}
-          </Button>
-        ) : null}
       </header>
 
-      {reveal && revealedResult ? (
-        <KeyMomentView
-          moments={revealedResult.keyMoments}
-          shown={reveal.shown}
-          onSkip={() => setReveal({ slot: reveal.slot, shown: momentCount })}
-        />
-      ) : null}
+      <PlayoffBracket matches={masked} champion={champion} />
 
-      <PlayoffBracket matches={bracket.matches} champion={bracket.champion} />
+      <div {...stylex.props(styles.logs)}>
+        {bracket.matches.map((match, index) =>
+          index <= watched && match.result ? (
+            <MatchLogView
+              key={match.slot}
+              title={`${PLAYOFF_SLOT_LABELS[match.slot]}: ${franchiseAbbreviation(match.result.homeFranchiseId)} v ${franchiseAbbreviation(match.result.awayFranchiseId)}`}
+              result={match.result}
+              live={index === watched}
+              onDone={() => handleDone(index)}
+            />
+          ) : null,
+        )}
+      </div>
     </section>
   );
 }

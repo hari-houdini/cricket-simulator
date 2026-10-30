@@ -66,6 +66,7 @@ const XI_BLOCK_MESSAGES = {
 /** What to tell the guest for each reason a substitution is refused, other than an XI rule. */
 const SUBSTITUTION_BLOCK_MESSAGES = {
   "not-yet-played": "Substitutions open after the first match.",
+  "not-in-progress": "Open the substitution before you choose the players.",
   "already-used": "You have already used your free substitution this season.",
   "no-starting-xi": "Save your starting XI before you make a substitution.",
   "out-not-in-xi": "Pick a player from your starting XI to take off.",
@@ -116,6 +117,8 @@ const ADVANCE_BLOCK_MESSAGES = {
   "season-over": "The season is over. The champion has been crowned.",
   "no-legal-starting-xi":
     "An owner's squad cannot field a legal starting XI, so the round cannot be played.",
+  "sim-paused":
+    "A substitution is in progress. The sim resumes when it is confirmed or cancelled.",
 } as const satisfies Record<AdvanceBlock, string>;
 
 /**

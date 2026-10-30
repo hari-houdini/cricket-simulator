@@ -1,14 +1,14 @@
 import type { z } from "zod";
 
 import type {
-  keyMomentSchema,
+  matchEventSchema,
   playoffResultSchema,
   playoffSlotViewSchema,
   playoffsSchema,
 } from "./playoffs.schema";
 
-/** One key moment in a playoff match, derived from {@link keyMomentSchema}. */
-export type KeyMoment = z.infer<typeof keyMomentSchema>;
+/** One key moment in a playoff match's match log, derived from {@link matchEventSchema}. */
+export type MatchEvent = z.infer<typeof matchEventSchema>;
 
 /** A played playoff match, derived from {@link playoffResultSchema}. */
 export type PlayoffResult = z.infer<typeof playoffResultSchema>;

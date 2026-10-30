@@ -2,7 +2,7 @@ import * as stylex from "@stylexjs/stylex";
 
 import { tokens } from "../../shared/const/tokens.stylex";
 
-/** StyleX rules for {@link FairPlayScreen}: a stack of franchises, each in two columns. */
+/** StyleX rules for {@link FairPlayScreen}: the ranked table and its notes. */
 export const styles = stylex.create({
   stack: {
     display: "flex",
@@ -13,42 +13,47 @@ export const styles = stylex.create({
     margin: 0,
     color: tokens.colorText,
   },
-  franchise: {
-    display: "flex",
-    flexDirection: "column",
-    gap: tokens.spaceSm,
-    backgroundColor: tokens.colorBase,
-    borderRadius: tokens.radiusSm,
-    boxShadow: tokens.shadowSubtle,
-    padding: tokens.spaceMd,
+  /**
+   * The wrapper is the only scroll container, so the page never scrolls sideways for the
+   * table. It takes focus so keyboard users can reach the columns that sit off-screen.
+   */
+  scroll: {
+    overflowX: "auto",
   },
-  heading: {
-    fontFamily: tokens.fontSerif,
-    fontWeight: tokens.fontWeightSemibold,
-    margin: 0,
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    color: tokens.colorText,
+  },
+  headerCell: {
+    textAlign: "left",
+    padding: tokens.spaceSm,
+    borderBottomColor: tokens.colorShadow,
+    borderBottomStyle: "solid",
+    borderBottomWidth: tokens.borderWidthHairline,
+  },
+  cell: {
+    textAlign: "left",
+    verticalAlign: "top",
+    padding: tokens.spaceSm,
+    borderBottomColor: tokens.colorShadow,
+    borderBottomStyle: "solid",
+    borderBottomWidth: tokens.borderWidthHairline,
+  },
+  rating: {
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: tokens.fontWeightBold,
   },
   winnerBadge: {
     color: tokens.colorGoldPrimary,
-    fontWeight: tokens.fontWeightBold,
-  },
-  columns: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(12rem, 1fr))",
-    gap: tokens.spaceMd,
-  },
-  columnTitle: {
-    margin: 0,
+    fontSize: tokens.fontSizeSmall,
     fontWeight: tokens.fontWeightBold,
   },
   list: {
-    display: "flex",
-    flexDirection: "column",
-    gap: tokens.spaceXs,
-    listStyle: "none",
     margin: 0,
-    padding: 0,
+    paddingLeft: tokens.spaceMd,
   },
   item: {
-    color: tokens.colorText,
+    margin: 0,
   },
 });

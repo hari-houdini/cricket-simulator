@@ -6,19 +6,20 @@ use std::collections::HashMap;
 
 use cricket_core::auction::{Auction, LotOutcome, next_bid};
 use cricket_core::awards::{self, FairPlayAward, Podium};
-use cricket_core::lobby::{Lobby, Phase};
-use cricket_core::match_simulator::MatchOutcome;
-use cricket_core::performance::FallOfWicket;
+use cricket_core::lobby::{Lobby, Phase, StartingXi};
+use cricket_core::match_log::{MatchEvent, MatchReplay};
+use cricket_core::match_simulator::{MatchOutcome, ModifierConfig};
 use cricket_core::playoffs::{PLAYOFF_MATCHES, QUALIFIER_1_ROUND};
 use cricket_core::standings::FranchiseRecord;
 
 use crate::api::{
     AuctionDto, AwardsDto, BidLogDto, FairPlayDto, FairPlayFranchiseDto, FairPlayLineDto,
-    FixtureDto, HighBidDto, KeyMomentDto, LeagueDto, LobbyDto, LotDto, ManOfTheMatchDto, MatchDto,
-    MatchScoreDto, OwnerAwardLineDto, OwnerDto, PairDto, PlayerAwardLineDto, PlayoffResultDto,
-    PlayoffSlotDto, PlayoffsDto, PurseDto, SoldDto, SquadDto, StandingDto, StartingXiDto,
+    FixtureDto, HighBidDto, LeagueDto, LineupDto, LobbyDto, LotDto, ManOfTheMatchDto, MatchDto,
+    MatchEventDto, MatchScoreDto, OwnerAwardLineDto, OwnerDto, PairDto, PlayerAwardLineDto,
+    PlayoffResultDto, PlayoffSlotDto, PlayoffsDto, PurseDto, SoldDto, SquadDto, StandingDto,
+    StartingXiDto, SubstitutionDto,
 };
-use crate::errors::ApiError;
+use crate::errors::{ApiError, from_lobby};
 
 /// The lobby as `lobbySchema` describes it.
 ///
@@ -61,6 +62,17 @@ pub fn lobby(lobby: &Lobby) -> LobbyDto {
         substituting: lobby.substituting_guests().map(str::to_string).collect(),
         skip_voters: lobby.skip_voters(),
         skip_threshold: lobby.skip_threshold() as u32,
+        substitutions: lobby
+            .substitutions()
+            .iter()
+            .map(|record| SubstitutionDto {
+                guest_id: record.guest_id.clone(),
+                out_player_id: record.out_id.clone(),
+                in_player_id: record.in_id.clone(),
+                matches_played: record.matches_played,
+            })
+            .collect(),
+        skipped_after_matches: lobby.skipped_after(),
     }
 }
 
@@ -168,14 +180,47 @@ pub fn squad(lobby: &Lobby, guest_id: &str) -> Result<SquadDto, ApiError> {
     Ok(SquadDto {
         guest_id: guest_id.to_string(),
         players: entry.players.clone(),
-        starting_xi: entry.starting_xi.as_ref().map(|xi| StartingXiDto {
-            player_ids: xi.player_ids.clone(),
-            captain_id: xi.captain_id.clone(),
-            vice_captain_id: xi.vice_captain_id.clone(),
-        }),
+        starting_xi: entry.starting_xi.as_ref().map(starting_xi_dto),
         locked: !lobby.league().is_empty(),
         substitution_used: entry.substitution_used,
     })
+}
+
+/// Every owner's lineup as `lineupSchema` describes it. Lineups are public once the auction has
+/// ended, so any guest can read the teams the league is played with. System squads have no owner
+/// and are left out.
+///
+/// @param lobby - The lobby.
+/// @returns One lineup per owner, in squad order.
+/// @throws Returns a 409 `SquadNotReadyError` before the auction ends.
+pub fn lineups(lobby: &Lobby) -> Result<Vec<LineupDto>, ApiError> {
+    if lobby.squads().is_empty() {
+        return Err(ApiError::new(409, "SquadNotReadyError"));
+    }
+    Ok(lobby
+        .squads()
+        .iter()
+        .filter_map(|entry| {
+            let guest_id = entry.owner_guest_id.as_ref()?;
+            Some(LineupDto {
+                guest_id: guest_id.clone(),
+                players: entry.players.clone(),
+                starting_xi: entry.starting_xi.as_ref().map(starting_xi_dto),
+            })
+        })
+        .collect())
+}
+
+/// A saved starting XI as `startingXiSchema` describes it.
+///
+/// @param xi - The core XI.
+/// @returns The DTO.
+fn starting_xi_dto(xi: &StartingXi) -> StartingXiDto {
+    StartingXiDto {
+        player_ids: xi.player_ids.clone(),
+        captain_id: xi.captain_id.clone(),
+        vice_captain_id: xi.vice_captain_id.clone(),
+    }
 }
 
 /// The league as `leagueSchema` describes it.
@@ -299,10 +344,17 @@ pub fn played_match(lobby: &Lobby, match_id: &str) -> Result<MatchDto, ApiError>
 /// @param lobby - The lobby.
 /// @returns The bracket DTO.
 /// @throws Returns a 409 `AuctionNotStartedError` before the auction starts.
-pub fn playoffs(lobby: &Lobby) -> Result<PlayoffsDto, ApiError> {
+pub fn playoffs(lobby: &Lobby, config: &ModifierConfig) -> Result<PlayoffsDto, ApiError> {
     if lobby.auction().is_none() {
         return Err(ApiError::new(409, "AuctionNotStartedError"));
     }
+    let replays = lobby.playoff_replays(config).map_err(from_lobby)?;
+    let names: HashMap<&str, &str> = lobby
+        .squads()
+        .iter()
+        .flat_map(|entry| entry.players.iter())
+        .map(|player| (player.id.as_str(), player.name.as_str()))
+        .collect();
     let table = lobby.table();
     let seed = |position: usize| {
         table
@@ -346,7 +398,9 @@ pub fn playoffs(lobby: &Lobby) -> Result<PlayoffsDto, ApiError> {
                 round: QUALIFIER_1_ROUND + index as u32,
                 home_franchise_id: home,
                 away_franchise_id: away,
-                result: played.get(index).map(playoff_result),
+                result: replays
+                    .get(index)
+                    .map(|replay| playoff_result(replay, &names)),
             }
         })
         .collect();
@@ -358,37 +412,156 @@ pub fn playoffs(lobby: &Lobby) -> Result<PlayoffsDto, ApiError> {
 
 /// A played playoff match as `playoffResultSchema` describes it.
 ///
-/// @param outcome - The match.
+/// @param replay - The match and its replayed key moments.
+/// @param names - Every player's display name, by player ID.
 /// @returns The result DTO.
-fn playoff_result(outcome: &MatchOutcome) -> PlayoffResultDto {
-    let mut key_moments: Vec<KeyMomentDto> = outcome
-        .fall_of_wickets
-        .iter()
-        .filter(|fallen| fallen.innings <= 2)
-        .map(wicket_moment)
-        .collect();
-    key_moments.push(KeyMomentDto::Result {
-        winner_franchise_id: outcome.winner_id.clone(),
-    });
+fn playoff_result(replay: &MatchReplay, names: &HashMap<&str, &str>) -> PlayoffResultDto {
+    let outcome = &replay.outcome;
+    let name_of = |id: &str| {
+        names
+            .get(id)
+            .map_or_else(|| id.to_string(), |name| name.to_string())
+    };
+    let man_of_the_match = awards::man_of_the_match(std::slice::from_ref(outcome))
+        .into_iter()
+        .next()
+        .map(|pick| ManOfTheMatchDto {
+            round: pick.round,
+            home_franchise_id: pick.home_id,
+            away_franchise_id: pick.away_id,
+            name: name_of(&pick.player_id),
+            player_id: pick.player_id,
+            franchise_id: pick.franchise_id,
+        });
     PlayoffResultDto {
         home_franchise_id: outcome.home_id.clone(),
         away_franchise_id: outcome.away_id.clone(),
         winner_franchise_id: outcome.winner_id.clone().unwrap_or_default(),
         super_over: outcome.innings.len() > 2,
         score: score(outcome),
-        key_moments,
+        man_of_the_match,
+        match_log: replay
+            .events
+            .iter()
+            .map(|event| match_event(event, &name_of))
+            .collect(),
     }
 }
 
-/// A wicket as a key moment.
+/// One key moment as the API describes it, with each player named.
 ///
-/// @param fallen - The wicket.
-/// @returns The key moment.
-fn wicket_moment(fallen: &FallOfWicket) -> KeyMomentDto {
-    KeyMomentDto::Wicket {
-        innings: fallen.innings,
-        wicket_number: fallen.wicket_number,
-        batting_franchise_id: fallen.batting_franchise_id.clone(),
+/// @param event - The key moment.
+/// @param name_of - The display name of a player, by ID.
+/// @returns The DTO.
+fn match_event(event: &MatchEvent, name_of: &impl Fn(&str) -> String) -> MatchEventDto {
+    match event {
+        MatchEvent::Toss {
+            winner_franchise_id,
+        } => MatchEventDto::Toss {
+            winner_franchise_id: winner_franchise_id.clone(),
+        },
+        MatchEvent::InningsStart {
+            innings,
+            super_over,
+            batting_franchise_id,
+            bowling_franchise_id,
+            openers,
+            opening_bowler_id,
+        } => MatchEventDto::InningsStart {
+            innings: *innings,
+            super_over: *super_over,
+            batting_franchise_id: batting_franchise_id.clone(),
+            bowling_franchise_id: bowling_franchise_id.clone(),
+            openers: openers.each_ref().map(|id| name_of(id)),
+            opening_bowler: name_of(opening_bowler_id),
+        },
+        MatchEvent::Milestone {
+            innings,
+            over,
+            ball,
+            batter_id,
+            milestone,
+        } => MatchEventDto::Milestone {
+            innings: *innings,
+            over: *over,
+            ball: *ball,
+            batter: name_of(batter_id),
+            milestone: *milestone,
+        },
+        MatchEvent::Partnership {
+            innings,
+            over,
+            ball,
+            batter_ids,
+            milestone,
+        } => MatchEventDto::Partnership {
+            innings: *innings,
+            over: *over,
+            ball: *ball,
+            batters: batter_ids.each_ref().map(|id| name_of(id)),
+            milestone: *milestone,
+        },
+        MatchEvent::Wicket {
+            innings,
+            over,
+            ball,
+            batter_id,
+            bowler_id,
+            kind,
+            fielder_id,
+            runs,
+            wickets,
+        } => MatchEventDto::Wicket {
+            innings: *innings,
+            over: *over,
+            ball: *ball,
+            batter: name_of(batter_id),
+            bowler: name_of(bowler_id),
+            wicket_kind: *kind,
+            fielder: fielder_id.as_deref().map(name_of),
+            runs: *runs,
+            wickets: *wickets,
+        },
+        MatchEvent::FourWickets {
+            innings,
+            over,
+            ball,
+            bowler_id,
+        } => MatchEventDto::FourWickets {
+            innings: *innings,
+            over: *over,
+            ball: *ball,
+            bowler: name_of(bowler_id),
+        },
+        MatchEvent::FinalOver {
+            innings,
+            runs,
+            wickets,
+            target,
+        } => MatchEventDto::FinalOver {
+            innings: *innings,
+            runs: *runs,
+            wickets: *wickets,
+            target: *target,
+        },
+        MatchEvent::InningsEnd {
+            innings,
+            batting_franchise_id,
+            runs,
+            wickets,
+            legal_balls,
+        } => MatchEventDto::InningsEnd {
+            innings: *innings,
+            batting_franchise_id: batting_franchise_id.clone(),
+            runs: *runs,
+            wickets: *wickets,
+            legal_balls: *legal_balls,
+        },
+        MatchEvent::Result {
+            winner_franchise_id,
+        } => MatchEventDto::Result {
+            winner_franchise_id: winner_franchise_id.clone(),
+        },
     }
 }
 
@@ -565,7 +738,11 @@ mod tests {
         let lobby = Lobby::new("ABC123", "Test", "1.1.0", Vec::new(), Vec::new());
         assert_eq!(auction(&lobby).unwrap_err().name, "AuctionNotStartedError");
         assert_eq!(league(&lobby).unwrap_err().name, "LeagueNotStartedError");
-        assert_eq!(playoffs(&lobby).unwrap_err().name, "AuctionNotStartedError");
+        let config = ModifierConfig::default();
+        assert_eq!(
+            playoffs(&lobby, &config).unwrap_err().name,
+            "AuctionNotStartedError"
+        );
         assert_eq!(squad(&lobby, "g").unwrap_err().name, "SquadNotReadyError");
     }
 }

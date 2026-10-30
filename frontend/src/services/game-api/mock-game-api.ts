@@ -24,8 +24,10 @@ import {
   leagueSchema,
   matchIdSchema,
   matchSchema,
+  setSkipVoteInputSchema,
 } from "../../shared/types/league.schema";
 import type { League, MatchScore } from "../../shared/types/league.types";
+import { lineupSchema } from "../../shared/types/lineup.schema";
 import {
   claimFranchiseInputSchema,
   createLobbyInputSchema,
@@ -33,15 +35,24 @@ import {
   lobbyCodeSchema,
   lobbySchema,
 } from "../../shared/types/lobby.schema";
-import type { Lobby, Owner } from "../../shared/types/lobby.types";
+import type {
+  Lobby,
+  Owner,
+  Substitution,
+} from "../../shared/types/lobby.types";
 import type { Player } from "../../shared/types/player.types";
 import { playoffsSchema } from "../../shared/types/playoffs.schema";
 import type {
   PlayoffResult,
   Playoffs,
 } from "../../shared/types/playoffs.types";
-import type { PlayoffSlot } from "../../shared/types/schedule.types";
+import type {
+  LeagueMatch,
+  PlayoffSlot,
+} from "../../shared/types/schedule.types";
 import {
+  beginSubstitutionInputSchema,
+  cancelSubstitutionInputSchema,
   getSquadInputSchema,
   setStartingXiInputSchema,
   squadSchema,
@@ -52,6 +63,7 @@ import type { Squad, StartingXi } from "../../shared/types/squad.types";
 import { bidBlockReason } from "../../shared/utils/auction-rules";
 import { defaultStartingXi } from "../../shared/utils/default-xi";
 import { franchiseClaimBlock } from "../../shared/utils/franchise-claim";
+import { franchiseAbbreviation } from "../../shared/utils/franchise-label";
 import {
   AuctionAlreadyStartedError,
   AuctionNotStartedError,
@@ -71,8 +83,8 @@ import {
   XiBlockedError,
   XiLockedError,
 } from "../../shared/utils/game-api.errors";
-import { keyMomentsFor } from "../../shared/utils/key-moments";
 import { advanceBlock } from "../../shared/utils/league-rules";
+import { matchLogFor } from "../../shared/utils/match-log";
 import {
   allocateMatch,
   type PlayingSide,
@@ -157,6 +169,32 @@ type StoredSquadChoices = {
 };
 
 /**
+ * A lobby's live sim state: the substitutions open right now, the owners voting to skip the
+ * league, the substitutions made, and the match count when the league was skipped. The Rust
+ * backend keeps the same record in `Lobby`, so the two agree on what the lobby reports.
+ */
+/**
+ * A lobby as the mock stores it. The live sim fields are not kept here: `lobbyResponse` fills them
+ * from the sim state, so a stored lobby can never disagree with it.
+ */
+type StoredLobby = Omit<
+  Lobby,
+  | "simPaused"
+  | "substituting"
+  | "skipVoters"
+  | "skipThreshold"
+  | "substitutions"
+  | "skippedAfterMatches"
+>;
+
+type StoredSim = {
+  readonly substituting: Set<string>;
+  readonly skipVotes: Set<string>;
+  readonly substitutions: Substitution[];
+  skippedAfter: number | null;
+};
+
+/**
  * Builds the in-memory mock of the game API. It keeps lobbies for as long as
  * the returned object lives, so each page load starts with an empty set, as
  * `docs/specs/mock-api-mvp.md` accepts.
@@ -183,9 +221,10 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
   }
 
   const now = options.now ?? Date.now;
-  const lobbiesByCode = new Map<string, Lobby>();
+  const lobbiesByCode = new Map<string, StoredLobby>();
   const auctionsByCode = new Map<string, StoredAuction>();
   const squadChoices = new Map<string, StoredSquadChoices>();
+  const simByCode = new Map<string, StoredSim>();
   /** Played league results, keyed by {@link resultKey}. */
   const leagueResults = new Map<string, MatchScore>();
   /** Played playoff matches, keyed by {@link playoffResultKey}. */
@@ -252,7 +291,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
    * @returns The stored lobby.
    * @throws {LobbyNotFoundError} When no lobby has that code.
    */
-  function findLobby(code: string): Lobby {
+  function findLobby(code: string): StoredLobby {
     const lobby = lobbiesByCode.get(code);
     if (!lobby) {
       throw new LobbyNotFoundError(code);
@@ -308,6 +347,108 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
   }
 
   /**
+   * The lobby's live sim state, created empty the first time it is read.
+   *
+   * @param code - A normalised lobby code.
+   * @returns The stored sim state, which the caller may change.
+   */
+  function simFor(code: string): StoredSim {
+    let sim = simByCode.get(code);
+    if (!sim) {
+      sim = {
+        substituting: new Set(),
+        skipVotes: new Set(),
+        substitutions: [],
+        skippedAfter: null,
+      };
+      simByCode.set(code, sim);
+    }
+    return sim;
+  }
+
+  /**
+   * How many league matches have been played.
+   *
+   * @param code - A normalised lobby code.
+   * @returns The count of league results.
+   */
+  function leagueMatchesPlayed(code: string): number {
+    return leagueSchedule().filter((match) =>
+      leagueResults.has(resultKey(code, match)),
+    ).length;
+  }
+
+  /**
+   * How many matches have been played, league then playoffs. A substitution records this
+   * count, so the stack can place it.
+   *
+   * @param code - A normalised lobby code.
+   * @returns The count of played matches.
+   */
+  function matchesPlayedFor(code: string): number {
+    const playoffsPlayed = playoffSchedule().filter((template) =>
+      playoffResults.has(playoffResultKey(code, template.slot)),
+    ).length;
+    return leagueMatchesPlayed(code) + playoffsPlayed;
+  }
+
+  /**
+   * Reports whether every league match has a result.
+   *
+   * @param code - A normalised lobby code.
+   * @returns True once the last league match has been played.
+   */
+  function leagueFinished(code: string): boolean {
+    return leagueMatchesPlayed(code) === leagueSchedule().length;
+  }
+
+  /**
+   * The next league match in schedule order that has no result yet.
+   *
+   * @param code - A normalised lobby code.
+   * @returns The next match, or undefined once the league is finished.
+   */
+  function nextLeagueMatch(code: string) {
+    return leagueSchedule().find(
+      (match) => !leagueResults.has(resultKey(code, match)),
+    );
+  }
+
+  /**
+   * Reports whether the skip vote has passed: strictly more than half of the owners have voted
+   * for it. The mock has no disconnects, so every vote counts.
+   *
+   * @param code - A normalised lobby code.
+   * @param lobby - The lobby, for its owners.
+   * @returns True when the rest of the league should be skipped.
+   */
+  function skipPassed(code: string, lobby: StoredLobby): boolean {
+    return (
+      simFor(code).skipVotes.size >= Math.floor(lobby.owners.length / 2) + 1
+    );
+  }
+
+  /**
+   * Builds the lobby a guest reads: the stored lobby, plus the live sim state the backend reports
+   * with it, and parses the result.
+   *
+   * @param lobby - The stored lobby.
+   * @returns The lobby, validated.
+   */
+  function lobbyResponse(lobby: StoredLobby): Lobby {
+    const sim = simFor(lobby.code);
+    return lobbySchema.parse({
+      ...lobby,
+      simPaused: sim.substituting.size > 0,
+      substituting: [...sim.substituting].sort(),
+      skipVoters: [...sim.skipVotes].sort(),
+      skipThreshold: Math.floor(lobby.owners.length / 2) + 1,
+      substitutions: sim.substitutions,
+      skippedAfterMatches: sim.skippedAfter,
+    });
+  }
+
+  /**
    * Every league fixture in round order, with its result if it has been played.
    *
    * @param code - A normalised lobby code.
@@ -352,7 +493,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         TEAMS.map((team) => team.id),
         fixtures,
       ),
-      leagueComplete: lobby.round >= LEAGUE_ROUNDS,
+      leagueComplete: leagueFinished(code),
     });
   }
 
@@ -365,7 +506,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
    * @returns The bracket, validated.
    */
   function playoffsView(code: string): Playoffs {
-    const leagueOver = findLobby(code).round >= LEAGUE_ROUNDS;
+    const leagueOver = leagueFinished(code);
     const standingOrder = leagueOver ? standingOrderFor(code) : [];
     const decided = new Map<PlayoffSlot, SlotDecision>();
     for (const template of playoffSchedule()) {
@@ -576,37 +717,44 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
   }
 
   /**
-   * Plays every fixture of a league round and stores the results.
+   * Plays one league match and stores its result. The lobby's round becomes the match's round,
+   * and the league ends with the last match.
    *
    * @param code - A normalised lobby code.
-   * @param round - The league round, from 1 to {@link LEAGUE_ROUNDS}.
+   * @param lobby - The lobby, changed in place.
+   * @param match - The league fixture to play.
    */
-  function playLeagueRound(code: string, round: number) {
-    for (const match of leagueSchedule()) {
-      if (match.round === round) {
-        const matchId = leagueMatchId(
-          round,
-          match.homeFranchiseId,
-          match.awayFranchiseId,
-        );
-        emit({
-          type: "match_started",
-          code,
-          matchId,
-          round,
-          homeFranchiseId: match.homeFranchiseId,
-          awayFranchiseId: match.awayFranchiseId,
-        });
-        const { score } = playFixture(
-          code,
-          round,
-          match.homeFranchiseId,
-          match.awayFranchiseId,
-          false,
-        );
-        leagueResults.set(resultKey(code, match), score);
-        emit({ type: "match_complete", code, matchId, result: score });
-      }
+  function playLeagueMatch(
+    code: string,
+    lobby: StoredLobby,
+    match: LeagueMatch,
+  ) {
+    const round = match.round;
+    const matchId = leagueMatchId(
+      round,
+      match.homeFranchiseId,
+      match.awayFranchiseId,
+    );
+    emit({
+      type: "match_started",
+      code,
+      matchId,
+      round,
+      homeFranchiseId: match.homeFranchiseId,
+      awayFranchiseId: match.awayFranchiseId,
+    });
+    const { score } = playFixture(
+      code,
+      round,
+      match.homeFranchiseId,
+      match.awayFranchiseId,
+      false,
+    );
+    leagueResults.set(resultKey(code, match), score);
+    emit({ type: "match_complete", code, matchId, result: score });
+    lobby.round = round;
+    if (leagueFinished(code)) {
+      lobby.phase = "playoffs";
     }
   }
 
@@ -643,16 +791,24 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
     if (winnerFranchiseId === null) {
       throw new Error(`Playoff round ${round} ended without a winner.`);
     }
-    const keyMoments = keyMomentsFor(score, home, away);
+    const matchLog = matchLogFor(score, home, away);
     playoffResults.set(playoffResultKey(code, match.slot), {
       homeFranchiseId: home,
       awayFranchiseId: away,
       winnerFranchiseId,
       superOver,
       score,
-      keyMoments,
+      manOfTheMatch: {
+        round,
+        homeFranchiseId: home,
+        awayFranchiseId: away,
+        playerId: `${winnerFranchiseId}-opener-a`,
+        name: `${franchiseAbbreviation(winnerFranchiseId)} Opener A`,
+        franchiseId: winnerFranchiseId,
+      },
+      matchLog,
     });
-    for (const moment of keyMoments) {
+    for (const moment of matchLog) {
       emit({ type: "key_moment", code, matchId, moment });
     }
     emit({ type: "match_complete", code, matchId, result: score });
@@ -703,7 +859,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       };
       const code = drawUnusedCode();
       sequence += 1;
-      const lobby: Lobby = {
+      const lobby: StoredLobby = {
         id: `lobby-${sequence}`,
         code,
         name: input.name,
@@ -714,12 +870,12 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         seedVersion: SEED_VERSION,
       };
       lobbiesByCode.set(code, lobby);
-      return lobbySchema.parse(lobby);
+      return lobbyResponse(lobby);
     },
 
     async getLobby(rawCode) {
       const code = normalizeCode(rawCode);
-      return lobbySchema.parse(findLobby(code));
+      return lobbyResponse(findLobby(code));
     },
 
     async joinLobby(rawInput) {
@@ -733,7 +889,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         (owner) => owner.guestId === input.guestId,
       );
       if (alreadyOwner) {
-        return lobbySchema.parse(lobby);
+        return lobbyResponse(lobby);
       }
       if (lobby.auctionStatus !== "waiting") {
         throw new AuctionAlreadyStartedError(input.code);
@@ -747,7 +903,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         displayName: input.displayName,
         franchiseId: null,
       });
-      return lobbySchema.parse(lobby);
+      return lobbyResponse(lobby);
     },
 
     async claimFranchise(rawInput) {
@@ -780,7 +936,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       if (owner) {
         owner.franchiseId = input.franchiseId;
       }
-      return lobbySchema.parse(lobby);
+      return lobbyResponse(lobby);
     },
 
     async startAuction(rawInput) {
@@ -807,7 +963,19 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       const auction = createMockAuction(input.code, lobby.owners, queue, now());
       auctionsByCode.set(input.code, { auction, queue });
       lobby.auctionStatus = auction.status;
-      return lobbySchema.parse(lobby);
+      return lobbyResponse(lobby);
+    },
+
+    async getLineups(rawCode) {
+      const code = normalizeCode(rawCode);
+      return findLobby(code).owners.map((owner) => {
+        const completed = completedSquad(code, owner.guestId);
+        return lineupSchema.parse({
+          guestId: owner.guestId,
+          players: completed.players,
+          startingXi: completed.choices.startingXi,
+        });
+      });
     },
 
     async getLeague(rawCode) {
@@ -835,6 +1003,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       const block = advanceBlock({
         round: lobby.round,
         everyOwnerCanField,
+        paused: simFor(input.code).substituting.size > 0,
       });
       if (block !== null) {
         throw new LeagueAdvanceBlockedError(block);
@@ -851,28 +1020,93 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         }
       }
 
-      const round = lobby.round + 1;
-      if (round <= LEAGUE_ROUNDS) {
-        playLeagueRound(input.code, round);
-      } else {
+      if (lobby.phase === "playoffs" || lobby.phase === "complete") {
+        const round = lobby.round + 1;
         playPlayoffRound(input.code, round);
-      }
-      lobby.round = round;
-      if (round === LEAGUE_ROUNDS) {
-        lobby.phase = "playoffs";
-      }
-      if (round === LAST_ROUND) {
-        lobby.phase = "complete";
-        const champion = playoffsView(input.code).champion;
-        if (champion !== null) {
-          emit({
-            type: "season_complete",
-            code: input.code,
-            championFranchiseId: champion,
-          });
+        lobby.round = round;
+        if (round === LAST_ROUND) {
+          lobby.phase = "complete";
+          const champion = playoffsView(input.code).champion;
+          if (champion !== null) {
+            emit({
+              type: "season_complete",
+              code: input.code,
+              championFranchiseId: champion,
+            });
+          }
+        }
+      } else if (skipPassed(input.code, lobby)) {
+        // The skip records how many league matches stood when it passed, then the rest play out.
+        const sim = simFor(input.code);
+        sim.skippedAfter ??= leagueMatchesPlayed(input.code);
+        for (let next = nextLeagueMatch(input.code); next; ) {
+          playLeagueMatch(input.code, lobby, next);
+          next = nextLeagueMatch(input.code);
+        }
+      } else {
+        const next = nextLeagueMatch(input.code);
+        if (next) {
+          playLeagueMatch(input.code, lobby, next);
         }
       }
       return leagueView(input.code);
+    },
+
+    async beginSubstitution(rawInput) {
+      const input = beginSubstitutionInputSchema.parse({
+        ...rawInput,
+        code: normalizeCode(rawInput.code),
+      });
+      requireSeason(input.code);
+      const lobby = findLobby(input.code);
+      if (lobby.phase === "complete") {
+        throw new LeagueAdvanceBlockedError("season-over");
+      }
+      const completed = completedSquad(input.code, input.guestId);
+      const { choices } = completed;
+      if (matchesPlayedFor(input.code) === 0) {
+        throw new SubstitutionBlockedError("not-yet-played");
+      }
+      if (choices.substitutionUsed) {
+        throw new SubstitutionBlockedError("already-used");
+      }
+      if (choices.startingXi === null) {
+        throw new SubstitutionBlockedError("no-starting-xi");
+      }
+      simFor(input.code).substituting.add(input.guestId);
+      return lobbyResponse(lobby);
+    },
+
+    async cancelSubstitution(rawInput) {
+      const input = cancelSubstitutionInputSchema.parse({
+        ...rawInput,
+        code: normalizeCode(rawInput.code),
+      });
+      requireSeason(input.code);
+      simFor(input.code).substituting.delete(input.guestId);
+      return lobbyResponse(findLobby(input.code));
+    },
+
+    async setSkipVote(rawInput) {
+      const input = setSkipVoteInputSchema.parse({
+        ...rawInput,
+        code: normalizeCode(rawInput.code),
+      });
+      requireSeason(input.code);
+      const lobby = findLobby(input.code);
+      if (!lobby.owners.some((owner) => owner.guestId === input.guestId)) {
+        throw new NotAnOwnerError(input.guestId);
+      }
+      if (lobby.phase !== "league") {
+        throw new LeagueAdvanceBlockedError("season-over");
+      }
+      const votes = simFor(input.code).skipVotes;
+      if (input.vote) {
+        votes.add(input.guestId);
+      } else {
+        votes.delete(input.guestId);
+      }
+      return lobbyResponse(lobby);
     },
 
     async getStandings(rawCode) {
@@ -1009,6 +1243,10 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       });
       const completed = completedSquad(input.code, input.guestId);
       const { choices } = completed;
+      const sim = simFor(input.code);
+      if (!sim.substituting.has(input.guestId)) {
+        throw new SubstitutionBlockedError("not-in-progress");
+      }
       const block = substitutionBlock({
         squad: completed.players,
         startingXi: choices.startingXi,
@@ -1032,6 +1270,13 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         });
       }
       choices.substitutionUsed = true;
+      sim.substituting.delete(input.guestId);
+      sim.substitutions.push({
+        guestId: input.guestId,
+        outPlayerId: input.outPlayerId,
+        inPlayerId: input.inPlayerId,
+        matchesPlayed: matchesPlayedFor(input.code),
+      });
       return squadView(input.guestId, completed);
     },
   };

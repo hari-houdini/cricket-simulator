@@ -1,9 +1,9 @@
 import type { MatchScore } from "../../shared/types/league.types";
 import type { PlayoffSlotView } from "../../shared/types/playoffs.types";
-import { keyMomentsFor } from "../../shared/utils/key-moments";
+import { matchLogFor } from "../../shared/utils/match-log";
 
 /**
- * A score with its key moments, for a stories' playoff result.
+ * A score with its match log, for a stories' playoff result.
  *
  * @param home - The home franchise.
  * @param away - The away franchise.
@@ -23,7 +23,8 @@ function resultFor(
     winnerFranchiseId: score.winnerFranchiseId ?? home,
     superOver,
     score,
-    keyMoments: keyMomentsFor(score, home, away),
+    manOfTheMatch: null,
+    matchLog: matchLogFor(score, home, away),
   };
 }
 

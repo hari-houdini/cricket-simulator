@@ -1,96 +1,44 @@
 import * as stylex from "@stylexjs/stylex";
 
-import type {
-  FairPlayFranchise,
-  FairPlayLine,
-} from "../../shared/types/awards.types";
+import { focusRing } from "../../shared/const/focus-ring.styles";
+import type { FairPlayLine } from "../../shared/types/awards.types";
 import { franchiseName } from "../../shared/utils/franchise-label";
 import { styles } from "./FairPlayScreen.styles";
-import type { FairPlayScreenProps } from "./FairPlayScreen.types";
+import type {
+  FairPlayPlayersProps,
+  FairPlayScreenProps,
+} from "./FairPlayScreen.types";
 
 /**
- * One column of a franchise's Fair Play screen: its title, and the players in it
- * with their average effect, or a line saying there are none.
+ * The players in one column of a franchise's entry, each with its average effect to two
+ * decimal places, or a line saying there are none.
  *
- * @param props.title - The column's heading.
  * @param props.lines - The players in the column.
- * @param props.empty - What to show when the column has no players.
- * @returns A labelled list of players and their effects.
+ * @returns A list of players, or the word "None".
  */
-function Column({
-  title,
-  lines,
-  empty,
-}: {
-  readonly title: string;
-  readonly lines: readonly FairPlayLine[];
-  readonly empty: string;
-}) {
+function FairPlayPlayers({ lines }: FairPlayPlayersProps) {
+  if (lines.length === 0) {
+    return <span>None</span>;
+  }
   return (
-    <div>
-      <h4 {...stylex.props(styles.columnTitle)}>{title}</h4>
-      {lines.length === 0 ? (
-        <p {...stylex.props(styles.item)}>{empty}</p>
-      ) : (
-        <ul {...stylex.props(styles.list)}>
-          {lines.map((line) => (
-            <li key={line.playerId} {...stylex.props(styles.item)}>
-              {line.name}: {line.averageEffect.toFixed(1)}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <ul {...stylex.props(styles.list)}>
+      {lines.map((line: FairPlayLine) => (
+        <li key={line.playerId} {...stylex.props(styles.item)}>
+          {line.name}: {line.averageEffect.toFixed(2)}
+        </li>
+      ))}
+    </ul>
   );
 }
 
 /**
- * One franchise's Fair Play card: the players who pulled its rating down, and
- * the players who held it up. The winner is named in text as well as styled.
+ * The Fair Play table, ranked best first. Each franchise shows its rating to two decimal
+ * places, and the players who pulled the rating down and the players who held it up. The
+ * winner is named in text as well as by its rank. Fair Play is a fantasy mechanic, not an IPL
+ * award, and the note says so.
  *
- * @param props.franchise - The franchise's rating.
- * @param props.isWinner - Whether this franchise holds the Fair Play award.
- * @returns A section for the franchise.
- */
-function FranchiseFairPlay({
-  franchise,
-  isWinner,
-}: {
-  readonly franchise: FairPlayFranchise;
-  readonly isWinner: boolean;
-}) {
-  const name = franchiseName(franchise.franchiseId);
-  return (
-    <section aria-label={name} {...stylex.props(styles.franchise)}>
-      <h3 {...stylex.props(styles.heading)}>
-        {name}
-        {isWinner ? (
-          <span {...stylex.props(styles.winnerBadge)}> · Fair Play winner</span>
-        ) : null}
-      </h3>
-      <p {...stylex.props(styles.item)}>Table position: {franchise.standing}</p>
-      <div {...stylex.props(styles.columns)}>
-        <Column
-          title="Pulled the rating down"
-          lines={franchise.lowering}
-          empty="No one pulled the rating down."
-        />
-        <Column
-          title="Held the rating up"
-          lines={franchise.lifting}
-          empty="No one held the rating up."
-        />
-      </div>
-    </section>
-  );
-}
-
-/**
- * The Fair Play screen: each franchise's two columns, with the winner named.
- * Fair Play is a fantasy mechanic, not an IPL award, and the note says so.
- *
- * @param props - The franchises' ratings and the winner.
- * @returns The screen, or a line saying it begins after the first match.
+ * @param props - The ranked franchises and the winner.
+ * @returns The table, or a line saying it begins after the first match.
  */
 export function FairPlayScreen({
   franchises,
@@ -101,20 +49,69 @@ export function FairPlayScreen({
       <p {...stylex.props(styles.note)}>
         Fair Play is a fantasy mechanic, not an IPL award. Each franchise&apos;s
         rating moves with the conduct of its players in matches. Trouble ratings
-        are unverified, so the ratings are a working estimate.
+        are unverified, so the ratings are a working estimate. The table is
+        ranked by rating, then league points, then net run rate.
       </p>
       {franchises.length === 0 ? (
         <p {...stylex.props(styles.note)}>
           Fair Play begins after the first match.
         </p>
       ) : (
-        franchises.map((franchise) => (
-          <FranchiseFairPlay
-            key={franchise.franchiseId}
-            franchise={franchise}
-            isWinner={franchise.franchiseId === winnerFranchiseId}
-          />
-        ))
+        <section
+          aria-label="Fair Play ranking"
+          // A scroll container must be focusable, so keyboard users can reach the columns that sit
+          // off-screen on a phone (axe: scrollable-region-focusable).
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable region, see the comment above
+          tabIndex={0}
+          {...stylex.props(styles.scroll, focusRing.ring)}
+        >
+          <table aria-label="Fair Play ranking" {...stylex.props(styles.table)}>
+            <thead>
+              <tr>
+                <th scope="col" {...stylex.props(styles.headerCell)}>
+                  Rank
+                </th>
+                <th scope="col" {...stylex.props(styles.headerCell)}>
+                  Franchise
+                </th>
+                <th scope="col" {...stylex.props(styles.headerCell)}>
+                  Rating
+                </th>
+                <th scope="col" {...stylex.props(styles.headerCell)}>
+                  Pulled the rating down
+                </th>
+                <th scope="col" {...stylex.props(styles.headerCell)}>
+                  Held the rating up
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {franchises.map((franchise) => (
+                <tr key={franchise.franchiseId}>
+                  <td {...stylex.props(styles.cell)}>{franchise.rank}</td>
+                  <td {...stylex.props(styles.cell)}>
+                    {franchiseName(franchise.franchiseId)}
+                    {franchise.franchiseId === winnerFranchiseId ? (
+                      <span {...stylex.props(styles.winnerBadge)}>
+                        {" "}
+                        · Fair Play winner
+                      </span>
+                    ) : null}
+                  </td>
+                  <td {...stylex.props(styles.cell, styles.rating)}>
+                    {franchise.standing.toFixed(2)}
+                  </td>
+                  <td {...stylex.props(styles.cell)}>
+                    <FairPlayPlayers lines={franchise.lowering} />
+                  </td>
+                  <td {...stylex.props(styles.cell)}>
+                    <FairPlayPlayers lines={franchise.lifting} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
       )}
     </section>
   );

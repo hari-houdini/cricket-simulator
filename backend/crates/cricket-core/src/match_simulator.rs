@@ -403,6 +403,16 @@ fn score_fair_play(lobby_id: &str, match_id: &str, sides: [&Side; 2]) -> Vec<Pla
     scores
 }
 
+/// A played match together with the deliveries it was played from. The outcome is what a
+/// finished match keeps; the innings are kept only so a replay can read the events.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlayedMatch {
+    /// The match as a finished season keeps it.
+    pub outcome: MatchOutcome,
+    /// Every innings, including super overs, with every delivery.
+    pub innings: Vec<Innings>,
+}
+
 /// Simulates one match from start to finish.
 ///
 /// The toss winner bats first. A league tie is recorded as a draw. A playoff tie is settled
@@ -425,6 +435,29 @@ pub fn simulate_match(
     kind: MatchKind,
     config: &ModifierConfig,
 ) -> MatchOutcome {
+    play_match(lobby_id, match_id, round, home, away, kind, config).outcome
+}
+
+/// Plays one match from start to finish, keeping its deliveries. {@link simulate_match} is this
+/// with the deliveries dropped, so the two always agree.
+///
+/// @param lobby_id - The lobby the match belongs to. Part of the seed.
+/// @param match_id - The match identifier. Part of the seed.
+/// @param round - The round the match is played in.
+/// @param home - The home side.
+/// @param away - The away side.
+/// @param kind - League or playoff.
+/// @param config - The ball model parameters.
+/// @returns The match and the innings it was played from.
+pub fn play_match(
+    lobby_id: &str,
+    match_id: &str,
+    round: u32,
+    home: &Side,
+    away: &Side,
+    kind: MatchKind,
+    config: &ModifierConfig,
+) -> PlayedMatch {
     let mut rng = GameRng::from_seed(seed_from(&["match", lobby_id, match_id]));
 
     let home_wins_toss = rng.below(2) == 0;
@@ -477,7 +510,7 @@ pub fn simulate_match(
     };
 
     let (performances, fall_of_wickets) = tally(lobby_id, match_id, [home, away], &innings);
-    MatchOutcome {
+    let outcome = MatchOutcome {
         id: match_id.to_string(),
         round,
         home_id: home.franchise_id.clone(),
@@ -489,7 +522,8 @@ pub fn simulate_match(
         fair_play: score_fair_play(lobby_id, match_id, [home, away]),
         performances,
         fall_of_wickets,
-    }
+    };
+    PlayedMatch { outcome, innings }
 }
 
 /// Plays super overs until one side scores more, appending each innings to `innings`.

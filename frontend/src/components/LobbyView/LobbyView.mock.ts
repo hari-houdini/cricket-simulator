@@ -14,6 +14,12 @@ export const twoOwnerLobby: Lobby = {
   auctionStatus: "waiting",
   round: 0,
   seedVersion: "1.1.0",
+  simPaused: false,
+  substituting: [],
+  skipVoters: [],
+  skipThreshold: 2,
+  substitutions: [],
+  skippedAfterMatches: null,
   owners: [
     { guestId: "asha", displayName: "Asha", franchiseId: "csk" },
     { guestId: "ravi", displayName: "Ravi", franchiseId: "mi" },

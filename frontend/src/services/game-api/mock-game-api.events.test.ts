@@ -3,13 +3,17 @@ import { ZodError } from "zod";
 
 import { BID_TIMER_MS, SQUAD_SIZE } from "../../shared/const/auction.const";
 import { FRANCHISE_COUNT } from "../../shared/const/league.const";
-import { LAST_ROUND } from "../../shared/const/lobby.const";
 import type { GameEvent } from "../../shared/types/game-event.types";
 import {
   LeagueNotStartedError,
   LobbyNotFoundError,
   MatchNotFoundError,
 } from "../../shared/utils/game-api.errors";
+import {
+  advanceMatches,
+  ROUND_MATCHES,
+  SEASON_STEPS,
+} from "./advance-steps.mock";
 import { createMockGameApi } from "./mock-game-api";
 import { leagueMatchId } from "./mock-league";
 
@@ -147,7 +151,7 @@ describe("mock game API live events", () => {
     const game = await finishedSoloAuction();
     const { events } = await listen(game);
 
-    await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
+    await advanceMatches(game.api, game.code, asha.guestId, ROUND_MATCHES);
 
     const started = events.filter((event) => event.type === "match_started");
     const completed = events.filter((event) => event.type === "match_complete");
@@ -168,9 +172,7 @@ describe("mock game API live events", () => {
     const game = await finishedSoloAuction();
     const { events } = await listen(game);
 
-    for (let round = 1; round <= LAST_ROUND; round += 1) {
-      await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
-    }
+    await advanceMatches(game.api, game.code, asha.guestId, SEASON_STEPS);
 
     const champion = must(
       (await game.api.getPlayoffs(game.code)).champion,
@@ -221,7 +223,7 @@ describe("mock game API standings and matches", () => {
 
   it("returns the table with one row per franchise, and counts each match for both sides", async () => {
     const game = await finishedSoloAuction();
-    await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
+    await advanceMatches(game.api, game.code, asha.guestId, ROUND_MATCHES);
 
     const standings = await game.api.getStandings(game.code);
 
@@ -231,7 +233,7 @@ describe("mock game API standings and matches", () => {
 
   it("reads a played league match by its id, and refuses one not yet played", async () => {
     const game = await finishedSoloAuction();
-    await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
+    await advanceMatches(game.api, game.code, asha.guestId, ROUND_MATCHES);
     const league = await game.api.getLeague(game.code);
     const played = must(
       league.fixtures.find((fixture) => fixture.round === 1),

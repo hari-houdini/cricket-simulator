@@ -248,6 +248,9 @@ describe("mock squad", () => {
     );
 
     await expect(
+      game.api.beginSubstitution({ code: game.code, guestId: asha.guestId }),
+    ).rejects.toMatchObject({ reason: "not-yet-played" });
+    await expect(
       game.api.substitute({
         code: game.code,
         guestId: asha.guestId,
@@ -257,6 +260,6 @@ describe("mock squad", () => {
         ),
         inPlayerId: bench.id,
       }),
-    ).rejects.toMatchObject({ reason: "not-yet-played" });
+    ).rejects.toMatchObject({ reason: "not-in-progress" });
   });
 });

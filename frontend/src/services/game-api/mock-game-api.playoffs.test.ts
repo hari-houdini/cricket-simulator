@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { BID_TIMER_MS, SQUAD_SIZE } from "../../shared/const/auction.const";
-import { LEAGUE_ROUNDS } from "../../shared/const/league.const";
-import { LAST_ROUND } from "../../shared/const/lobby.const";
+import { LEAGUE_MATCHES } from "../../shared/const/league.const";
 import { XI_SIZE } from "../../shared/const/squad.const";
 import type { Player } from "../../shared/types/player.types";
 import { LeagueNotStartedError } from "../../shared/utils/game-api.errors";
+import {
+  advanceMatches,
+  PLAYOFF_STEPS,
+  SEASON_STEPS,
+} from "./advance-steps.mock";
 import { createMockGameApi } from "./mock-game-api";
 
 const asha = { guestId: "asha", displayName: "Asha" };
@@ -116,9 +120,7 @@ async function saveLegalXi(game: Game) {
  * @param game - A lobby with a saved XI.
  */
 async function playLeague(game: Game) {
-  for (let round = 1; round <= LEAGUE_ROUNDS; round += 1) {
-    await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
-  }
+  await advanceMatches(game.api, game.code, asha.guestId, LEAGUE_MATCHES);
 }
 
 describe("mock playoffs", () => {
@@ -194,9 +196,7 @@ describe("mock playoffs", () => {
     await saveLegalXi(game);
     await playLeague(game);
 
-    for (let round = LEAGUE_ROUNDS + 1; round <= LAST_ROUND; round += 1) {
-      await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
-    }
+    await advanceMatches(game.api, game.code, asha.guestId, PLAYOFF_STEPS);
 
     const bracket = await game.api.getPlayoffs(game.code);
     expect(bracket.matches.every((match) => match.result !== null)).toBe(true);
@@ -213,9 +213,7 @@ describe("mock playoffs", () => {
     await completeSoloAuction(game);
     await saveLegalXi(game);
     await playLeague(game);
-    for (let round = LEAGUE_ROUNDS + 1; round <= LAST_ROUND; round += 1) {
-      await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
-    }
+    await advanceMatches(game.api, game.code, asha.guestId, PLAYOFF_STEPS);
 
     const bracket = await game.api.getPlayoffs(game.code);
     const slot = (name: string) =>
@@ -245,9 +243,7 @@ describe("mock playoffs", () => {
     await completeSoloAuction(game);
     await saveLegalXi(game);
     await playLeague(game);
-    for (let round = LEAGUE_ROUNDS + 1; round <= LAST_ROUND; round += 1) {
-      await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
-    }
+    await advanceMatches(game.api, game.code, asha.guestId, PLAYOFF_STEPS);
 
     const bracket = await game.api.getPlayoffs(game.code);
     for (const match of bracket.matches) {
@@ -255,7 +251,7 @@ describe("mock playoffs", () => {
       expect([result.homeFranchiseId, result.awayFranchiseId]).toContain(
         result.winnerFranchiseId,
       );
-      expect(result.keyMoments.at(-1)).toEqual({
+      expect(result.matchLog.at(-1)).toEqual({
         kind: "result",
         winnerFranchiseId: result.winnerFranchiseId,
       });
@@ -266,9 +262,7 @@ describe("mock playoffs", () => {
     const game = await setUpSoloLobby();
     await completeSoloAuction(game);
     await saveLegalXi(game);
-    for (let round = 1; round <= LAST_ROUND; round += 1) {
-      await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
-    }
+    await advanceMatches(game.api, game.code, asha.guestId, SEASON_STEPS);
 
     await expect(
       game.api.advanceRound({ code: game.code, guestId: asha.guestId }),
@@ -282,9 +276,7 @@ describe("mock playoffs", () => {
       await completeSoloAuction(game);
       await saveLegalXi(game);
       await playLeague(game);
-      for (let round = LEAGUE_ROUNDS + 1; round <= LAST_ROUND; round += 1) {
-        await game.api.advanceRound({ code: game.code, guestId: asha.guestId });
-      }
+      await advanceMatches(game.api, game.code, asha.guestId, PLAYOFF_STEPS);
     }
 
     expect(await second.api.getPlayoffs(second.code)).toEqual(

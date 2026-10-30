@@ -17,9 +17,10 @@ import { styles } from "./LobbyScreen.styles";
 import type { LobbyScreenProps } from "./LobbyScreen.types";
 
 /**
- * How often the lobby is re-read while its auction runs. The auction panel reads
- * the auction itself, but the lobby decides whether the squad panel shows, so
- * the lobby must move on to `complete` without a reload.
+ * How often the lobby is re-read while its auction runs and while the season is played. The
+ * auction panel reads the auction itself, but the lobby decides whether the squad panel shows,
+ * so the lobby must move on to `complete` without a reload. The sim reads the pause and the
+ * substitutions from the lobby, so every guest sees them as they happen.
  */
 const LOBBY_POLL_MS = 1000;
 
@@ -79,13 +80,16 @@ export function LobbyScreen({ code }: LobbyScreenProps) {
     };
   }, [api, code, guestId]);
 
-  const auctionRunning =
-    state.status === "ready" && state.lobby.auctionStatus === "running";
+  const live =
+    state.status === "ready" &&
+    (state.lobby.auctionStatus === "running" ||
+      state.lobby.phase === "league" ||
+      state.lobby.phase === "playoffs");
 
-  // Re-read the lobby while the auction runs, so it notices when the auction ends.
-  // A failed read is skipped; the next tick tries again.
+  // Re-read the lobby while the auction runs, and through the season, so the stack and any pause
+  // reach every guest. A failed read is skipped; the next tick tries again.
   useEffect(() => {
-    if (!auctionRunning) {
+    if (!live) {
       return;
     }
     let cancelled = false;
@@ -103,7 +107,7 @@ export function LobbyScreen({ code }: LobbyScreenProps) {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [api, code, auctionRunning]);
+  }, [api, code, live]);
 
   /**
    * Runs an action that returns the lobby, and shows the result or the error.
@@ -173,12 +177,7 @@ export function LobbyScreen({ code }: LobbyScreenProps) {
       onStart={() =>
         void run(() => api.startAuction({ code: lobby.code, guestId }))
       }
-      onRoundAdvanced={() => {
-        api
-          .getLobby(lobby.code)
-          .then((next) => setState({ status: "ready", lobby: next }))
-          .catch(() => undefined);
-      }}
+      onLobbyUpdated={(next) => setState({ status: "ready", lobby: next })}
     />
   );
 }

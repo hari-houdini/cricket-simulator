@@ -16,5 +16,7 @@
   "simPaused": false,
   "substituting": [],
   "skipVoters": [],
-  "skipThreshold": 1
+  "skipThreshold": 1,
+  "substitutions": [],
+  "skippedAfterMatches": null
 }

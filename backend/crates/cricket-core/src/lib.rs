@@ -7,6 +7,7 @@ pub mod auction;
 pub mod awards;
 pub mod fantasy;
 pub mod lobby;
+pub mod match_log;
 pub mod match_simulator;
 pub mod models;
 pub mod performance;

@@ -4,7 +4,8 @@
 //! Nullable fields serialise as `null`, never as a missing key. Money is in lakhs and every
 //! count is an integer. Both directions use `camelCase`.
 
-use cricket_core::models::Player;
+use cricket_core::match_log::Milestone;
+use cricket_core::models::{Player, WicketKind};
 use serde::{Deserialize, Serialize};
 
 /// A lobby, as `lobbySchema` describes it.
@@ -35,6 +36,24 @@ pub struct LobbyDto {
     pub skip_voters: Vec<String>,
     /// How many connected owners must vote to skip: strictly more than half of the owners.
     pub skip_threshold: u32,
+    /// Every substitution made, in order, so a view can rebuild the XI at any point.
+    pub substitutions: Vec<SubstitutionDto>,
+    /// How many matches had been played when the league was skipped, or `null` if it was not.
+    pub skipped_after_matches: Option<u32>,
+}
+
+/// A substitution, as `substitutionRecordSchema` describes it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubstitutionDto {
+    /// The owner who made the swap.
+    pub guest_id: String,
+    /// The XI player who left.
+    pub out_player_id: String,
+    /// The squad player who came in.
+    pub in_player_id: String,
+    /// How many matches had been played when the swap was confirmed.
+    pub matches_played: u32,
 }
 
 /// A guest in a lobby, as `ownerSchema` describes it.
@@ -157,6 +176,18 @@ pub struct SquadDto {
     pub locked: bool,
     /// Whether the free substitution has been spent.
     pub substitution_used: bool,
+}
+
+/// One owner's lineup, as `lineupSchema` describes it: the squad and the saved XI.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LineupDto {
+    /// The owner.
+    pub guest_id: String,
+    /// The 15 players.
+    pub players: Vec<Player>,
+    /// The saved starting XI, or `null`.
+    pub starting_xi: Option<StartingXiDto>,
 }
 
 /// A starting XI, as `startingXiSchema` describes it.
@@ -295,30 +326,126 @@ pub struct PlayoffResultDto {
     pub super_over: bool,
     /// The score.
     pub score: MatchScoreDto,
-    /// Wickets, then the result.
-    pub key_moments: Vec<KeyMomentDto>,
+    /// The Man of the Match, or `null` if the match had no performances.
+    pub man_of_the_match: Option<ManOfTheMatchDto>,
+    /// The key moments, from the toss to the result, replayed from the match's seed (ADR 0007).
+    pub match_log: Vec<MatchEventDto>,
 }
 
-/// A key moment, as `keyMomentSchema` describes it. The `kind` field tags the variant.
+/// One key moment in a playoff match's log, as `matchEventSchema` describes it. The `kind` field
+/// tags the variant. Players are named as well as identified, so the log reads without a lookup.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
     rename_all_fields = "camelCase"
 )]
-pub enum KeyMomentDto {
-    /// A wicket.
-    Wicket {
-        /// 1 or 2.
+pub enum MatchEventDto {
+    /// The toss. The winner bats first.
+    Toss {
+        /// The franchise that won the toss.
+        winner_franchise_id: String,
+    },
+    /// An innings begins.
+    InningsStart {
+        /// One-based innings number within the match.
         innings: u32,
-        /// The wicket number within the innings.
-        wicket_number: u32,
-        /// The franchise that lost it.
+        /// Whether this is a super over.
+        super_over: bool,
+        /// The franchise batting.
         batting_franchise_id: String,
+        /// The franchise bowling.
+        bowling_franchise_id: String,
+        /// The two openers, in batting order.
+        openers: [String; 2],
+        /// The bowler who bowls the first over.
+        opening_bowler: String,
+    },
+    /// A batter brings up a thirty, fifty or hundred.
+    Milestone {
+        /// The innings.
+        innings: u32,
+        /// The over, one-based.
+        over: u32,
+        /// The ball within the over.
+        ball: u32,
+        /// The batter.
+        batter: String,
+        /// `thirty`, `fifty` or `hundred`.
+        milestone: Milestone,
+    },
+    /// Two batters bring up a fifty or hundred partnership.
+    Partnership {
+        /// The innings.
+        innings: u32,
+        /// The over, one-based.
+        over: u32,
+        /// The ball within the over.
+        ball: u32,
+        /// The two batters at the crease.
+        batters: [String; 2],
+        /// `fifty` or `hundred`.
+        milestone: Milestone,
+    },
+    /// A batter is dismissed.
+    Wicket {
+        /// The innings.
+        innings: u32,
+        /// The over, one-based.
+        over: u32,
+        /// The ball within the over.
+        ball: u32,
+        /// The batter dismissed.
+        batter: String,
+        /// The bowler.
+        bowler: String,
+        /// How the batter was dismissed.
+        wicket_kind: WicketKind,
+        /// The catcher, or `null` unless it was a catch.
+        fielder: Option<String>,
+        /// The batting side's runs after the ball.
+        runs: u32,
+        /// The batting side's wickets after the ball.
+        wickets: u32,
+    },
+    /// A bowler takes his fourth wicket in an innings.
+    FourWickets {
+        /// The innings.
+        innings: u32,
+        /// The over, one-based.
+        over: u32,
+        /// The ball within the over.
+        ball: u32,
+        /// The bowler.
+        bowler: String,
+    },
+    /// The start of the last over of an innings.
+    FinalOver {
+        /// The innings.
+        innings: u32,
+        /// The runs before the over.
+        runs: u32,
+        /// The wickets before the over.
+        wickets: u32,
+        /// The runs needed to win, in a chase.
+        target: Option<u32>,
+    },
+    /// An innings ends.
+    InningsEnd {
+        /// The innings.
+        innings: u32,
+        /// The franchise that batted.
+        batting_franchise_id: String,
+        /// The total runs.
+        runs: u32,
+        /// The wickets lost.
+        wickets: u32,
+        /// Legal deliveries bowled.
+        legal_balls: u32,
     },
     /// The result of the match.
     Result {
-        /// The winner.
+        /// The winner, which is always set in the playoffs.
         winner_franchise_id: Option<String>,
     },
 }
@@ -546,13 +673,22 @@ mod tests {
     }
 
     #[test]
-    fn key_moments_are_tagged_with_kind() {
-        let moment = KeyMomentDto::Result {
-            winner_franchise_id: None,
+    fn match_events_are_tagged_with_kind_and_name_the_wicket_kind() {
+        let event = MatchEventDto::Wicket {
+            innings: 1,
+            over: 4,
+            ball: 2,
+            batter: "Asha".to_string(),
+            bowler: "Ravi".to_string(),
+            wicket_kind: WicketKind::RunOut,
+            fielder: None,
+            runs: 40,
+            wickets: 2,
         };
-        let json = serde_json::to_value(&moment).expect("serialises");
-        assert_eq!(json["kind"], "result");
-        assert!(json["winnerFranchiseId"].is_null());
+        let json = serde_json::to_value(&event).expect("serialises");
+        assert_eq!(json["kind"], "wicket");
+        assert_eq!(json["wicketKind"], "run-out");
+        assert!(json["fielder"].is_null());
     }
 
     /// Parses a shared fixture into its DTO and checks that serialising it gives the same JSON.

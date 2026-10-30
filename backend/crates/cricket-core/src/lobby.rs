@@ -9,7 +9,8 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 
 use crate::auction::{Auction, AuctionError, LotOutcome, OwnerSeat, SeatStatus, lot_order};
-use crate::match_simulator::{MatchOutcome, ModifierConfig, Side};
+use crate::match_log::{MatchReplay, replay_match};
+use crate::match_simulator::{MatchKind, MatchOutcome, ModifierConfig, Side};
 use crate::models::Player;
 use crate::playoffs::{FINAL_ROUND, PlayoffBracket, PlayoffError};
 use crate::schedule::{Fixture, ScheduleError, lobby_schedule};
@@ -173,6 +174,27 @@ pub struct Lobby {
     /// Owners voting to skip the rest of the league. Votes from disconnected owners do not count.
     #[serde(default)]
     skip_votes: BTreeSet<String>,
+    /// Every substitution made, in order.
+    #[serde(default)]
+    substitutions: Vec<SubstitutionRecord>,
+    /// How many matches had been played when the league was skipped, or `None` if it was not.
+    #[serde(default)]
+    skipped_after: Option<u32>,
+}
+
+/// A substitution as the season keeps it: who came off, who came on, and where in the season it
+/// happened, so a view can rebuild the XI at any earlier point.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubstitutionRecord {
+    /// The owner who made the swap.
+    pub guest_id: String,
+    /// The XI player who left.
+    pub out_id: String,
+    /// The squad player who came in.
+    pub in_id: String,
+    /// How many matches, league then playoffs, had been played when the swap was confirmed.
+    pub matches_played: u32,
 }
 
 impl Lobby {
@@ -208,6 +230,8 @@ impl Lobby {
             bracket: None,
             substituting: BTreeSet::new(),
             skip_votes: BTreeSet::new(),
+            substitutions: Vec::new(),
+            skipped_after: None,
         }
     }
 
@@ -587,6 +611,7 @@ impl Lobby {
     ) -> Result<(), LobbyError> {
         let in_progress = self.substituting.contains(guest_id);
         let played = !self.league.is_empty();
+        let matches_played = self.matches_played();
         let entry = self.owner_entry_mut(guest_id)?;
         let refuse = |reason: SubstitutionError| LobbyError::Substitution(reason);
         if !in_progress {
@@ -630,7 +655,38 @@ impl Lobby {
         });
         entry.substitution_used = true;
         self.substituting.remove(guest_id);
+        self.substitutions.push(SubstitutionRecord {
+            guest_id: guest_id.to_string(),
+            out_id: out_id.to_string(),
+            in_id: in_id.to_string(),
+            matches_played,
+        });
         Ok(())
+    }
+
+    /// Every substitution made, in order.
+    ///
+    /// @returns The substitution records.
+    pub fn substitutions(&self) -> &[SubstitutionRecord] {
+        &self.substitutions
+    }
+
+    /// How many matches had been played when the league was skipped.
+    ///
+    /// @returns The match count at the skip, or `None` if the league was not skipped.
+    pub fn skipped_after(&self) -> Option<u32> {
+        self.skipped_after
+    }
+
+    /// How many matches have been played, league then playoffs.
+    ///
+    /// @returns The count of played matches.
+    pub fn matches_played(&self) -> u32 {
+        (self.league.len()
+            + self
+                .bracket
+                .as_ref()
+                .map_or(0, |bracket| bracket.matches().len())) as u32
     }
 
     /// Reports whether a substitution is open, which pauses the sim for every guest.
@@ -707,7 +763,10 @@ impl Lobby {
             return Err(LobbyError::SimPaused);
         }
         match self.phase {
-            Phase::League if self.skip_passed() => self.play_rest_of_league(config),
+            Phase::League if self.skip_passed() => {
+                self.skipped_after.get_or_insert(self.league.len() as u32);
+                self.play_rest_of_league(config)
+            }
             Phase::League => self
                 .play_next_league_match(config)
                 .map(|played| vec![played]),
@@ -820,11 +879,21 @@ impl Lobby {
         }
     }
 
-    /// Builds the sides for simulation from the squads and their chosen XIs.
+    /// Builds the sides for simulation now, from the squads and their chosen XIs.
     ///
     /// @returns One side per franchise, in batting order.
     /// @throws Returns {@link LobbyError::XiMissing} if any squad has no XI.
     fn sides(&self) -> Result<Vec<Side>, LobbyError> {
+        self.sides_at(self.matches_played())
+    }
+
+    /// Builds the sides as they stood after `matches_played` matches. A substitution made later
+    /// is undone, so a replay of an earlier match uses the XI it was played with.
+    ///
+    /// @param matches_played - How many matches had been played, league then playoffs.
+    /// @returns One side per franchise, in batting order.
+    /// @throws Returns {@link LobbyError::XiMissing} if any squad has no XI.
+    fn sides_at(&self, matches_played: u32) -> Result<Vec<Side>, LobbyError> {
         let missing: Vec<String> = self
             .squads
             .iter()
@@ -838,10 +907,8 @@ impl Lobby {
             .squads
             .iter()
             .map(|entry| {
-                let xi = entry
-                    .starting_xi
-                    .as_ref()
-                    .map(|xi| xi.player_ids.as_slice())
+                let xi = starting_xi_at(entry, &self.substitutions, matches_played)
+                    .map(|xi| xi.player_ids)
                     .unwrap_or_default();
                 Side {
                     franchise_id: entry.franchise_id.clone(),
@@ -858,6 +925,41 @@ impl Lobby {
                 }
             })
             .collect())
+    }
+
+    /// Replays every played playoff match from its seed, with the XI it was played with, and
+    /// lists its key moments (ADR 0007). The outcomes are the stored ones, so a replay can be
+    /// checked against the bracket.
+    ///
+    /// @param config - The ball model parameters the bracket was played with.
+    /// @returns One replay per played playoff match, in bracket order.
+    /// @throws Returns a {@link LobbyError} if a side cannot be found for a played match.
+    pub fn playoff_replays(&self, config: &ModifierConfig) -> Result<Vec<MatchReplay>, LobbyError> {
+        let Some(bracket) = &self.bracket else {
+            return Ok(Vec::new());
+        };
+        let league_len = self.league.len() as u32;
+        bracket
+            .matches()
+            .iter()
+            .enumerate()
+            .map(|(index, outcome)| {
+                // The bracket's match `index` was played after the league and `index` playoff
+                // matches, so the XI is the one at that point.
+                let sides = self.sides_at(league_len + index as u32)?;
+                let home = find_side(&sides, &outcome.home_id)?;
+                let away = find_side(&sides, &outcome.away_id)?;
+                Ok(replay_match(
+                    &self.id,
+                    &outcome.id,
+                    outcome.round,
+                    home,
+                    away,
+                    MatchKind::Playoff,
+                    config,
+                ))
+            })
+            .collect()
     }
 
     /// Passes for every connected-away owner who has to act on the open lot, until none is left.
@@ -1022,6 +1124,34 @@ fn find_side<'a>(sides: &'a [Side], franchise_id: &str) -> Result<&'a Side, Lobb
         .iter()
         .find(|side| side.franchise_id == franchise_id)
         .ok_or_else(|| LobbyError::UnknownFranchise(franchise_id.to_string()))
+}
+
+/// The XI a franchise had after `matches_played` matches: its current XI with every later
+/// substitution of its owner undone, newest first. A system squad has no owner and never changes.
+///
+/// @param entry - The squad.
+/// @param substitutions - Every substitution made, in order.
+/// @param matches_played - The point to rebuild the XI at.
+/// @returns The XI at that point, or `None` if no XI has been saved yet.
+fn starting_xi_at(
+    entry: &SquadEntry,
+    substitutions: &[SubstitutionRecord],
+    matches_played: u32,
+) -> Option<StartingXi> {
+    let mut xi = entry.starting_xi.clone()?;
+    let Some(owner) = entry.owner_guest_id.as_deref() else {
+        return Some(xi);
+    };
+    let later = substitutions
+        .iter()
+        .rev()
+        .filter(|record| record.guest_id == owner && record.matches_played > matches_played);
+    for record in later {
+        if let Some(slot) = xi.player_ids.iter_mut().find(|id| **id == record.in_id) {
+            *slot = record.out_id.clone();
+        }
+    }
+    Some(xi)
 }
 
 #[cfg(test)]
@@ -1468,6 +1598,8 @@ mod tests {
         lobby
             .substitute("guest-a", &out, &incoming)
             .expect("the free swap is made");
+        assert_eq!(lobby.substitutions().len(), 1);
+        assert_eq!(lobby.substitutions()[0].matches_played, 1);
         assert_eq!(
             lobby.begin_substitution("guest-a"),
             Err(LobbyError::Substitution(SubstitutionError::AlreadyUsed))
@@ -1524,6 +1656,33 @@ mod tests {
                     .map(|p| (out.clone(), p.id.clone()))
             })
             .expect("a bench player shares a role with someone in the XI")
+    }
+
+    #[test]
+    fn a_playoff_replay_uses_the_xi_each_match_was_played_with() {
+        let mut lobby = lobby_after_first_match(&[("guest-a", "csk")]);
+        let config = ModifierConfig::default();
+        while lobby.phase() == Phase::League {
+            lobby.advance(&config).expect("league match plays");
+        }
+        lobby.advance(&config).expect("qualifier 1 plays");
+
+        // A swap made after qualifier 1 must not change qualifier 1 when it is replayed.
+        let (out, incoming) = a_legal_swap(&lobby, "guest-a");
+        lobby
+            .begin_substitution("guest-a")
+            .expect("the substitution opens in the playoffs");
+        lobby
+            .substitute("guest-a", &out, &incoming)
+            .expect("the swap is made");
+        lobby.advance(&config).expect("eliminator plays");
+
+        let replays = lobby.playoff_replays(&config).expect("the playoffs replay");
+        let stored = lobby.bracket().expect("the bracket exists").matches();
+        assert_eq!(replays.len(), 2);
+        for (replay, outcome) in replays.iter().zip(stored) {
+            assert_eq!(&replay.outcome, outcome);
+        }
     }
 
     #[test]
@@ -1594,6 +1753,7 @@ mod tests {
         lobby
             .advance(&ModifierConfig::default())
             .expect("the league is skipped");
+        assert_eq!(lobby.skipped_after(), Some(1));
         assert_eq!(lobby.phase(), Phase::Playoffs);
         assert_eq!(lobby.league().len(), 70);
     }

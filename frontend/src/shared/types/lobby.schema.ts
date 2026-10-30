@@ -1,10 +1,11 @@
-import { array, number, object, string, enum as zodEnum } from "zod";
+import { array, boolean, number, object, string, enum as zodEnum } from "zod";
 
 import {
   LAST_ROUND,
   LOBBY_CODE_LENGTH,
   MAX_OWNERS,
 } from "../const/lobby.const";
+import { playerIdSchema } from "./player.schema";
 import { seedVersionSchema } from "./seed.schema";
 
 /**
@@ -56,6 +57,18 @@ export const ownerSchema = object({
 });
 
 /**
+ * A substitution the season has made: the owner, the player who came off, the player who came
+ * on, and how many matches had been played when it was confirmed. The count places it in the
+ * stack, and lets the squads view rebuild the XI at any earlier point.
+ */
+export const substitutionRecordSchema = object({
+  guestId: guestIdSchema,
+  outPlayerId: playerIdSchema,
+  inPlayerId: playerIdSchema,
+  matchesPlayed: number().int().min(0),
+});
+
+/**
  * A lobby, as the frontend sees it. Owners are capped at {@link MAX_OWNERS}, one
  * per IPL franchise. Round runs from 0 (before the first match) to
  * {@link LAST_ROUND}.
@@ -78,6 +91,22 @@ export const lobbySchema = object({
    * version, so the lobby never silently picks up later player data.
    */
   seedVersion: seedVersionSchema,
+  /**
+   * Whether a substitution is open. The sim waits while it is, for every guest.
+   */
+  simPaused: boolean(),
+  /** The guests whose substitution is open, in guest-ID order. */
+  substituting: array(guestIdSchema),
+  /** The connected owners voting to skip the rest of the league. */
+  skipVoters: array(guestIdSchema),
+  /** How many connected owners must vote to skip: strictly more than half of the owners. */
+  skipThreshold: number().int().min(1),
+  /** Every substitution made, in order. */
+  substitutions: array(substitutionRecordSchema),
+  /**
+   * How many matches had been played when the league was skipped, or null if it was not.
+   */
+  skippedAfterMatches: number().int().min(0).nullable(),
 });
 
 /** Input for creating a lobby. The creator becomes its first owner. */

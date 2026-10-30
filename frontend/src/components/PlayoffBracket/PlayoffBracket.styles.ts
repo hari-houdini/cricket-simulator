@@ -2,7 +2,7 @@ import * as stylex from "@stylexjs/stylex";
 
 import { tokens } from "../../shared/const/tokens.stylex";
 
-/** StyleX rules for {@link PlayoffBracket} and {@link KeyMomentView}'s cards. */
+/** StyleX rules for {@link PlayoffBracket}'s slot cards. */
 export const styles = stylex.create({
   /**
    * The bracket's horizontal scroll container, so a narrow phone scrolls the

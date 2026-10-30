@@ -1,6 +1,8 @@
 import type { z } from "zod";
 
 import type {
+  beginSubstitutionInputSchema,
+  cancelSubstitutionInputSchema,
   getSquadInputSchema,
   setStartingXiInputSchema,
   squadSchema,
@@ -22,3 +24,13 @@ export type SetStartingXiInput = z.infer<typeof setStartingXiInputSchema>;
 
 /** Input for the free substitution, derived from {@link substituteInputSchema}. */
 export type SubstituteInput = z.infer<typeof substituteInputSchema>;
+
+/** Input for opening a substitution, derived from {@link beginSubstitutionInputSchema}. */
+export type BeginSubstitutionInput = z.infer<
+  typeof beginSubstitutionInputSchema
+>;
+
+/** Input for cancelling a substitution, derived from {@link cancelSubstitutionInputSchema}. */
+export type CancelSubstitutionInput = z.infer<
+  typeof cancelSubstitutionInputSchema
+>;

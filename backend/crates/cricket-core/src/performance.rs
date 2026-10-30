@@ -50,6 +50,45 @@ pub struct FallOfWicket {
     pub batting_franchise_id: String,
 }
 
+/// Draws the catcher for every wicket, in the order the wickets fell across all innings.
+///
+/// A wicket has a catcher only when it is a catch and the bowling side has a fielder to take it.
+/// The draws use their own seeded stream, so the same match always gives the same catchers and
+/// a replay can name them (see {@link crate::match_log}).
+///
+/// @param lobby_id - The lobby the match belongs to. Part of the catch seed.
+/// @param match_id - The match identifier. Part of the catch seed.
+/// @param sides - The two sides.
+/// @param innings - Every innings played, including super overs.
+/// @returns One entry per wicket: the catcher's player ID, or `None` if there was no catch.
+pub fn catchers(
+    lobby_id: &str,
+    match_id: &str,
+    sides: [&Side; 2],
+    innings: &[Innings],
+) -> Vec<Option<String>> {
+    let mut rng = GameRng::from_seed(seed_from(&["catch", lobby_id, match_id]));
+    let mut catchers = Vec::new();
+    for plan in innings {
+        let fielders = sides
+            .iter()
+            .find(|side| side.franchise_id == plan.bowling_franchise_id)
+            .map(|side| side.xi.as_slice())
+            .unwrap_or_default();
+        for ball in &plan.balls {
+            if let Some(kind) = ball.wicket {
+                let catcher = (kind == WicketKind::Caught && !fielders.is_empty()).then(|| {
+                    fielders[rng.below(fielders.len() as u32) as usize]
+                        .id
+                        .clone()
+                });
+                catchers.push(catcher);
+            }
+        }
+    }
+    catchers
+}
+
 /// Builds every starting-XI player's line and the fall of wickets for a match.
 ///
 /// @param lobby_id - The lobby the match belongs to. Part of the catch seed.
@@ -63,7 +102,7 @@ pub fn tally(
     sides: [&Side; 2],
     innings: &[Innings],
 ) -> (Vec<PlayerPerformance>, Vec<FallOfWicket>) {
-    let mut rng = GameRng::from_seed(seed_from(&["catch", lobby_id, match_id]));
+    let mut catchers = catchers(lobby_id, match_id, sides, innings).into_iter();
     let mut rows: Vec<PlayerPerformance> = sides
         .iter()
         .flat_map(|side| {
@@ -88,11 +127,6 @@ pub fn tally(
     let mut fall_of_wickets = Vec::new();
 
     for (index, plan) in innings.iter().enumerate() {
-        let fielders = sides
-            .iter()
-            .find(|side| side.franchise_id == plan.bowling_franchise_id)
-            .map(|side| side.xi.as_slice())
-            .unwrap_or_default();
         let mut wicket_number = 0;
         for ball in &plan.balls {
             let batter = find_row(&mut rows, &ball.batter_id);
@@ -117,9 +151,10 @@ pub fn tally(
                 if kind != WicketKind::RunOut {
                     find_row(&mut rows, &ball.bowler_id).wickets += 1;
                 }
-                if kind == WicketKind::Caught && !fielders.is_empty() {
-                    let catcher = &fielders[rng.below(fielders.len() as u32) as usize];
-                    find_row(&mut rows, &catcher.id).catches += 1;
+                // `catchers` holds one entry per wicket, in the same order, so each wicket
+                // takes the next one.
+                if let Some(Some(catcher_id)) = catchers.next() {
+                    find_row(&mut rows, &catcher_id).catches += 1;
                 }
             }
         }

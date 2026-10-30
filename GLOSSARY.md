@@ -122,6 +122,18 @@ _Avoid_: Run rate
 The league table, ordered by points and then NRR.
 _Avoid_: Table (in UI copy only), leaderboard
 
+**Match stack**:
+The season as a guest sees it: each match, newest on top, shown once the sim has played it. Upcoming fixtures are not shown.
+_Avoid_: Fixture list, schedule (in UI copy)
+
+**Sim pause**:
+The state in which the season waits because an owner's free substitution is open. Every guest sees it, and nothing is played until the substitution is confirmed or cancelled.
+_Avoid_: Freeze, stall
+
+**League skip**:
+A vote to play the rest of the league at once. It passes when more than half of the owners vote for it.
+_Avoid_: Forfeit, fast-forward
+
 ## Playoffs
 
 **Playoffs**:
@@ -171,8 +183,12 @@ Points a player earns from one match's performance, which the captain and vice-c
 _Avoid_: Score, rating (rating means trouble rating here)
 
 **Key moment**:
-A notable event shown during a playoff match, such as a wicket, a 50 or 100 milestone, a 4-wicket haul, the final over, or the result.
+A notable event in a playoff match, such as a wicket, a 30, 50 or 100 milestone, a partnership milestone, a 4-wicket haul, the final over, or the result.
 _Avoid_: Highlight, event
+
+**Match log**:
+The key moments of one playoff match in order: the toss, each innings from its openers to its total, and the result.
+_Avoid_: Commentary, play-by-play
 
 **Man of the Match**:
 The player with the most fantasy points in a match.

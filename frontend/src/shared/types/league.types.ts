@@ -6,6 +6,7 @@ import type {
   leagueSchema,
   matchSchema,
   matchScoreSchema,
+  setSkipVoteInputSchema,
   standingSchema,
 } from "./league.schema";
 
@@ -26,3 +27,6 @@ export type AdvanceRoundInput = z.infer<typeof advanceRoundInputSchema>;
 
 /** One played league match, derived from {@link matchSchema}. */
 export type Match = z.infer<typeof matchSchema>;
+
+/** Input for voting to skip the league, derived from {@link setSkipVoteInputSchema}. */
+export type SetSkipVoteInput = z.infer<typeof setSkipVoteInputSchema>;

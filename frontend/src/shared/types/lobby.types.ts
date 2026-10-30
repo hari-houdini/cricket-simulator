@@ -7,6 +7,7 @@ import type {
   lobbyPhaseSchema,
   lobbySchema,
   ownerSchema,
+  substitutionRecordSchema,
 } from "./lobby.schema";
 
 /** A lobby phase, derived from {@link lobbyPhaseSchema}. */
@@ -29,3 +30,6 @@ export type JoinLobbyInput = z.infer<typeof joinLobbyInputSchema>;
 
 /** Input for claiming a franchise, derived from {@link claimFranchiseInputSchema}. */
 export type ClaimFranchiseInput = z.infer<typeof claimFranchiseInputSchema>;
+
+/** A substitution the season has made, derived from {@link substitutionRecordSchema}. */
+export type Substitution = z.infer<typeof substitutionRecordSchema>;

@@ -11,6 +11,12 @@ const lobby: Lobby = {
   auctionStatus: "waiting",
   round: 0,
   seedVersion: "1.1.0",
+  simPaused: false,
+  substituting: [],
+  skipVoters: [],
+  skipThreshold: 2,
+  substitutions: [],
+  skippedAfterMatches: null,
   owners: [
     { guestId: "asha", displayName: "Asha", franchiseId: "csk" },
     { guestId: "ravi", displayName: "Ravi", franchiseId: null },
@@ -36,11 +42,7 @@ describe("franchiseClaimBlock", () => {
 
   it("blocks a claim once the lobby has left the auction phase", () => {
     expect(
-      franchiseClaimBlock(
-        { ...lobby, phase: "league", round: 1 },
-        "ravi",
-        "mi",
-      ),
+      franchiseClaimBlock({ ...lobby, phase: "league" }, "ravi", "mi"),
     ).toBe("closed");
   });
 });
