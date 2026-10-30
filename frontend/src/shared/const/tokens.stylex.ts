@@ -130,6 +130,8 @@ export const tokens = stylex.defineVars({
   borderWidthHairline: "1px",
   /** The thick edge that marks a match with an owner in it. */
   borderWidthAccent: "4px",
+  /** Thickness of the edge lines that draw on a button's hover (the snippet's btn-6 and btn-7). */
+  borderWidthLine: "2px",
   /** Width of the keyboard focus ring. */
   widthFocusRing: "2px",
   /** Gap between the focus ring and the element it marks. */

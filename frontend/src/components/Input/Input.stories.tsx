@@ -23,6 +23,46 @@ export const Text: Story = {
   },
 };
 
+/**
+ * Password field. The play checks the value is masked, so the characters are not
+ * shown on screen.
+ */
+export const Password: Story = {
+  args: {
+    kind: "text",
+    id: "password",
+    label: "Password",
+    inputType: "password",
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByLabelText("Password")).toHaveAttribute(
+      "type",
+      "password",
+    );
+  },
+};
+
+/**
+ * Text field with an error. The play checks the field is marked invalid and that
+ * its message is linked to it, so a screen reader reads the reason with the field.
+ */
+export const WithError: Story = {
+  args: {
+    kind: "text",
+    id: "email",
+    label: "Email",
+    inputType: "email",
+    error: "Enter an email address, like name@example.com.",
+  },
+  play: async ({ canvas }) => {
+    const field = canvas.getByLabelText("Email");
+    await expect(field).toHaveAttribute("aria-invalid", "true");
+    await expect(field).toHaveAccessibleDescription(
+      "Enter an email address, like name@example.com.",
+    );
+  },
+};
+
 /** Dropdown for choosing a franchise. */
 export const Select: Story = {
   args: {

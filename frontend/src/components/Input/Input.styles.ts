@@ -21,6 +21,7 @@ export const styles = stylex.create({
     fontSize: "14px",
   },
   control: {
+    width: "100%",
     minHeight: "44px",
     paddingInline: tokens.spaceMd,
     paddingBlock: tokens.spaceInput,
@@ -54,6 +55,19 @@ export const styles = stylex.create({
     "@media (prefers-reduced-motion: reduce)": {
       transitionProperty: "none",
     },
+  },
+  /**
+   * The red border on an invalid field. Colour is not the only signal: the
+   * message under the field says what is wrong, and `aria-invalid` tells
+   * assistive technology.
+   */
+  controlInvalid: {
+    borderColor: tokens.colorStatusError,
+  },
+  error: {
+    margin: 0,
+    fontSize: "14px",
+    color: tokens.colorStatusError,
   },
   toggleRow: {
     display: "inline-flex",

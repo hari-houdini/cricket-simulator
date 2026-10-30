@@ -15,4 +15,10 @@ export type InputProps = z.input<typeof inputSchema> & {
   value?: string;
   checked?: boolean;
   onChange?: ChangeEventHandler<HTMLInputElement | HTMLSelectElement>;
+  /**
+   * A message that says why the value is wrong. It is shown under a text field
+   * and linked to it with `aria-describedby`, and the field is marked
+   * `aria-invalid`. Leave it out when the value is fine.
+   */
+  error?: string | undefined;
 };

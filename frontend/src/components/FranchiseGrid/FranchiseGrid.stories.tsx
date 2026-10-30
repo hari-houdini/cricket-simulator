@@ -44,12 +44,16 @@ export const MixedTaken: Story = {
 /** While a claim is in flight, every claim button is disabled so a second click cannot race the first. */
 export const ClaimPending: Story = {
   args: { lobby: unclaimedLobby, pending: true },
-  play: async ({ canvas }) => {
-    await expect(
-      canvas.getByRole("button", { name: "Claim Chennai Super Kings" }),
-    ).toBeDisabled();
-    await userEvent.click(
-      canvas.getByRole("button", { name: "Claim Chennai Super Kings" }),
-    );
+  play: async ({ canvas, args }) => {
+    const claim = canvas.getByRole("button", {
+      name: "Claim Chennai Super Kings",
+    });
+    await expect(claim).toBeDisabled();
+    // A disabled button has `pointer-events: none`, so the pointer check would
+    // refuse the click. Skip the check (`0` is `PointerEventsCheckLevel.Never`,
+    // which is type-only in the browser test bundle) and assert the handler
+    // was never called.
+    await userEvent.click(claim, { pointerEventsCheck: 0 });
+    await expect(args.onClaim).not.toHaveBeenCalled();
   },
 };

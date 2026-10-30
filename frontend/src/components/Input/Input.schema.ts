@@ -1,4 +1,14 @@
-import { array, discriminatedUnion, literal, object, string } from "zod";
+import {
+  array,
+  discriminatedUnion,
+  literal,
+  object,
+  string,
+  enum as zodEnum,
+} from "zod";
+
+/** The native `type` a text field can take. `text` is the default. */
+export const inputTypes = ["text", "email", "password"] as const;
 
 /** One choice in a dropdown. */
 export const inputOptionSchema = object({
@@ -16,6 +26,7 @@ export const inputSchema = discriminatedUnion("kind", [
     kind: literal("text"),
     label: string().min(1),
     placeholder: string().optional(),
+    inputType: zodEnum(inputTypes).default("text"),
   }),
   object({
     kind: literal("select"),

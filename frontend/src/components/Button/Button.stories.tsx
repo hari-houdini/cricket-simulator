@@ -32,10 +32,10 @@ export const Tertiary: Story = {
 };
 
 /**
- * Hover reveals the gold underline. The play checks the compiled `:hover::after`
- * rule draws the underline to `scaleX(1)`. It reads the stylesheet rather than
- * a real hover, because `userEvent.hover` does not set `:hover` in this browser
- * run. StyleX wraps rules in `@layer`, so the match is on the rule text.
+ * Hover draws the tertiary's corner lines. The play checks the compiled
+ * `:hover::before` rule draws its line to `scaleY(1)`. It reads the stylesheet
+ * rather than a real hover, because `userEvent.hover` does not set `:hover` in
+ * this browser run. StyleX wraps rules in `@layer`, so the match is on the rule text.
  */
 export const TertiaryHover: Story = {
   args: { variant: "tertiary", children: "View details" },
@@ -46,8 +46,8 @@ export const TertiaryHover: Story = {
     await expect(
       rules.some(
         (text) =>
-          text.includes(":hover::after") &&
-          text.includes("transform: scaleX(1)"),
+          text.includes(":hover::before") &&
+          text.includes("transform: scaleY(1)"),
       ),
     ).toBe(true);
   },
@@ -63,7 +63,10 @@ export const Large: Story = {
   args: { size: "lg", children: "Confirm squad" },
 };
 
-/** Disabled buttons are opacity 50% and not interactive. The play checks the DOM reflects the prop. */
+/**
+ * Disabled primary takes the filled look of btn-13's hover, and ignores hover and
+ * press. The play checks the DOM reflects the prop.
+ */
 export const Disabled: Story = {
   args: { disabled: true, children: "Start auction" },
   play: async ({ canvas }) => {
@@ -71,6 +74,61 @@ export const Disabled: Story = {
       canvas.getByRole("button", { name: "Start auction" }),
     ).toBeDisabled();
   },
+};
+
+/** Disabled secondary: the filled look over the navy surface, with gold text kept for contrast. */
+export const DisabledSecondary: Story = {
+  args: { variant: "secondary", disabled: true, children: "Pass" },
+};
+
+/** Disabled tertiary: the same filled look, so it reads as unavailable and not as a plain link. */
+export const DisabledTertiary: Story = {
+  args: { variant: "tertiary", disabled: true, children: "View details" },
+};
+
+/**
+ * A selected button (`aria-pressed="true"`) keeps the btn-11 sheen looping. The
+ * play checks the state reaches the DOM, which is what the sheen keys on.
+ */
+export const Selected: Story = {
+  args: { "aria-pressed": true, children: "Captains only" },
+  play: async ({ canvas }) => {
+    await expect(
+      canvas.getByRole("button", { name: "Captains only" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  },
+};
+
+/**
+ * Every variant side by side, in the default, selected, and disabled states. For
+ * a visual review, since the hover and press effects need a pointer to show.
+ */
+export const AllVariants: Story = {
+  render: () => (
+    <>
+      <Button variant="primary">Bid ₹1cr</Button>
+      <Button variant="primary" aria-pressed>
+        Bid ₹1cr
+      </Button>
+      <Button variant="primary" disabled>
+        Bid ₹1cr
+      </Button>
+      <Button variant="secondary">Pass</Button>
+      <Button variant="secondary" aria-pressed>
+        Pass
+      </Button>
+      <Button variant="secondary" disabled>
+        Pass
+      </Button>
+      <Button variant="tertiary">View details</Button>
+      <Button variant="tertiary" aria-pressed>
+        View details
+      </Button>
+      <Button variant="tertiary" disabled>
+        View details
+      </Button>
+    </>
+  ),
 };
 
 /** Icon-only button. The accessible name must come from `aria-label`. */

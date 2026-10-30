@@ -18,9 +18,10 @@ import type { InputProps } from "./Input.types";
  */
 export function Input(props: InputProps) {
   const parsed = inputSchema.parse(props);
-  const { id, name, disabled, value, checked, onChange } = props;
+  const { id, name, disabled, value, checked, onChange, error } = props;
 
   if (parsed.kind === "text") {
+    const errorId = `${id}-error`;
     return (
       <div {...stylex.props(styles.field)}>
         <label htmlFor={id} {...stylex.props(styles.label)}>
@@ -29,13 +30,23 @@ export function Input(props: InputProps) {
         <input
           id={id}
           name={name}
-          type="text"
+          type={parsed.inputType}
           placeholder={parsed.placeholder}
           disabled={disabled}
           value={value}
           onChange={onChange}
-          {...stylex.props(styles.control)}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+          {...stylex.props(
+            styles.control,
+            error ? styles.controlInvalid : null,
+          )}
         />
+        {error ? (
+          <p id={errorId} {...stylex.props(styles.error)}>
+            {error}
+          </p>
+        ) : null}
       </div>
     );
   }
