@@ -169,7 +169,7 @@ export function LobbyView({
       )}
 
       {lobby.auctionStatus === "complete" && isOwner ? (
-        <SquadPanel key={lobby.round} code={lobby.code} />
+        <SquadPanel key={`squad-${lobby.round}`} code={lobby.code} />
       ) : null}
 
       {lobby.auctionStatus === "complete" ? (
@@ -189,7 +189,7 @@ export function LobbyView({
       ) : null}
 
       {lobby.auctionStatus === "complete" ? (
-        <AwardsPanel key={lobby.round} code={lobby.code} />
+        <AwardsPanel key={`awards-${lobby.round}`} code={lobby.code} />
       ) : null}
     </div>
   );
