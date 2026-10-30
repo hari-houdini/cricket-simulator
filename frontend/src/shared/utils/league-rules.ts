@@ -1,7 +1,5 @@
 import { LAST_ROUND } from "../const/lobby.const";
-
-/** Why the next round cannot be played. */
-export type AdvanceBlock = "season-over" | "no-legal-starting-xi";
+import type { AdvanceBlock } from "../types/refusal.types";
 
 /** What the advance check needs to know about the lobby. */
 export type AdvanceCheck = {

@@ -78,6 +78,13 @@ pub enum Operation {
     },
     /// Reads the league.
     GetLeague,
+    /// Reads the league table, best first.
+    GetStandings,
+    /// Reads one played league match.
+    GetMatch {
+        /// The match ID, such as `r03-csk-mi`.
+        match_id: String,
+    },
     /// Plays the next league round, or the next playoff match.
     AdvanceRound {
         /// The owner playing it.

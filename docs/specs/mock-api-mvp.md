@@ -2,7 +2,7 @@
 
 ## Context
 
-The backend (`backend/`) is empty and stays that way for this iteration. The frontend (`frontend/`) still ships the Next.js starter page, but it has shared UI primitives (Button, Card, Input, Modal, Toast, Badge, Skeleton, EmptyState, ErrorBanner) and a validated list of the 10 franchises (`shared/const/teams.const.ts`). The goal is to build the playable MVP screens in phases against a mock API layer, so the game flow can be exercised end to end before the Rust service exists. A single switch points the frontend at either the mock or the real Rust API, and the same mock can drive workflow tests.
+When this spec was written the backend (`backend/`) was empty. The frontend (`frontend/`) then still shipped the Next.js starter page, but it had shared UI primitives (Button, Card, Input, Modal, Toast, Badge, Skeleton, EmptyState, ErrorBanner) and a validated list of the 10 franchises (`shared/const/teams.const.ts`). The goal is to build the playable MVP screens in phases against a mock API layer, so the game flow can be exercised end to end before the Rust service exists. A single switch points the frontend at either the mock or the real Rust API, and the same mock can drive workflow tests.
 
 ## Problem Statement
 
@@ -31,7 +31,7 @@ Define the API contract once as zod schemas. Implement a game API client interfa
 One seam for the whole iteration: the **game API client interface** in `services/`.
 
 - `mock` implementation: in-memory, seeded, used for development, Storybook, and workflow tests.
-- `http` implementation: calls the Rust API in `ARCHITECTURE.md`. Built in phase 4 (`services/game-api/http-game-api.ts`). Its refusals become the same typed errors as the mock's, and its responses are checked against the same zod schemas.
+- `http` implementation: calls the Rust API in `ARCHITECTURE.md`. Built (`services/game-api/http-game-api.ts`), and it calls the Rust API in `backend/`. Its refusals become the same typed errors as the mock's, and its responses are checked against the same zod schemas.
 - Switch: `NEXT_PUBLIC_API_MODE` set to `mock` or `http`, default `mock`. `http` also needs `NEXT_PUBLIC_API_URL`, the Worker's origin, which is also added to the CSP `connect-src`.
 
 Components and hooks import the interface, never the mock. Contract tests call the interface, so the same suite runs against the HTTP client once the Rust service exists.
@@ -131,13 +131,13 @@ Accessibility and layout
 
 **Contract (schemas)**
 - Request and response shapes are zod schemas in `*.schema.ts`. Types are derived with `z.infer` in `*.types.ts`.
-- Schemas cover: Player, Franchise (the existing `team.schema.ts` extends to this), Squad, Lobby, Owner, Bid, Auction state, Match, Innings summary, Standings row, Awards, Fair Play rating.
+- Schemas cover: Player, Franchise (the existing `team.schema.ts` extends to this), Squad, Lobby, Owner, Bid, Auction state, Match (score level; the innings summary is not in the frontend contract yet), Standings row, Awards, Fair Play rating.
 - Money is stored as integer lakhs so floats never enter the rules. Format to ₹cr only at render time.
 
 **Rules in shared utils (pure, no I/O)**
 - Bid increment by current bid band.
 - Purse check: a bid is valid only if it does not exceed the purse remaining.
-- Squad validation: 15 drafted; XI of 11; exactly one wicket-keeper; at least 4 bowling options (bowlers and bowling all-rounders); captain and vice-captain both in the XI and distinct.
+- Squad validation: 15 drafted; XI of 11; exactly one wicket-keeper; at least 4 bowling options (bowlers and all-rounders, as `game-design.md` section 4 says); captain and vice-captain both in the XI and distinct.
 - Standings order: points descending, then NRR descending.
 - Man of the Match tie-break: most fantasy points, then `runs + 20 × wickets`, then earlier batting position.
 - Playoff mapping: top four map to Qualifier 1, Eliminator, Qualifier 2, Final as in `game-design.md` §5.
@@ -146,7 +146,7 @@ Accessibility and layout
 **Placeholders (shown as provisional in the UI)**
 - Fantasy points formula is open (`game-design.md` §14.1). The mock uses a placeholder formula, and the UI does not present it as final.
 - The Emerging Player "uncapped" definition is open (§14.2). The mock sets eligibility from seed data only.
-- Pass action, purse exhaustion, and disconnects are open (§14.4–14.6). Not implemented. The mock auction has no pass.
+- Pass action, purse exhaustion, and disconnects are open (§14.4–14.6). The mock auction has no pass. The Rust core already encodes these using the glossary terms (Pass, Removed owner, disconnect). That encoding is a placeholder until §14 is decided, and the glossary keeps the terms.
 
 **Phases to MVP** (each ends with a usable, tested slice)
 - Phase 0: Foundation. Replace the starter `app/page.tsx`. Add the API interface, schemas, the mock with its seeded generator, the env switch, and the app shell (`<header>`, `<nav>`, `<main>`, skip link). Pass lint and type check.
@@ -188,7 +188,7 @@ Prior art: `shared/utils/` has no tests yet, so these set the pattern. Existing 
 
 ## Out of Scope
 
-- The Rust backend, Cloudflare Workers, Durable Objects, and the real match simulator. The mock does not claim its outcomes match the real simulator's.
+- The balance of the real match simulator. The mock does not claim its outcomes match the Rust simulator's. The Rust backend, its Workers and Durable Objects are built separately (`ARCHITECTURE.md`).
 - Auction, squad, league and playoff scenarios over HTTP. A full auction takes hundreds of timed lots, so the contract suite covers the lobby, auction-open and refusal paths over HTTP. The post-auction behaviour is covered by the mock tests, the Rust tests and the shared fixtures.
 - Real WebSocket transport. The mock delivers events.
 - Authentication and accounts. Guests only.

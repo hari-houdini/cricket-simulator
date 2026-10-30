@@ -7,10 +7,10 @@
 
 use cricket_core::auction::AuctionError;
 use cricket_core::lobby::{Lobby, LobbyError, Phase};
-use cricket_core::model::{Franchise, Player};
+use cricket_core::match_simulator::ModifierConfig;
+use cricket_core::models::{Franchise, Player};
 use cricket_core::schedule::Fixture;
 use cricket_core::seed_data::{parse_franchises, parse_players, parse_schedule};
-use cricket_core::simulator::ModifierConfig;
 use cricket_core::squad::SQUAD_SIZE;
 
 use crate::errors::{ApiError, from_lobby, substitution_reason, xi_reason};
@@ -219,6 +219,8 @@ pub fn execute(
             to_json(&views::squad(lobby, &guest_id)?)
         }
         Operation::GetLeague => to_json(&views::league(lobby)?),
+        Operation::GetStandings => to_json(&views::standings(lobby)?),
+        Operation::GetMatch { match_id } => to_json(&views::played_match(lobby, &match_id)?),
         Operation::AdvanceRound { guest_id } => {
             advance(lobby, &guest_id, config)?;
             to_json(&views::league(lobby)?)
@@ -448,7 +450,7 @@ mod tests {
     /// @param guest - The owner.
     /// @param now - The current time.
     fn set_strongest_xi(lobby: &mut Lobby, guest: &str, now: u64) {
-        let players: Vec<cricket_core::model::Player> = lobby
+        let players: Vec<cricket_core::models::Player> = lobby
             .squads()
             .iter()
             .find(|entry| entry.owner_guest_id.as_deref() == Some(guest))

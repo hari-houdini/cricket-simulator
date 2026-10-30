@@ -9,7 +9,10 @@ export const refusalSchema = object({
   reason: string().nullable(),
 });
 
-/** Reasons a bid is refused, matching `BidBlock` in `shared/utils/auction-rules.ts`. */
+/**
+ * Reasons a bid is refused. Each reason's meaning is documented on
+ * {@link BidBlock} in `refusal.types.ts`, and the auction rules return them.
+ */
 export const bidBlockSchema = zodEnum([
   "no-open-lot",
   "lot-closed",
@@ -20,13 +23,13 @@ export const bidBlockSchema = zodEnum([
   "over-purse",
 ]);
 
-/** Reasons the auction cannot start, matching `AuctionStartBlock` in `shared/utils/game-api.errors.ts`. */
+/** Reasons the auction cannot start: the lobby is empty, or an owner has no franchise. */
 export const auctionStartBlockSchema = zodEnum([
   "no-owners",
   "unclaimed-franchise",
 ]);
 
-/** Reasons a starting XI is refused, matching `XiBlock` in `shared/utils/squad-rules.ts`. */
+/** Reasons a starting XI is refused. The squad rules return them in this order of checks. */
 export const xiBlockSchema = zodEnum([
   "wrong-size",
   "duplicate",
@@ -39,7 +42,10 @@ export const xiBlockSchema = zodEnum([
   "too-few-bowling-options",
 ]);
 
-/** Reasons a substitution is refused, matching `SubstitutionBlock` in `shared/utils/squad-rules.ts`. */
+/**
+ * Reasons a substitution is refused: its own reasons, plus every XI reason,
+ * since a swap that leaves an illegal XI is refused with that rule.
+ */
 export const substitutionBlockSchema = zodEnum([
   "not-yet-played",
   "already-used",
@@ -48,18 +54,10 @@ export const substitutionBlockSchema = zodEnum([
   "captain-or-vice-captain",
   "in-not-in-squad",
   "in-already-in-xi",
-  "wrong-size",
-  "duplicate",
-  "not-in-squad",
-  "captain-not-in-xi",
-  "vice-captain-not-in-xi",
-  "same-captain-and-vice-captain",
-  "no-wicket-keeper",
-  "too-many-wicket-keepers",
-  "too-few-bowling-options",
+  ...xiBlockSchema.options,
 ]);
 
-/** Reasons a round is not played, matching `AdvanceBlock` in `shared/utils/league-rules.ts`. */
+/** Reasons a round is not played: the season is over, or an owner has no legal XI. */
 export const advanceBlockSchema = zodEnum([
   "season-over",
   "no-legal-starting-xi",

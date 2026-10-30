@@ -10,6 +10,9 @@ import type { GameApi } from "../../shared/types/game-api.types";
 import {
   advanceRoundInputSchema,
   leagueSchema,
+  matchIdSchema,
+  matchSchema,
+  standingsSchema,
 } from "../../shared/types/league.schema";
 import {
   claimFranchiseInputSchema,
@@ -54,6 +57,19 @@ type ApiCall = {
 };
 
 /**
+ * One request for a lobby. `suffix` follows `/api/lobbies/{code}`, and the
+ * optional ids are what a refusal may name.
+ */
+type LobbyCall = {
+  readonly method: "GET" | "POST";
+  readonly suffix: string;
+  readonly body?: unknown;
+  readonly guestId?: string;
+  readonly franchiseId?: string;
+  readonly matchId?: string;
+};
+
+/**
  * Normalises a lobby code the way the mock does, then checks its shape, so
  * both modes reject the same codes with the same error.
  *
@@ -63,6 +79,22 @@ type ApiCall = {
  */
 function normaliseCode(code: string): string {
   return lobbyCodeSchema.parse(code.trim().toUpperCase());
+}
+
+/**
+ * Normalises a lobby input's code, then checks the whole input with its schema,
+ * so the HTTP client rejects bad input before sending it, as the mock does.
+ *
+ * @param schema - The input schema for the method.
+ * @param input - The input as the caller sent it.
+ * @returns The parsed input, with its code normalised.
+ * @throws {ZodError} When the input does not match the schema.
+ */
+function parseLobbyInput<T>(
+  schema: ZodType<T>,
+  input: { readonly code: string },
+): T {
+  return schema.parse({ ...input, code: normaliseCode(input.code) });
 }
 
 /**
@@ -120,12 +152,39 @@ export function createHttpGameApi(options: HttpGameApiOptions): GameApi {
   const origin = new URL(options.baseUrl).origin;
   const send: FetchLike =
     options.fetch ?? ((url, init) => globalThis.fetch(url, init));
-  const lobbyPath = (code: string) => `/api/lobbies/${normaliseCode(code)}`;
-  const lobbyContext = (code: string): RefusalContext => ({
-    code: normaliseCode(code),
-    guestId: "",
-    franchiseId: "",
-  });
+
+  /**
+   * Sends a request for one lobby. The code is normalised here, so every method
+   * accepts the same codes as the mock and shares one path and refusal context.
+   *
+   * @param code - The lobby code, as the caller typed it.
+   * @param call - The request, relative to the lobby.
+   * @param schema - The schema the successful response must match.
+   * @returns The parsed response.
+   */
+  const lobbyCall = <T>(
+    code: string,
+    call: LobbyCall,
+    schema: ZodType<T>,
+  ): Promise<T> => {
+    const lobbyCode = normaliseCode(code);
+    return request(
+      send,
+      origin,
+      {
+        method: call.method,
+        path: `/api/lobbies/${lobbyCode}${call.suffix}`,
+        body: call.body,
+        context: {
+          code: lobbyCode,
+          guestId: call.guestId ?? "",
+          franchiseId: call.franchiseId ?? "",
+          matchId: call.matchId ?? "",
+        },
+      },
+      schema,
+    );
+  };
 
   return {
     createLobby: async (input) => {
@@ -137,230 +196,177 @@ export function createHttpGameApi(options: HttpGameApiOptions): GameApi {
           method: "POST",
           path: "/api/lobbies",
           body: parsed,
-          context: { code: "", guestId: parsed.guestId, franchiseId: "" },
+          context: {
+            code: "",
+            guestId: parsed.guestId,
+            franchiseId: "",
+            matchId: "",
+          },
         },
         lobbySchema,
       );
     },
 
     getLobby: (code) =>
-      request(
-        send,
-        origin,
-        {
-          method: "GET",
-          path: lobbyPath(code),
-          context: lobbyContext(code),
-        },
-        lobbySchema,
-      ),
+      lobbyCall(code, { method: "GET", suffix: "" }, lobbySchema),
 
     joinLobby: async (input) => {
-      const parsed = joinLobbyInputSchema.parse({
-        ...input,
-        code: normaliseCode(input.code),
-      });
-      return request(
-        send,
-        origin,
+      const parsed = parseLobbyInput(joinLobbyInputSchema, input);
+      return lobbyCall(
+        parsed.code,
         {
           method: "POST",
-          path: `${lobbyPath(parsed.code)}/join`,
+          suffix: "/join",
           body: { guestId: parsed.guestId, displayName: parsed.displayName },
-          context: { ...lobbyContext(parsed.code), guestId: parsed.guestId },
+          guestId: parsed.guestId,
         },
         lobbySchema,
       );
     },
 
     claimFranchise: async (input) => {
-      const parsed = claimFranchiseInputSchema.parse({
-        ...input,
-        code: normaliseCode(input.code),
-      });
-      return request(
-        send,
-        origin,
+      const parsed = parseLobbyInput(claimFranchiseInputSchema, input);
+      return lobbyCall(
+        parsed.code,
         {
           method: "POST",
-          path: `${lobbyPath(parsed.code)}/franchise`,
+          suffix: "/franchise",
           body: { guestId: parsed.guestId, franchiseId: parsed.franchiseId },
-          context: {
-            code: parsed.code,
-            guestId: parsed.guestId,
-            franchiseId: parsed.franchiseId,
-          },
+          guestId: parsed.guestId,
+          franchiseId: parsed.franchiseId,
         },
         lobbySchema,
       );
     },
 
     startAuction: async (input) => {
-      const parsed = startAuctionInputSchema.parse({
-        ...input,
-        code: normaliseCode(input.code),
-      });
-      return request(
-        send,
-        origin,
+      const parsed = parseLobbyInput(startAuctionInputSchema, input);
+      return lobbyCall(
+        parsed.code,
         {
           method: "POST",
-          path: `${lobbyPath(parsed.code)}/auction/start`,
+          suffix: "/auction/start",
           body: { guestId: parsed.guestId },
-          context: { ...lobbyContext(parsed.code), guestId: parsed.guestId },
+          guestId: parsed.guestId,
         },
         lobbySchema,
       );
     },
 
     getAuction: (code) =>
-      request(
-        send,
-        origin,
-        {
-          method: "GET",
-          path: `${lobbyPath(code)}/auction`,
-          context: lobbyContext(code),
-        },
-        auctionSchema,
-      ),
+      lobbyCall(code, { method: "GET", suffix: "/auction" }, auctionSchema),
 
     placeBid: async (input) => {
-      const parsed = placeBidInputSchema.parse({
-        ...input,
-        code: normaliseCode(input.code),
-      });
-      return request(
-        send,
-        origin,
+      const parsed = parseLobbyInput(placeBidInputSchema, input);
+      return lobbyCall(
+        parsed.code,
         {
           method: "POST",
-          path: `${lobbyPath(parsed.code)}/auction/bids`,
-          body: {
-            guestId: parsed.guestId,
-            amountLakhs: parsed.amountLakhs,
-          },
-          context: { ...lobbyContext(parsed.code), guestId: parsed.guestId },
+          suffix: "/auction/bids",
+          body: { guestId: parsed.guestId, amountLakhs: parsed.amountLakhs },
+          guestId: parsed.guestId,
         },
         auctionSchema,
       );
     },
 
     getSquad: async (input) => {
-      const parsed = getSquadInputSchema.parse({
-        ...input,
-        code: normaliseCode(input.code),
-      });
+      const parsed = parseLobbyInput(getSquadInputSchema, input);
       const guest = encodeURIComponent(parsed.guestId);
-      return request(
-        send,
-        origin,
+      return lobbyCall(
+        parsed.code,
         {
           method: "GET",
-          path: `${lobbyPath(parsed.code)}/squad?guestId=${guest}`,
-          context: { ...lobbyContext(parsed.code), guestId: parsed.guestId },
+          suffix: `/squad?guestId=${guest}`,
+          guestId: parsed.guestId,
         },
         squadSchema,
       );
     },
 
     setStartingXi: async (input) => {
-      const parsed = setStartingXiInputSchema.parse({
-        ...input,
-        code: normaliseCode(input.code),
-      });
-      return request(
-        send,
-        origin,
+      const parsed = parseLobbyInput(setStartingXiInputSchema, input);
+      return lobbyCall(
+        parsed.code,
         {
           method: "POST",
-          path: `${lobbyPath(parsed.code)}/squad/xi`,
+          suffix: "/squad/xi",
           body: {
             guestId: parsed.guestId,
             playerIds: parsed.playerIds,
             captainId: parsed.captainId,
             viceCaptainId: parsed.viceCaptainId,
           },
-          context: { ...lobbyContext(parsed.code), guestId: parsed.guestId },
+          guestId: parsed.guestId,
         },
         squadSchema,
       );
     },
 
     substitute: async (input) => {
-      const parsed = substituteInputSchema.parse({
-        ...input,
-        code: normaliseCode(input.code),
-      });
-      return request(
-        send,
-        origin,
+      const parsed = parseLobbyInput(substituteInputSchema, input);
+      return lobbyCall(
+        parsed.code,
         {
           method: "POST",
-          path: `${lobbyPath(parsed.code)}/squad/substitution`,
+          suffix: "/squad/substitution",
           body: {
             guestId: parsed.guestId,
             outPlayerId: parsed.outPlayerId,
             inPlayerId: parsed.inPlayerId,
           },
-          context: { ...lobbyContext(parsed.code), guestId: parsed.guestId },
+          guestId: parsed.guestId,
         },
         squadSchema,
       );
     },
 
     getLeague: (code) =>
-      request(
-        send,
-        origin,
+      lobbyCall(code, { method: "GET", suffix: "/league" }, leagueSchema),
+
+    getStandings: (code) =>
+      lobbyCall(code, { method: "GET", suffix: "/standings" }, standingsSchema),
+
+    getMatch: async (code, matchId) => {
+      const id = matchIdSchema.parse(matchId);
+      return lobbyCall(
+        code,
         {
           method: "GET",
-          path: `${lobbyPath(code)}/league`,
-          context: lobbyContext(code),
+          suffix: `/matches/${encodeURIComponent(id)}`,
+          matchId: id,
         },
-        leagueSchema,
-      ),
+        matchSchema,
+      );
+    },
 
     advanceRound: async (input) => {
-      const parsed = advanceRoundInputSchema.parse({
-        ...input,
-        code: normaliseCode(input.code),
-      });
-      return request(
-        send,
-        origin,
+      const parsed = parseLobbyInput(advanceRoundInputSchema, input);
+      return lobbyCall(
+        parsed.code,
         {
           method: "POST",
-          path: `${lobbyPath(parsed.code)}/league/advance`,
+          suffix: "/league/advance",
           body: { guestId: parsed.guestId },
-          context: { ...lobbyContext(parsed.code), guestId: parsed.guestId },
+          guestId: parsed.guestId,
         },
         leagueSchema,
       );
     },
 
     getPlayoffs: (code) =>
-      request(
-        send,
-        origin,
-        {
-          method: "GET",
-          path: `${lobbyPath(code)}/playoffs`,
-          context: lobbyContext(code),
-        },
-        playoffsSchema,
-      ),
+      lobbyCall(code, { method: "GET", suffix: "/playoffs" }, playoffsSchema),
 
     getAwards: (code) =>
-      request(
-        send,
-        origin,
-        {
-          method: "GET",
-          path: `${lobbyPath(code)}/awards`,
-          context: lobbyContext(code),
-        },
-        awardsSchema,
+      lobbyCall(code, { method: "GET", suffix: "/awards" }, awardsSchema),
+
+    // The live transport is a WebSocket, which the backend does not serve yet.
+    // Rejecting says so, rather than returning a subscription that never fires.
+    subscribe: () =>
+      Promise.reject(
+        new Error(
+          "Live events need the WebSocket transport, which is not built yet.",
+        ),
       ),
   };
 }

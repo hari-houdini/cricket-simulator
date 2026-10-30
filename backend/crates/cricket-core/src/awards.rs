@@ -11,10 +11,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::fantasy::{self, SquadRole};
 use crate::lobby::SquadEntry;
-use crate::model::Category;
+use crate::match_simulator::MatchOutcome;
+use crate::models::Category;
 use crate::performance::PlayerPerformance;
-use crate::simulator::MatchOutcome;
-use crate::standings::TeamRecord;
+use crate::standings::FranchiseRecord;
 
 /// The first and second place on one award.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -291,25 +291,30 @@ fn most_valuable(matches: &[MatchOutcome], squads: &[SquadEntry]) -> Vec<OwnerLi
     lines
 }
 
+/// The common denominator for per-match Fair Play means: the least common multiple of 1 through 11,
+/// the largest starting XI. Multiplying by it keeps every match mean an integer.
+const FAIR_PLAY_SCALE: u64 = 27_720;
+
 /// Builds the Fair Play award from the match scores.
 ///
-/// A match rating is the floor of a team's mean score, in tenths. A franchise's standing is the
-/// mean of its match ratings. Each player's average effect is their mean score minus the maximum.
+/// A franchise's standing is the mean of its per-match mean scores. Each per-match mean is kept
+/// exact by scaling it with {@link FAIR_PLAY_SCALE}, not rounded, so near-equal standings still
+/// rank correctly. Each player's average effect is their mean score minus the maximum.
 ///
 /// @param table - The league table, best first. Its order breaks standing ties.
 /// @param matches - Every played match.
 /// @returns The Fair Play award.
-pub fn fair_play(table: &[TeamRecord], matches: &[MatchOutcome]) -> FairPlayAward {
+pub fn fair_play(table: &[FranchiseRecord], matches: &[MatchOutcome]) -> FairPlayAward {
     let mut ratings: BTreeMap<&str, (u64, u32)> = BTreeMap::new();
     let mut players: BTreeMap<&str, (u64, u32, &str)> = BTreeMap::new();
     for outcome in matches {
-        let mut per_team: BTreeMap<&str, (u32, u32)> = BTreeMap::new();
+        let mut per_franchise: BTreeMap<&str, (u32, u32)> = BTreeMap::new();
         for score in &outcome.fair_play {
-            let team = per_team
+            let franchise = per_franchise
                 .entry(score.franchise_id.as_str())
                 .or_insert((0, 0));
-            team.0 += score.score_tenths;
-            team.1 += 1;
+            franchise.0 += score.score_tenths;
+            franchise.1 += 1;
             let player = players.entry(score.player_id.as_str()).or_insert((
                 0,
                 0,
@@ -318,10 +323,10 @@ pub fn fair_play(table: &[TeamRecord], matches: &[MatchOutcome]) -> FairPlayAwar
             player.0 += u64::from(score.score_tenths);
             player.1 += 1;
         }
-        for (franchise, (sum, count)) in per_team {
-            let rating = sum / count;
+        for (franchise, (sum, count)) in per_franchise {
+            // An XI has at most 11 players, so `count` always divides FAIR_PLAY_SCALE.
             let entry = ratings.entry(franchise).or_insert((0, 0));
-            entry.0 += u64::from(rating);
+            entry.0 += u64::from(sum) * (FAIR_PLAY_SCALE / u64::from(count));
             entry.1 += 1;
         }
     }
@@ -337,21 +342,36 @@ pub fn fair_play(table: &[TeamRecord], matches: &[MatchOutcome]) -> FairPlayAwar
                 .collect();
             Some(FairPlayFranchise {
                 franchise_id: record.franchise_id.clone(),
-                standing: rating_sum as f64 / f64::from(rated) / 10.0,
+                standing: rating_sum as f64 / (FAIR_PLAY_SCALE as f64 * f64::from(rated) * 10.0),
                 lowering: lowest_effects(&effects),
                 lifting: highest_effects(&effects),
             })
         })
         .collect();
 
-    let winner = franchises
+    // Compared exactly, so a tie keeps the earlier franchise in league table order.
+    let winner = table
         .iter()
-        .fold(None::<&FairPlayFranchise>, |best, candidate| match best {
-            Some(current) if current.standing >= candidate.standing => Some(current),
+        .filter_map(|record| {
+            ratings
+                .get(record.franchise_id.as_str())
+                .map(|&rating| (record.franchise_id.as_str(), rating))
+        })
+        .fold(None::<(&str, (u64, u32))>, |best, candidate| match best {
+            Some(current) if !beats(candidate.1, current.1) => Some(current),
             _ => Some(candidate),
         })
-        .map(|franchise| franchise.franchise_id.clone());
+        .map(|(franchise_id, _)| franchise_id.to_string());
     FairPlayAward { winner, franchises }
+}
+
+/// Whether one franchise's Fair Play standing is strictly higher than another's.
+///
+/// @param left - The (scaled rating sum, rated match count) of the franchise in question.
+/// @param right - The (scaled rating sum, rated match count) to compare against.
+/// @returns True if `left` has the higher mean, comparing by cross-multiplying.
+fn beats(left: (u64, u32), right: (u64, u32)) -> bool {
+    u128::from(left.0) * u128::from(right.1) > u128::from(right.0) * u128::from(left.1)
 }
 
 /// The two players who pulled a franchise's rating down most. Only players below the maximum count.
@@ -408,7 +428,7 @@ fn effect_line(entry: &(&str, u64, u32)) -> PlayerEffect {
 /// @returns Every award for the season so far.
 pub fn season_awards(
     matches: &[MatchOutcome],
-    table: &[TeamRecord],
+    table: &[FranchiseRecord],
     squads: &[SquadEntry],
 ) -> SeasonAwards {
     let totals = season_totals(matches);
@@ -485,8 +505,8 @@ fn map_podium<T, U>(podium: Podium<T>, convert: impl Fn(T) -> U) -> Podium<U> {
 mod tests {
     use super::*;
     use crate::lobby::StartingXi;
-    use crate::model::Player;
-    use crate::simulator::PlayerFairPlay;
+    use crate::match_simulator::PlayerFairPlay;
+    use crate::models::Player;
     use crate::squad::SQUAD_SIZE;
 
     fn perf(player: &str, franchise: &str, position: u32) -> PlayerPerformance {
@@ -538,7 +558,7 @@ mod tests {
             id: id.to_string(),
             name: id.to_string(),
             franchise_id: None,
-            role: crate::model::Role::Batter,
+            role: crate::models::Role::Batter,
             category,
             retired: false,
             batting: 50,
@@ -629,7 +649,7 @@ mod tests {
 
     #[test]
     fn fair_play_ranks_the_cleaner_franchise_and_names_two_lowering_players() {
-        let table = vec![TeamRecord::new("a"), TeamRecord::new("b")];
+        let table = vec![FranchiseRecord::new("a"), FranchiseRecord::new("b")];
         let matches = vec![outcome(
             1,
             Vec::new(),
@@ -663,7 +683,7 @@ mod tests {
 
     #[test]
     fn fair_play_ties_keep_league_table_order() {
-        let table = vec![TeamRecord::new("top"), TeamRecord::new("second")];
+        let table = vec![FranchiseRecord::new("top"), FranchiseRecord::new("second")];
         let matches = vec![outcome(
             1,
             Vec::new(),
@@ -673,8 +693,26 @@ mod tests {
     }
 
     #[test]
+    fn fair_play_ranks_fractional_match_means_exactly() {
+        // A's mean is 99.33 and B's is 99. Flooring both to 99 would tie them, and the table
+        // order would then wrongly give B the award.
+        let table = vec![FranchiseRecord::new("b"), FranchiseRecord::new("a")];
+        let matches = vec![outcome(
+            1,
+            Vec::new(),
+            vec![
+                score("p1", "a", 100),
+                score("p2", "a", 99),
+                score("p3", "a", 99),
+                score("p4", "b", 99),
+            ],
+        )];
+        assert_eq!(fair_play(&table, &matches).winner.as_deref(), Some("a"));
+    }
+
+    #[test]
     fn a_franchise_with_no_rated_match_cannot_win_fair_play() {
-        let table = vec![TeamRecord::new("a")];
+        let table = vec![FranchiseRecord::new("a")];
         assert_eq!(fair_play(&table, &[]).winner, None);
     }
 

@@ -6,9 +6,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::{Innings, WicketKind};
+use crate::match_simulator::Side;
+use crate::models::{Innings, WicketKind};
 use crate::seed::{GameRng, seed_from};
-use crate::simulator::Side;
 
 /// One starting-XI player's line in one match, the input to fantasy points and awards.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -142,7 +142,7 @@ fn find_row<'a>(rows: &'a mut [PlayerPerformance], player_id: &str) -> &'a mut P
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Ball, Category, Player, Role};
+    use crate::models::{Ball, Category, Player, Role};
 
     fn player(id: &str, role: Role) -> Player {
         Player {

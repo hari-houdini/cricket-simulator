@@ -152,6 +152,13 @@ pub fn parse(
             )
         }
         ("GET", ["api", "lobbies", code, "league"]) => lobby(code, Operation::GetLeague),
+        ("GET", ["api", "lobbies", code, "standings"]) => lobby(code, Operation::GetStandings),
+        ("GET", ["api", "lobbies", code, "matches", segment]) => lobby(
+            code,
+            Operation::GetMatch {
+                match_id: match_id(segment)?,
+            },
+        ),
         ("POST", ["api", "lobbies", code, "league", "advance"]) => {
             let input: GuestBody = parse_body(body)?;
             lobby(
@@ -341,6 +348,27 @@ fn invalid(field: &'static str) -> ApiError {
     ApiError::because(400, "InvalidInputError", field)
 }
 
+/// Checks a match ID from the URL. It has the same shape as the frontend's `matchIdSchema`:
+/// lowercase letters and digits, joined by single hyphens.
+///
+/// @param value - The ID segment from the path.
+/// @returns The ID, unchanged.
+/// @throws Returns a 400 {@link ApiError} naming `matchId` when the shape is wrong.
+fn match_id(value: &str) -> Result<String, ApiError> {
+    let well_formed = !value.is_empty()
+        && value.split('-').all(|part| {
+            !part.is_empty()
+                && part
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
+        });
+    if well_formed {
+        Ok(value.to_string())
+    } else {
+        Err(invalid("matchId"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -362,6 +390,35 @@ mod tests {
                 display_name: "Asha".to_string(),
             }
         );
+    }
+
+    #[test]
+    fn the_standings_and_a_match_are_routed_as_reads() {
+        let standings = parse("GET", "/api/lobbies/abc123/standings", None, "").expect("routes");
+        assert!(matches!(
+            standings,
+            Routed::Lobby {
+                operation: Operation::GetStandings,
+                ..
+            }
+        ));
+        let routed =
+            parse("GET", "/api/lobbies/abc123/matches/r03-csk-mi", None, "").expect("routes");
+        assert_eq!(
+            routed,
+            Routed::Lobby {
+                code: "ABC123".to_string(),
+                operation: Operation::GetMatch {
+                    match_id: "r03-csk-mi".to_string(),
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn a_malformed_match_id_is_refused_before_the_lobby_is_read() {
+        let error = parse("GET", "/api/lobbies/abc123/matches/Not-An-Id", None, "").unwrap_err();
+        assert_eq!(error.reason, Some("matchId"));
     }
 
     #[test]

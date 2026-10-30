@@ -18,13 +18,15 @@ export const startingXiSchema = object({
 });
 
 /**
- * One owner's squad as the UI sees it. `startingXi` is null until the owner
- * saves an XI. `locked` is true from the first match, and `substitutionUsed`
- * records whether the one free swap has been spent.
+ * One owner's squad as the UI sees it. It holds exactly {@link SQUAD_SIZE}
+ * players, since the squad is only read once the auction has finished.
+ * `startingXi` is null until the owner saves an XI. `locked` is true from the
+ * first match, and `substitutionUsed` records whether the one free swap has
+ * been spent.
  */
 export const squadSchema = object({
   guestId: guestIdSchema,
-  players: array(playerSchema).max(SQUAD_SIZE),
+  players: array(playerSchema).length(SQUAD_SIZE),
   startingXi: startingXiSchema.nullable(),
   locked: boolean(),
   substitutionUsed: boolean(),

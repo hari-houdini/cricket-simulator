@@ -9,7 +9,7 @@ import { awardsSchema } from "./awards.schema";
 import { leagueSchema } from "./league.schema";
 import { lobbySchema } from "./lobby.schema";
 import { playoffsSchema } from "./playoffs.schema";
-import { squadSchema } from "./squad.schema";
+import { squadSchema, startingXiSchema } from "./squad.schema";
 
 /**
  * The shared API fixtures. The backend's Rust tests round-trip the same files through its DTOs,
@@ -56,6 +56,37 @@ describe("API fixtures", () => {
 
   it("match the squad schema", () => {
     expect(issuesFor(squadSchema, "squad")).toEqual([]);
+  });
+
+  it("reject a squad that is not 15 players", () => {
+    const squad: unknown = readFixture("squad");
+    if (typeof squad !== "object" || squad === null || !("players" in squad)) {
+      throw new Error("the squad fixture has no players list");
+    }
+    const players: unknown = squad.players;
+    if (!Array.isArray(players)) {
+      throw new Error("the squad fixture's players are not a list");
+    }
+
+    expect(
+      squadSchema.safeParse({ ...squad, players: players.slice(0, 14) })
+        .success,
+    ).toBe(false);
+  });
+
+  it("reject a starting XI that is not 11 players", () => {
+    const playerIds = Array.from(
+      { length: 10 },
+      (_, index) => `player-${index}`,
+    );
+
+    expect(
+      startingXiSchema.safeParse({
+        playerIds,
+        captainId: playerIds[0],
+        viceCaptainId: playerIds[1],
+      }).success,
+    ).toBe(false);
   });
 
   it("match the league schema", () => {

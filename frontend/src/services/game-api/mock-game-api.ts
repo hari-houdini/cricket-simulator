@@ -14,9 +14,16 @@ import {
 import type { Auction } from "../../shared/types/auction.types";
 import type { Awards } from "../../shared/types/awards.types";
 import type { GameApi } from "../../shared/types/game-api.types";
+import { gameEventSchema } from "../../shared/types/game-event.schema";
+import type {
+  GameEvent,
+  GameEventListener,
+} from "../../shared/types/game-event.types";
 import {
   advanceRoundInputSchema,
   leagueSchema,
+  matchIdSchema,
+  matchSchema,
 } from "../../shared/types/league.schema";
 import type { League, MatchScore } from "../../shared/types/league.types";
 import {
@@ -57,6 +64,7 @@ import {
   LeagueNotStartedError,
   LobbyFullError,
   LobbyNotFoundError,
+  MatchNotFoundError,
   NotAnOwnerError,
   SquadNotReadyError,
   SubstitutionBlockedError,
@@ -92,9 +100,11 @@ import {
 } from "./mock-auction";
 import { type AwardOwner, buildAwards } from "./mock-awards";
 import {
+  leagueMatchId,
   type MatchRecord,
   matchSeedKey,
   playMatch,
+  playoffMatchId,
   playoffResultKey,
   recordMatch,
   resultKey,
@@ -182,7 +192,26 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
   const playoffResults = new Map<string, PlayoffResult>();
   /** Every played match's player lines, by lobby code, for the awards. */
   const matchRecordsByCode = new Map<string, MatchRecord[]>();
+  /** Live event listeners, by lobby code. */
+  const listenersByCode = new Map<string, Set<GameEventListener>>();
   let sequence = 0;
+
+  /**
+   * Sends one live event to every listener of its lobby. The event is parsed
+   * first, so a listener never receives a shape the schema would reject.
+   *
+   * @param event - The event, which names its lobby in `code`.
+   */
+  function emit(event: GameEvent): void {
+    const listeners = listenersByCode.get(event.code);
+    if (!listeners) {
+      return;
+    }
+    const parsed = gameEventSchema.parse(event);
+    for (const listener of listeners) {
+      listener(parsed);
+    }
+  }
 
   /**
    * Draws a code that no existing lobby uses. Retries on collision, which is
@@ -244,7 +273,17 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
     if (!stored) {
       throw new AuctionNotStartedError(code);
     }
+    const soldBefore = stored.auction.sold.length;
     settleExpiredLots(stored.auction, stored.queue, now());
+    for (const sale of stored.auction.sold.slice(soldBefore)) {
+      emit({
+        type: "auction_hammer",
+        code,
+        playerId: sale.player.id,
+        guestId: sale.guestId,
+        amountLakhs: sale.amountLakhs,
+      });
+    }
     const lobby = findLobby(code);
     lobby.auctionStatus = stored.auction.status;
     if (stored.auction.status === "complete" && lobby.phase === "auction") {
@@ -545,6 +584,19 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
   function playLeagueRound(code: string, round: number) {
     for (const match of leagueSchedule()) {
       if (match.round === round) {
+        const matchId = leagueMatchId(
+          round,
+          match.homeFranchiseId,
+          match.awayFranchiseId,
+        );
+        emit({
+          type: "match_started",
+          code,
+          matchId,
+          round,
+          homeFranchiseId: match.homeFranchiseId,
+          awayFranchiseId: match.awayFranchiseId,
+        });
         const { score } = playFixture(
           code,
           round,
@@ -553,6 +605,7 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
           false,
         );
         leagueResults.set(resultKey(code, match), score);
+        emit({ type: "match_complete", code, matchId, result: score });
       }
     }
   }
@@ -575,20 +628,34 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       throw new Error(`Playoff round ${round} has no teams to play.`);
     }
 
+    const matchId = playoffMatchId(round);
+    emit({
+      type: "match_started",
+      code,
+      matchId,
+      round,
+      homeFranchiseId: home,
+      awayFranchiseId: away,
+    });
     const { score, superOver } = playFixture(code, round, home, away, true);
     // A knockout match is never tied: playFixture settles a level score.
     const winnerFranchiseId = score.winnerFranchiseId;
     if (winnerFranchiseId === null) {
       throw new Error(`Playoff round ${round} ended without a winner.`);
     }
+    const keyMoments = keyMomentsFor(score, home, away);
     playoffResults.set(playoffResultKey(code, match.slot), {
       homeFranchiseId: home,
       awayFranchiseId: away,
       winnerFranchiseId,
       superOver,
       score,
-      keyMoments: keyMomentsFor(score, home, away),
+      keyMoments,
     });
+    for (const moment of keyMoments) {
+      emit({ type: "key_moment", code, matchId, moment });
+    }
+    emit({ type: "match_complete", code, matchId, result: score });
   }
 
   /**
@@ -796,8 +863,61 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
       }
       if (round === LAST_ROUND) {
         lobby.phase = "complete";
+        const champion = playoffsView(input.code).champion;
+        if (champion !== null) {
+          emit({
+            type: "season_complete",
+            code: input.code,
+            championFranchiseId: champion,
+          });
+        }
       }
       return leagueView(input.code);
+    },
+
+    async getStandings(rawCode) {
+      const code = normalizeCode(rawCode);
+      requireSeason(code);
+      return leagueView(code).standings;
+    },
+
+    async getMatch(rawCode, matchId) {
+      const code = normalizeCode(rawCode);
+      const id = matchIdSchema.parse(matchId);
+      requireSeason(code);
+      const match = leagueSchedule().find(
+        (item) =>
+          leagueMatchId(
+            item.round,
+            item.homeFranchiseId,
+            item.awayFranchiseId,
+          ) === id,
+      );
+      const result = match
+        ? leagueResults.get(resultKey(code, match))
+        : undefined;
+      if (!match || !result) {
+        throw new MatchNotFoundError(id);
+      }
+      return matchSchema.parse({
+        id,
+        round: match.round,
+        homeFranchiseId: match.homeFranchiseId,
+        awayFranchiseId: match.awayFranchiseId,
+        result,
+      });
+    },
+
+    async subscribe(rawCode, listener) {
+      const code = normalizeCode(rawCode);
+      findLobby(code);
+      const listeners =
+        listenersByCode.get(code) ?? new Set<GameEventListener>();
+      listenersByCode.set(code, listeners);
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
     },
 
     async getAwards(rawCode) {
@@ -835,6 +955,16 @@ export function createMockGameApi(options: MockGameApiOptions = {}): GameApi {
         throw new BidBlockedError(reason);
       }
       recordBid(stored.auction, input.guestId, input.amountLakhs, clock);
+      const lot = stored.auction.lot;
+      if (lot !== null) {
+        emit({
+          type: "auction_bid",
+          code: input.code,
+          playerId: lot.player.id,
+          guestId: input.guestId,
+          amountLakhs: input.amountLakhs,
+        });
+      }
       return auctionSchema.parse(stored.auction);
     },
 

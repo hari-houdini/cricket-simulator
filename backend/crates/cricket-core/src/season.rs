@@ -1,10 +1,10 @@
 //! Plays a whole season: the league from the lobby schedule, then the playoffs
 //! (GLOSSARY.md, Season).
 
+use crate::match_simulator::{MatchKind, MatchOutcome, ModifierConfig, Side, simulate_match};
 use crate::playoffs::{PlayoffError, PlayoffResult, run_playoffs};
 use crate::schedule::Fixture;
-use crate::simulator::{MatchKind, MatchOutcome, ModifierConfig, Side, simulate_match};
-use crate::standings::{TeamRecord, league_table};
+use crate::standings::{FranchiseRecord, league_table};
 
 /// The complete result of a season.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -12,7 +12,7 @@ pub struct SeasonResult {
     /// Every league match, in play order.
     pub league: Vec<MatchOutcome>,
     /// The final league table, best first.
-    pub table: Vec<TeamRecord>,
+    pub table: Vec<FranchiseRecord>,
     /// The playoff bracket and champion.
     pub playoffs: PlayoffResult,
 }
@@ -93,8 +93,8 @@ pub fn play_season(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::Player;
-    use crate::model::Role;
+    use crate::models::Player;
+    use crate::models::Role;
     use crate::schedule::lobby_schedule;
     use crate::seed_data::{parse_franchises, parse_players, parse_schedule};
 

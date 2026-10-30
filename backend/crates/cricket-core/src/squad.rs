@@ -1,6 +1,6 @@
 //! Squad and starting XI rules (docs/game-design.md section 4).
 
-use crate::model::{Lakhs, Player, Role};
+use crate::models::{Lakhs, Player, Role};
 
 /// Players drafted by each owner (GLOSSARY.md, Squad).
 pub const SQUAD_SIZE: usize = 15;
@@ -137,7 +137,7 @@ pub fn validate_starting_xi(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::Category;
+    use crate::models::Category;
 
     fn player(id: &str, role: Role, base_price: Lakhs) -> Player {
         Player {

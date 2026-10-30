@@ -2,6 +2,8 @@
 node_modules/
 target/
 *.lock
+# AGENTS.md requires Cargo.lock to be committed.
+!backend/Cargo.lock
 
 # Build outputs
 dist/
@@ -41,3 +43,6 @@ temp/
 # Development
 .wrangler/
 wrangler.toml.local
+
+# Playwright MCP snapshots
+.playwright-mcp/

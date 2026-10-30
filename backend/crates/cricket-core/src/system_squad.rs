@@ -1,10 +1,10 @@
 //! System squads and the strongest legal XI (GLOSSARY.md, System squad; docs/game-design.md
 //! sections 2 and 4).
 //!
-//! A franchise with no owner is filled automatically, so every season has all 10 teams. The
+//! A franchise with no owner is filled automatically, so every season has all 10 franchises. The
 //! same selection gives an owner who saved no XI their default XI.
 
-use crate::model::{Player, Role};
+use crate::models::{Player, Role};
 use crate::squad::{MIN_BOWLING_OPTIONS, SQUAD_SIZE, XI_SIZE};
 
 /// Why a system squad cannot be filled from the pool.
@@ -206,7 +206,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::Category;
+    use crate::models::Category;
     use crate::squad::SQUAD_SIZE;
     use crate::squad::validate_starting_xi;
 

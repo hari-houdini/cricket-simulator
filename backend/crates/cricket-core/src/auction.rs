@@ -8,7 +8,7 @@ use std::collections::VecDeque;
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::{Lakhs, Player};
+use crate::models::{Lakhs, Player};
 use crate::seed::{GameRng, seed_from};
 use crate::squad::{PURSE_LAKHS, SQUAD_SIZE};
 
@@ -509,7 +509,7 @@ impl Auction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Category, Role};
+    use crate::models::{Category, Role};
 
     fn player(id: &str, base_price: Lakhs) -> Player {
         Player {
@@ -531,7 +531,7 @@ mod tests {
         (0..count)
             .map(|index| OwnerSeat {
                 guest_id: format!("guest-{index}"),
-                franchise_id: format!("team-{index}"),
+                franchise_id: format!("franchise-{index}"),
             })
             .collect()
     }

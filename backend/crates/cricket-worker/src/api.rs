@@ -4,7 +4,7 @@
 //! Nullable fields serialise as `null`, never as a missing key. Money is in lakhs and every
 //! count is an integer. Both directions use `camelCase`.
 
-use cricket_core::model::Player;
+use cricket_core::models::Player;
 use serde::{Deserialize, Serialize};
 
 /// A lobby, as `lobbySchema` describes it.
@@ -207,6 +207,22 @@ pub struct MatchScoreDto {
     pub winner_franchise_id: Option<String>,
 }
 
+/// One played league match, as `matchSchema` describes it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchDto {
+    /// The match ID, such as `r03-csk-mi`.
+    pub id: String,
+    /// The league round.
+    pub round: u32,
+    /// The home franchise.
+    pub home_franchise_id: String,
+    /// The away franchise.
+    pub away_franchise_id: String,
+    /// The result. A played match always has one.
+    pub result: MatchScoreDto,
+}
+
 /// One franchise's table row, as `standingSchema` describes it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -249,9 +265,9 @@ pub struct PlayoffSlotDto {
     pub slot: String,
     /// The round, 15 to 18.
     pub round: u32,
-    /// The home team, or `null` until known.
+    /// The home franchise, or `null` until known.
     pub home_franchise_id: Option<String>,
-    /// The away team, or `null` until known.
+    /// The away franchise, or `null` until known.
     pub away_franchise_id: Option<String>,
     /// The result once played, or `null`.
     pub result: Option<PlayoffResultDto>,
@@ -261,9 +277,9 @@ pub struct PlayoffSlotDto {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayoffResultDto {
-    /// Home team.
+    /// Home franchise.
     pub home_franchise_id: String,
-    /// Away team.
+    /// Away franchise.
     pub away_franchise_id: String,
     /// The winner. Always set in the playoffs.
     pub winner_franchise_id: String,

@@ -7,6 +7,7 @@ import {
   BidBlockedError,
   LeagueNotStartedError,
   LobbyNotFoundError,
+  MatchNotFoundError,
 } from "../../shared/utils/game-api.errors";
 import { createHttpGameApi, type FetchLike } from "./http-game-api";
 
@@ -174,5 +175,72 @@ describe("createHttpGameApi responses", () => {
     await expect(api.getLeague("ABC123")).rejects.toBeInstanceOf(
       LeagueNotStartedError,
     );
+  });
+});
+
+describe("createHttpGameApi standings, matches and live events", () => {
+  it("reads the table from the standings route", async () => {
+    const json = fixture("league");
+    const standings =
+      typeof json === "object" && json !== null && "standings" in json
+        ? json.standings
+        : undefined;
+    const { send, seen } = fakeFetch(200, standings);
+    const api = createHttpGameApi({ baseUrl: BASE_URL, fetch: send });
+
+    const table = await api.getStandings("abc123");
+
+    expect(seen[0]?.url).toBe(`${BASE_URL}/api/lobbies/ABC123/standings`);
+    expect(table).toHaveLength(10);
+  });
+
+  it("reads one match from its route, and parses the result", async () => {
+    const match = {
+      id: "r01-csk-mi",
+      round: 1,
+      homeFranchiseId: "csk",
+      awayFranchiseId: "mi",
+      result: {
+        homeRuns: 150,
+        homeWickets: 5,
+        awayRuns: 140,
+        awayWickets: 10,
+        winnerFranchiseId: "csk",
+      },
+    };
+    const { send, seen } = fakeFetch(200, match);
+    const api = createHttpGameApi({ baseUrl: BASE_URL, fetch: send });
+
+    const result = await api.getMatch("ABC123", "r01-csk-mi");
+
+    expect(seen[0]?.url).toBe(
+      `${BASE_URL}/api/lobbies/ABC123/matches/r01-csk-mi`,
+    );
+    expect(result).toEqual(match);
+  });
+
+  it("turns a missing match refusal into MatchNotFoundError with the id", async () => {
+    const { send } = fakeFetch(404, {
+      error: "MatchNotFoundError",
+      reason: null,
+    });
+    const api = createHttpGameApi({ baseUrl: BASE_URL, fetch: send });
+
+    const error = await api
+      .getMatch("ABC123", "r01-csk-mi")
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(MatchNotFoundError);
+    expect((error as Error).message).toContain("r01-csk-mi");
+  });
+
+  it("rejects live events until the WebSocket transport exists", async () => {
+    const { send, seen } = fakeFetch(200, null);
+    const api = createHttpGameApi({ baseUrl: BASE_URL, fetch: send });
+
+    await expect(api.subscribe("ABC123", () => {})).rejects.toThrow(
+      "WebSocket",
+    );
+    expect(seen).toEqual([]);
   });
 });

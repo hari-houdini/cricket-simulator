@@ -7,14 +7,14 @@ use std::collections::HashMap;
 use cricket_core::auction::{Auction, LotOutcome, next_bid};
 use cricket_core::awards::{self, FairPlayAward, Podium};
 use cricket_core::lobby::{Lobby, Phase};
+use cricket_core::match_simulator::MatchOutcome;
 use cricket_core::performance::FallOfWicket;
 use cricket_core::playoffs::{PLAYOFF_MATCHES, QUALIFIER_1_ROUND};
-use cricket_core::simulator::MatchOutcome;
-use cricket_core::standings::TeamRecord;
+use cricket_core::standings::FranchiseRecord;
 
 use crate::api::{
     AuctionDto, AwardsDto, BidLogDto, FairPlayDto, FairPlayFranchiseDto, FairPlayLineDto,
-    FixtureDto, HighBidDto, KeyMomentDto, LeagueDto, LobbyDto, LotDto, ManOfTheMatchDto,
+    FixtureDto, HighBidDto, KeyMomentDto, LeagueDto, LobbyDto, LotDto, ManOfTheMatchDto, MatchDto,
     MatchScoreDto, OwnerAwardLineDto, OwnerDto, PairDto, PlayerAwardLineDto, PlayoffResultDto,
     PlayoffSlotDto, PlayoffsDto, PurseDto, SoldDto, SquadDto, StandingDto, StartingXiDto,
 };
@@ -213,7 +213,7 @@ pub fn league(lobby: &Lobby) -> Result<LeagueDto, ApiError> {
 ///
 /// @param record - The franchise's record.
 /// @returns The standing DTO.
-fn standing(record: &TeamRecord) -> StandingDto {
+fn standing(record: &FranchiseRecord) -> StandingDto {
     StandingDto {
         franchise_id: record.franchise_id.clone(),
         played: record.played,
@@ -252,7 +252,45 @@ pub fn score(outcome: &MatchOutcome) -> MatchScoreDto {
     }
 }
 
-/// The playoff bracket as `playoffsSchema` describes it. Teams are `null` until they are known.
+/// The league table, best first, as `standingsSchema` describes it.
+///
+/// @param lobby - The lobby.
+/// @returns One row per franchise.
+/// @throws Returns a 409 `LeagueNotStartedError` until the auction has ended.
+pub fn standings(lobby: &Lobby) -> Result<Vec<StandingDto>, ApiError> {
+    if lobby.schedule().is_empty() {
+        return Err(ApiError::new(409, "LeagueNotStartedError"));
+    }
+    Ok(lobby.table().iter().map(standing).collect())
+}
+
+/// One played league match, as `matchSchema` describes it. Its ID is the one the frontend and the
+/// mock use, so a match read in one mode can be read in the other.
+///
+/// @param lobby - The lobby.
+/// @param match_id - The match ID, such as `r03-csk-mi`.
+/// @returns The match DTO.
+/// @throws Returns a 409 `LeagueNotStartedError` before the auction ends, and a 404
+///   `MatchNotFoundError` when no played league match has the ID.
+pub fn played_match(lobby: &Lobby, match_id: &str) -> Result<MatchDto, ApiError> {
+    if lobby.schedule().is_empty() {
+        return Err(ApiError::new(409, "LeagueNotStartedError"));
+    }
+    let outcome = lobby
+        .league()
+        .iter()
+        .find(|played| played.id == match_id)
+        .ok_or_else(|| ApiError::new(404, "MatchNotFoundError"))?;
+    Ok(MatchDto {
+        id: outcome.id.clone(),
+        round: outcome.round,
+        home_franchise_id: outcome.home_id.clone(),
+        away_franchise_id: outcome.away_id.clone(),
+        result: score(outcome),
+    })
+}
+
+/// The playoff bracket as `playoffsSchema` describes it. Franchises are `null` until they are known.
 ///
 /// @param lobby - The lobby.
 /// @returns The bracket DTO.
@@ -281,7 +319,7 @@ pub fn playoffs(lobby: &Lobby) -> Result<PlayoffsDto, ApiError> {
     };
     // Known from the table once the bracket exists. Later slots depend on earlier results.
     let has_bracket = lobby.bracket().is_some();
-    let teams = [
+    let franchises = [
         (
             has_bracket.then(|| seed(0)).flatten(),
             has_bracket.then(|| seed(1)).flatten(),
@@ -298,7 +336,7 @@ pub fn playoffs(lobby: &Lobby) -> Result<PlayoffsDto, ApiError> {
         .iter()
         .enumerate()
         .map(|(index, slot)| {
-            let (home, away) = teams[index].clone();
+            let (home, away) = franchises[index].clone();
             PlayoffSlotDto {
                 slot: slot.to_string(),
                 round: QUALIFIER_1_ROUND + index as u32,

@@ -9,11 +9,17 @@ import {
   FranchiseClaimClosedError,
   FranchiseNotFoundError,
   FranchiseTakenError,
+  InternalError,
+  InvalidInputError,
   LeagueNotStartedError,
+  LobbyCodeTakenError,
+  LobbyCodeUnavailableError,
   LobbyFullError,
   LobbyNotFoundError,
+  MatchNotFoundError,
   NotAnOwnerError,
   SquadNotReadyError,
+  WrongPhaseError,
   XiLockedError,
 } from "./game-api.errors";
 
@@ -21,6 +27,7 @@ const context: RefusalContext = {
   code: "ABC123",
   guestId: "guest-1",
   franchiseId: "csk",
+  matchId: "r01-csk-mi",
 };
 
 /**
@@ -126,5 +133,43 @@ describe("refusalError", () => {
 
     expect(error.name).toBe("Error");
     expect(error.message).toBe("The API refused the request: NotFoundError.");
+  });
+
+  it("maps the refusals the Rust backend sends that the mock never raises", () => {
+    expect(refusalError(refusal("WrongPhaseError"), context)).toBeInstanceOf(
+      WrongPhaseError,
+    );
+    expect(
+      refusalError(refusal("LobbyCodeTakenError"), context),
+    ).toBeInstanceOf(LobbyCodeTakenError);
+    expect(
+      refusalError(refusal("LobbyCodeUnavailableError"), context),
+    ).toBeInstanceOf(LobbyCodeUnavailableError);
+    expect(refusalError(refusal("InternalError"), context)).toBeInstanceOf(
+      InternalError,
+    );
+  });
+
+  it("maps a missing match to MatchNotFoundError naming the id", () => {
+    const error = refusalError(refusal("MatchNotFoundError"), context);
+
+    expect(error).toBeInstanceOf(MatchNotFoundError);
+    expect(error.message).toContain("r01-csk-mi");
+  });
+
+  it("keeps the field an invalid request named", () => {
+    const named = refusalError(refusal("InvalidInputError", "body"), context);
+    const unnamed = refusalError(refusal("InvalidInputError"), context);
+
+    expect(named).toBeInstanceOf(InvalidInputError);
+    expect((named as InvalidInputError).field).toBe("body");
+    expect((unnamed as InvalidInputError).field).toBeNull();
+  });
+
+  it("does not match an inherited name as a refusal", () => {
+    const error = refusalError(refusal("constructor"), context);
+
+    expect(error.name).toBe("Error");
+    expect(error.message).toBe("The API refused the request: constructor.");
   });
 });

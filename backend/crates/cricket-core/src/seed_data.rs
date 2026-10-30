@@ -5,7 +5,7 @@
 
 use serde::Deserialize;
 
-use crate::model::{Franchise, Player};
+use crate::models::{Franchise, Player};
 use crate::schedule::Fixture;
 
 /// The contents of `players.v1.json`.

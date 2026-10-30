@@ -1,7 +1,7 @@
 //! The league table: points, then net run rate (GLOSSARY.md, Standings and Points).
 
-use crate::model::InningsSummary;
-use crate::simulator::{BALLS_PER_OVER, INNINGS_WICKETS, MatchOutcome, OVERS_PER_INNINGS};
+use crate::match_simulator::{BALLS_PER_OVER, INNINGS_WICKETS, MatchOutcome, OVERS_PER_INNINGS};
+use crate::models::InningsSummary;
 
 /// Points for a win (GLOSSARY.md, Points).
 pub const WIN_POINTS: u32 = 2;
@@ -10,7 +10,7 @@ pub const TIE_POINTS: u32 = 1;
 
 /// One franchise's league record.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TeamRecord {
+pub struct FranchiseRecord {
     /// The franchise.
     pub franchise_id: String,
     /// Matches played.
@@ -33,7 +33,7 @@ pub struct TeamRecord {
     pub balls_bowled: u32,
 }
 
-impl TeamRecord {
+impl FranchiseRecord {
     /// Creates an empty record for a franchise.
     ///
     /// @param franchise_id - The franchise.
@@ -83,11 +83,14 @@ fn balls_for_run_rate(innings: &InningsSummary) -> u32 {
 /// The table is sorted by points, then net run rate, then franchise ID so the order is
 /// always the same.
 ///
-/// @param franchise_ids - Every franchise in the lobby, so teams with no result still appear.
+/// @param franchise_ids - Every franchise in the lobby, so franchises with no result still appear.
 /// @param matches - The league matches. Playoff matches must not be included.
 /// @returns The table, best first.
-pub fn league_table(franchise_ids: &[String], matches: &[MatchOutcome]) -> Vec<TeamRecord> {
-    let mut table: Vec<TeamRecord> = franchise_ids.iter().map(|id| TeamRecord::new(id)).collect();
+pub fn league_table(franchise_ids: &[String], matches: &[MatchOutcome]) -> Vec<FranchiseRecord> {
+    let mut table: Vec<FranchiseRecord> = franchise_ids
+        .iter()
+        .map(|id| FranchiseRecord::new(id))
+        .collect();
 
     for outcome in matches {
         for innings in &outcome.innings {
@@ -141,7 +144,11 @@ pub fn league_table(franchise_ids: &[String], matches: &[MatchOutcome]) -> Vec<T
 /// @param table - The table being built.
 /// @param franchise_id - The franchise to update.
 /// @param change - The update to apply.
-fn credit(table: &mut [TeamRecord], franchise_id: &str, change: impl FnOnce(&mut TeamRecord)) {
+fn credit(
+    table: &mut [FranchiseRecord],
+    franchise_id: &str,
+    change: impl FnOnce(&mut FranchiseRecord),
+) {
     if let Some(record) = table
         .iter_mut()
         .find(|record| record.franchise_id == franchise_id)
@@ -228,7 +235,7 @@ mod tests {
     }
 
     #[test]
-    fn teams_with_no_result_still_appear() {
+    fn franchises_with_no_result_still_appear() {
         let table = league_table(&ids(&["a", "b"]), &[]);
         assert_eq!(table.len(), 2);
         assert!(

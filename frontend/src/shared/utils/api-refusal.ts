@@ -16,13 +16,19 @@ import {
   FranchiseClaimClosedError,
   FranchiseNotFoundError,
   FranchiseTakenError,
+  InternalError,
+  InvalidInputError,
   LeagueAdvanceBlockedError,
   LeagueNotStartedError,
+  LobbyCodeTakenError,
+  LobbyCodeUnavailableError,
   LobbyFullError,
   LobbyNotFoundError,
+  MatchNotFoundError,
   NotAnOwnerError,
   SquadNotReadyError,
   SubstitutionBlockedError,
+  WrongPhaseError,
   XiBlockedError,
   XiLockedError,
 } from "./game-api.errors";
@@ -36,23 +42,76 @@ export type RefusalContext = {
   readonly code: string;
   readonly guestId: string;
   readonly franchiseId: string;
+  readonly matchId: string;
 };
 
+/** Turns one refusal body into its typed error. */
+type RefusalMapping = (refusal: Refusal) => Error;
+
 /**
- * Returns the reason when it is one the frontend knows for this class, or
- * `null` so the caller falls back to a generic error.
+ * A plain error for a refusal the frontend cannot map. It names the class the
+ * backend sent, so the message still says what was refused.
+ *
+ * @param error - The class name from the backend.
+ * @returns A plain `Error`.
+ */
+function unrecognisedRefusal(error: string): Error {
+  return new Error(`The API refused the request: ${error}.`);
+}
+
+/**
+ * Builds the mapping for a class that carries a reason. A reason outside the
+ * class's vocabulary becomes an unrecognised refusal, never a guessed class.
  *
  * @param schema - The reason vocabulary for the class.
- * @param reason - The reason from the backend, if any.
- * @returns The typed reason, or `null`.
+ * @param build - Creates the typed error from a known reason.
+ * @returns The mapping from a refusal body to its typed error.
  */
-function knownReason<T extends string>(
+function blocked<T extends string>(
   schema: ZodType<T>,
-  reason: string | null,
-): T | null {
-  const parsed = schema.safeParse(reason);
-  return parsed.success ? parsed.data : null;
+  build: (reason: T) => Error,
+): RefusalMapping {
+  return ({ error, reason }) => {
+    const parsed = schema.safeParse(reason);
+    return parsed.success ? build(parsed.data) : unrecognisedRefusal(error);
+  };
 }
+
+/**
+ * The refusals that carry a reason, keyed by the backend's class name. A
+ * `Map`, so a name such as `constructor` cannot match an inherited property.
+ */
+const blockedRefusals = new Map<string, RefusalMapping>([
+  [
+    "AuctionStartBlockedError",
+    blocked(
+      auctionStartBlockSchema,
+      (reason) => new AuctionStartBlockedError(reason),
+    ),
+  ],
+  [
+    "BidBlockedError",
+    blocked(bidBlockSchema, (reason) => new BidBlockedError(reason)),
+  ],
+  [
+    "XiBlockedError",
+    blocked(xiBlockSchema, (reason) => new XiBlockedError(reason)),
+  ],
+  [
+    "SubstitutionBlockedError",
+    blocked(
+      substitutionBlockSchema,
+      (reason) => new SubstitutionBlockedError(reason),
+    ),
+  ],
+  [
+    "LeagueAdvanceBlockedError",
+    blocked(
+      advanceBlockSchema,
+      (reason) => new LeagueAdvanceBlockedError(reason),
+    ),
+  ],
+]);
 
 /**
  * Turns a backend refusal into the typed error the mock throws for the same
@@ -66,7 +125,10 @@ function knownReason<T extends string>(
  */
 export function refusalError(refusal: Refusal, context: RefusalContext): Error {
   const { error, reason } = refusal;
-  const unknown = new Error(`The API refused the request: ${error}.`);
+  const reasonMapping = blockedRefusals.get(error);
+  if (reasonMapping) {
+    return reasonMapping(refusal);
+  }
 
   switch (error) {
     case "LobbyNotFoundError":
@@ -91,27 +153,19 @@ export function refusalError(refusal: Refusal, context: RefusalContext): Error {
       return new XiLockedError(context.code);
     case "LeagueNotStartedError":
       return new LeagueNotStartedError(context.code);
-    case "AuctionStartBlockedError": {
-      const known = knownReason(auctionStartBlockSchema, reason);
-      return known ? new AuctionStartBlockedError(known) : unknown;
-    }
-    case "BidBlockedError": {
-      const known = knownReason(bidBlockSchema, reason);
-      return known ? new BidBlockedError(known) : unknown;
-    }
-    case "XiBlockedError": {
-      const known = knownReason(xiBlockSchema, reason);
-      return known ? new XiBlockedError(known) : unknown;
-    }
-    case "SubstitutionBlockedError": {
-      const known = knownReason(substitutionBlockSchema, reason);
-      return known ? new SubstitutionBlockedError(known) : unknown;
-    }
-    case "LeagueAdvanceBlockedError": {
-      const known = knownReason(advanceBlockSchema, reason);
-      return known ? new LeagueAdvanceBlockedError(known) : unknown;
-    }
+    case "WrongPhaseError":
+      return new WrongPhaseError();
+    case "MatchNotFoundError":
+      return new MatchNotFoundError(context.matchId);
+    case "InvalidInputError":
+      return new InvalidInputError(reason);
+    case "LobbyCodeTakenError":
+      return new LobbyCodeTakenError();
+    case "LobbyCodeUnavailableError":
+      return new LobbyCodeUnavailableError();
+    case "InternalError":
+      return new InternalError();
     default:
-      return unknown;
+      return unrecognisedRefusal(error);
   }
 }

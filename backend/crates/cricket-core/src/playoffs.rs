@@ -2,8 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::simulator::{MatchKind, MatchOutcome, ModifierConfig, Side, simulate_match};
-use crate::standings::TeamRecord;
+use crate::match_simulator::{MatchKind, MatchOutcome, ModifierConfig, Side, simulate_match};
+use crate::standings::FranchiseRecord;
 
 /// Round of Qualifier 1.
 pub const QUALIFIER_1_ROUND: u32 = 15;
@@ -20,7 +20,7 @@ pub const PLAYOFF_MATCHES: usize = 4;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlayoffError {
     /// Fewer than four franchises are in the table.
-    NotEnoughTeams { found: usize },
+    NotEnoughFranchises { found: usize },
     /// A playoff franchise has no starting XI in `sides`.
     MissingSide(String),
     /// Every playoff match has already been played.
@@ -44,10 +44,10 @@ impl PlayoffBracket {
     ///
     /// @param table - The league table, best first.
     /// @returns A bracket with no matches played.
-    /// @throws Returns {@link PlayoffError::NotEnoughTeams} if the table has fewer than four franchises.
-    pub fn new(table: &[TeamRecord]) -> Result<Self, PlayoffError> {
+    /// @throws Returns {@link PlayoffError::NotEnoughFranchises} if the table has fewer than four franchises.
+    pub fn new(table: &[FranchiseRecord]) -> Result<Self, PlayoffError> {
         if table.len() < PLAYOFF_MATCHES {
-            return Err(PlayoffError::NotEnoughTeams { found: table.len() });
+            return Err(PlayoffError::NotEnoughFranchises { found: table.len() });
         }
         Ok(Self {
             seeds: [
@@ -189,7 +189,7 @@ fn find_side<'a>(sides: &'a [Side], franchise_id: &str) -> Result<&'a Side, Play
 /// @throws Returns a {@link PlayoffError} if the table is too short or a side is missing.
 pub fn run_playoffs(
     lobby_id: &str,
-    table: &[TeamRecord],
+    table: &[FranchiseRecord],
     sides: &[Side],
     config: &ModifierConfig,
 ) -> Result<PlayoffResult, PlayoffError> {
@@ -219,7 +219,7 @@ pub struct PlayoffResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Category, Player, Role};
+    use crate::models::{Category, Player, Role};
 
     fn player(id: &str, role: Role) -> Player {
         Player {
@@ -261,8 +261,8 @@ mod tests {
         }
     }
 
-    fn table(ids: &[&str]) -> Vec<TeamRecord> {
-        ids.iter().map(|id| TeamRecord::new(id)).collect()
+    fn table(ids: &[&str]) -> Vec<FranchiseRecord> {
+        ids.iter().map(|id| FranchiseRecord::new(id)).collect()
     }
 
     #[test]
@@ -322,11 +322,11 @@ mod tests {
     }
 
     #[test]
-    fn the_playoffs_need_four_teams() {
+    fn the_playoffs_need_four_franchises() {
         let sides = vec![side("a")];
         assert_eq!(
             run_playoffs("lobby", &table(&["a"]), &sides, &ModifierConfig::default()),
-            Err(PlayoffError::NotEnoughTeams { found: 1 })
+            Err(PlayoffError::NotEnoughFranchises { found: 1 })
         );
     }
 

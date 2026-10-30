@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { lobbyCodeSchema } from "../types/lobby.schema";
+import type {
+  AdvanceBlock,
+  SubstitutionBlock,
+  XiBlock,
+} from "../types/refusal.types";
 import {
   describeAdvanceBlock,
   describeApiError,
@@ -24,8 +29,6 @@ import {
   XiBlockedError,
   XiLockedError,
 } from "./game-api.errors";
-import type { AdvanceBlock } from "./league-rules";
-import type { SubstitutionBlock, XiBlock } from "./squad-rules";
 
 const XI_REASONS: readonly XiBlock[] = [
   "wrong-size",

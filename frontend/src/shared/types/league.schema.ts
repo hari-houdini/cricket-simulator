@@ -1,4 +1,4 @@
-import { array, boolean, number, object } from "zod";
+import { array, boolean, number, object, string } from "zod";
 
 import {
   FRANCHISE_COUNT,
@@ -52,6 +52,28 @@ export const standingSchema = object({
   netRunRate: number(),
 });
 
+/** The league table, best first: one row for every franchise. */
+export const standingsSchema = array(standingSchema).length(FRANCHISE_COUNT);
+
+/**
+ * A match id, such as `r03-csk-mi` for a league match or `playoff-15` for a
+ * playoff match. The Rust backend and the mock build the same ids, so an id
+ * from one can be looked up in the other.
+ */
+export const matchIdSchema = string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+
+/**
+ * One played league match, as `getMatch` returns it. Unlike a fixture, the
+ * result is always present, because only a played match can be read.
+ */
+export const matchSchema = object({
+  id: matchIdSchema,
+  round: number().int().min(1).max(LEAGUE_ROUNDS),
+  homeFranchiseId: franchiseIdSchema,
+  awayFranchiseId: franchiseIdSchema,
+  result: matchScoreSchema,
+});
+
 /**
  * The league as the frontend sees it: every fixture in round order, the table,
  * and whether the league rounds are over. `round` is 0 before the first round
@@ -60,7 +82,7 @@ export const standingSchema = object({
 export const leagueSchema = object({
   round: number().int().min(0).max(LAST_ROUND),
   fixtures: array(fixtureSchema).length(LEAGUE_MATCHES),
-  standings: array(standingSchema).length(FRANCHISE_COUNT),
+  standings: standingsSchema,
   leagueComplete: boolean(),
 });
 

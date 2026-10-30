@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::{Ball, Innings, InningsSummary, Player, WicketKind};
+use crate::models::{Ball, Innings, InningsSummary, Player, WicketKind};
 use crate::performance::{FallOfWicket, PlayerPerformance, tally};
 use crate::seed::{GameRng, seed_from};
 
@@ -534,7 +534,7 @@ fn settle_super_overs(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Category, Role};
+    use crate::models::{Category, Role};
 
     fn player(id: &str, role: Role, rating: u8, trouble: u8) -> Player {
         Player {

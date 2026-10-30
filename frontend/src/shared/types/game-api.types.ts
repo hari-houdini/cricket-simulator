@@ -4,7 +4,13 @@ import type {
   StartAuctionInput,
 } from "./auction.types";
 import type { Awards } from "./awards.types";
-import type { AdvanceRoundInput, League } from "./league.types";
+import type { GameEventListener, Unsubscribe } from "./game-event.types";
+import type {
+  AdvanceRoundInput,
+  League,
+  Match,
+  Standing,
+} from "./league.types";
 import type {
   ClaimFranchiseInput,
   CreateLobbyInput,
@@ -84,6 +90,17 @@ export type GameApi = {
    */
   readonly advanceRound: (input: AdvanceRoundInput) => Promise<League>;
   /**
+   * Reads the league table, best first. Rejects with `LeagueNotStartedError`
+   * until the auction has finished.
+   */
+  readonly getStandings: (code: string) => Promise<Standing[]>;
+  /**
+   * Reads one played league match by its id, such as `r03-csk-mi`. Rejects
+   * with `MatchNotFoundError` for an id no league match has, or a match not yet
+   * played.
+   */
+  readonly getMatch: (code: string, matchId: string) => Promise<Match>;
+  /**
    * Reads the playoff bracket. Rejects with `AuctionNotStartedError` before the
    * auction starts. Places are null until they are known.
    */
@@ -94,4 +111,13 @@ export type GameApi = {
    * with `AuctionNotStartedError` before the auction starts.
    */
   readonly getAwards: (code: string) => Promise<Awards>;
+  /**
+   * Listens for live events in a lobby: bids, hammers, match progress and the
+   * season's end. Resolves to a function that stops the listening. The HTTP
+   * mode rejects, since its live transport (WebSocket) is not built yet.
+   */
+  readonly subscribe: (
+    code: string,
+    listener: GameEventListener,
+  ) => Promise<Unsubscribe>;
 };

@@ -9,12 +9,12 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 
 use crate::auction::{Auction, AuctionError, LotOutcome, OwnerSeat, SeatStatus, lot_order};
-use crate::model::Player;
+use crate::match_simulator::{MatchOutcome, ModifierConfig, Side};
+use crate::models::Player;
 use crate::playoffs::{FINAL_ROUND, PlayoffBracket, PlayoffError};
 use crate::schedule::{Fixture, ScheduleError, lobby_schedule};
-use crate::simulator::{MatchOutcome, ModifierConfig, Side};
 use crate::squad::{SQUAD_SIZE, SquadError, validate_starting_xi};
-use crate::standings::{TeamRecord, league_table};
+use crate::standings::{FranchiseRecord, league_table};
 use crate::system_squad::{SystemSquadError, fill_system_squad, strongest_legal_xi};
 
 /// Rounds in the league phase.
@@ -271,7 +271,7 @@ impl Lobby {
     /// The league table so far.
     ///
     /// @returns The table, best first.
-    pub fn table(&self) -> Vec<TeamRecord> {
+    pub fn table(&self) -> Vec<FranchiseRecord> {
         league_table(&self.franchise_ids, &self.league)
     }
 
@@ -602,6 +602,9 @@ impl Lobby {
         &mut self,
         config: &ModifierConfig,
     ) -> Result<Vec<MatchOutcome>, LobbyError> {
+        if self.next_round == 1 {
+            self.default_missing_xis();
+        }
         let sides = self.sides()?;
         let round = self.next_round;
         let fixtures: Vec<Fixture> = self
@@ -619,13 +622,13 @@ impl Lobby {
                 "r{:02}-{}-{}",
                 round, fixture.home_franchise_id, fixture.away_franchise_id
             );
-            played.push(crate::simulator::simulate_match(
+            played.push(crate::match_simulator::simulate_match(
                 &self.id,
                 &match_id,
                 round,
                 home,
                 away,
-                crate::simulator::MatchKind::League,
+                crate::match_simulator::MatchKind::League,
                 config,
             ));
         }
@@ -662,6 +665,27 @@ impl Lobby {
             self.phase = Phase::Complete;
         }
         Ok(vec![outcome])
+    }
+
+    /// Gives every owner who saved no XI the strongest legal XI from their squad, so it locks with
+    /// the rest when round one is played (`docs/game-design.md` section 4). The best batter is
+    /// captain and the next is vice-captain, since the design sets no default. A squad with no
+    /// legal XI keeps none, and {@link Self::sides} then blocks the round.
+    fn default_missing_xis(&mut self) {
+        for entry in self
+            .squads
+            .iter_mut()
+            .filter(|entry| entry.starting_xi.is_none())
+        {
+            let Some(ids) = strongest_legal_xi(&entry.players) else {
+                continue;
+            };
+            entry.starting_xi = Some(StartingXi {
+                captain_id: ids[0].clone(),
+                vice_captain_id: ids[1].clone(),
+                player_ids: ids,
+            });
+        }
     }
 
     /// Builds the sides for simulation from the squads and their chosen XIs.
@@ -872,7 +896,7 @@ fn find_side<'a>(sides: &'a [Side], franchise_id: &str) -> Result<&'a Side, Lobb
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::Franchise;
+    use crate::models::{Franchise, Role};
     use crate::seed_data::{parse_franchises, parse_players, parse_schedule};
 
     const PLAYERS: &str = include_str!("../../../../data/seeds/players.v1.json");
@@ -1119,23 +1143,63 @@ mod tests {
     }
 
     #[test]
-    fn a_round_is_blocked_while_an_owner_has_no_xi() {
+    fn an_owner_with_no_saved_xi_gets_the_strongest_legal_xi_before_round_one() {
         let (ids, players, template) = seed();
         let mut lobby = new_lobby(ids, template);
         seat(&mut lobby, "guest-a", "csk");
         lobby.start_auction(players, 0).expect("auction starts");
         run_auction(&mut lobby, Some("guest-a"));
-        let owner_has_xi = lobby
+        let expected = {
+            let owned = lobby
+                .squads()
+                .iter()
+                .find(|entry| entry.owner_guest_id.as_deref() == Some("guest-a"))
+                .expect("owner keeps a squad");
+            strongest_legal_xi(&owned.players).expect("the bought squad has a legal XI")
+        };
+
+        lobby
+            .advance(&ModifierConfig::default())
+            .expect("round one plays with the default XI");
+
+        let stored = lobby
             .squads()
             .iter()
             .find(|entry| entry.owner_guest_id.as_deref() == Some("guest-a"))
-            .is_some_and(|entry| entry.starting_xi.is_some());
-        if !owner_has_xi {
-            assert!(matches!(
-                lobby.advance(&ModifierConfig::default()),
-                Err(LobbyError::XiMissing(_))
-            ));
-        }
+            .and_then(|entry| entry.starting_xi.as_ref())
+            .expect("the default XI is stored");
+        assert_eq!(stored.player_ids, expected);
+        assert_eq!(stored.captain_id, expected[0]);
+        assert_eq!(stored.vice_captain_id, expected[1]);
+        assert!(
+            matches!(
+                lobby.set_starting_xi("guest-a", expected.clone(), &expected[0], &expected[1]),
+                Err(LobbyError::XiLocked)
+            ),
+            "the default XI is locked once round one is played"
+        );
+    }
+
+    #[test]
+    fn a_round_is_blocked_while_an_owner_has_no_legal_xi() {
+        let (ids, players, template) = seed();
+        let mut lobby = new_lobby(ids, template);
+        seat(&mut lobby, "guest-a", "csk");
+        lobby.start_auction(players, 0).expect("auction starts");
+        run_auction(&mut lobby, Some("guest-a"));
+        let owned = lobby
+            .squads
+            .iter_mut()
+            .find(|entry| entry.owner_guest_id.as_deref() == Some("guest-a"))
+            .expect("owner keeps a squad");
+        owned
+            .players
+            .retain(|player| player.role != Role::WicketKeeper);
+
+        assert!(matches!(
+            lobby.advance(&ModifierConfig::default()),
+            Err(LobbyError::XiMissing(missing)) if missing == vec!["csk".to_string()]
+        ));
     }
 
     #[test]

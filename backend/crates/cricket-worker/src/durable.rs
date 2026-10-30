@@ -7,7 +7,7 @@
 //! the `u64` to JavaScript number edge cases of structured storage.
 
 use cricket_core::lobby::Lobby;
-use cricket_core::simulator::ModifierConfig;
+use cricket_core::match_simulator::ModifierConfig;
 use worker::*;
 
 use crate::cors;
