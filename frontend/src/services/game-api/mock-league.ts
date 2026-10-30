@@ -35,6 +35,35 @@ export function resultKey(code: string, match: LeagueMatch): string {
 }
 
 /**
+ * The id of a league match, in the form the Rust backend uses: the round, then
+ * the home and away franchises, such as `r03-csk-mi`. The two must agree, so a
+ * match id from one mode can be read in the other.
+ *
+ * @param round - The league round.
+ * @param homeFranchiseId - The home franchise.
+ * @param awayFranchiseId - The away franchise.
+ * @returns The match id.
+ */
+export function leagueMatchId(
+  round: number,
+  homeFranchiseId: string,
+  awayFranchiseId: string,
+): string {
+  return `r${String(round).padStart(2, "0")}-${homeFranchiseId}-${awayFranchiseId}`;
+}
+
+/**
+ * The id of a playoff match, from its round. Playoff matches are not readable
+ * with `getMatch` yet, but their live events carry this id.
+ *
+ * @param round - The playoff round, from 15 to 18.
+ * @returns The match id.
+ */
+export function playoffMatchId(round: number): string {
+  return `playoff-${round}`;
+}
+
+/**
  * The map key for one playoff slot's result in one lobby.
  *
  * @param code - A normalised lobby code.

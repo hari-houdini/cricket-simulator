@@ -105,6 +105,10 @@ app/
 
 ## Backend Architecture (Cloudflare Workers)
 
+The backend is a Cargo workspace. `cricket-core` holds the game rules as pure Rust with no I/O. `cricket-worker` is the Worker adapter, which owns the Durable Object and the HTTP and WebSocket surface. Time and randomness enter the core as arguments. See [ADR 0005](docs/adr/0005-pure-core-with-worker-adapter.md).
+
+Delivery is in four phases: the core, the Worker adapter, the HTTP and WebSocket API, and the frontend cut-over from the mock.
+
 ### 1. Core Services
 
 #### Match Simulator (`match_simulator.rs`)
@@ -223,12 +227,14 @@ struct PlayerRatings {
 struct Squad {
     id: String,
     lobby_id: String,
-    user_id: String,
+    owner_id: String,  // the guest who owns the franchise
+    franchise_id: String,
     players: Vec<Player>,  // 15 drafted players
     starting_xi: Vec<String>,  // 11 player IDs from players
     captain_id: String,
     vice_captain_id: String,
-    total_spent: u32,  // ₹
+    total_spent: u32,  // lakhs (ADR 0004)
+    substitution_used: bool,
     season_stats: SeasonStats,
 }
 
@@ -250,10 +256,10 @@ struct Match {
     id: String,
     lobby_id: String,
     round: u32,
-    team1: Squad,
-    team2: Squad,
-    toss_winner: String,
-    batting_first: String,
+    home: Squad,  // see GLOSSARY.md, Franchise and Squad
+    away: Squad,
+    toss_winner: String,  // franchise_id
+    batting_first: String,  // franchise_id
     innings1: Innings,
     innings2: Innings,
     result: MatchResult,
@@ -262,8 +268,8 @@ struct Match {
 }
 
 struct Innings {
-    batting_team: Squad,
-    bowling_team: Squad,
+    batting_franchise_id: String,
+    bowling_franchise_id: String,
     balls: Vec<Ball>,
     total_runs: u32,
     total_wickets: u32,
@@ -287,18 +293,21 @@ struct Lobby {
     id: String,
     code: String,  // Shareable code
     name: String,
-    created_by: String,
+    created_by: String,  // guest_id
     created_at: DateTime,
-    users: Vec<LobbyUser>,
-    current_phase: Phase,  // Auction, League, Playoffs, Complete
+    owners: Vec<Owner>,  // removed owners are dropped (GLOSSARY.md, Removed owner)
+    phase: Phase,  // auction | league | playoffs | complete
     current_round: u32,
-    seed_version: String,  // seed data set the lobby was created with (see data/seeds/)
+    seed_version: String,  // seed data set the lobby was created with, copied at creation (see data/seeds/)
     season: Season,
     standings: Standings,
 }
 
-struct LobbyUser {
-    user_id: String,
+/// The guest who holds one franchise, its squad and its purse.
+struct Owner {
+    guest_id: String,
+    franchise_id: String,
+    purse_remaining: u32,  // lakhs
     squad: Squad,
     league_points: u32,
     playoff_record: PlayoffRecord,
@@ -308,51 +317,41 @@ struct LobbyUser {
 
 ### 3. API Endpoints
 
-**Lobby Management**
+The frontend's `GameApi` is the authoritative contract. Its zod schemas (`frontend/src/shared/types/*.schema.ts`) define each response, and the shared fixtures in `data/fixtures/api/` are parsed by both those schemas and the Rust DTOs in `cricket-worker/src/api.rs`. The lobby code is the Durable Object name, so every lobby route goes to that object. Each refusal is a JSON body `{"error": <name>, "reason": <kebab-case reason or null>}` with the status the frontend expects.
+
+**Lobby**
 ```
-POST   /api/lobbies
-       Create lobby → returns lobby code
-
-GET    /api/lobbies/:id
-       Get lobby state & standings
-
-POST   /api/lobbies/:id/users/:user_id/squad
-       Submit squad selection
-
-GET    /api/lobbies/:id/standings
-       Get current league table & awards
+POST   /api/lobbies                          Create a lobby; the creator is its first guest (201)
+GET    /api/lobbies/:code                    Lobby state
+POST   /api/lobbies/:code/join               Join as a guest
+POST   /api/lobbies/:code/franchise          Claim a franchise
 ```
 
-**Match Simulation**
+**Auction**
 ```
-POST   /api/lobbies/:id/simulate-round
-       Simulate next round of matches
-
-GET    /api/lobbies/:id/match/:match_id
-       Get match details & stats
-
-GET    /api/lobbies/:id/season/awards
-       Get season awards & winners
+POST   /api/lobbies/:code/auction/start      Start the auction once every owner has claimed
+GET    /api/lobbies/:code/auction            Current lot, high bid, bid log and purses
+POST   /api/lobbies/:code/auction/bids       Bid on the open lot (amountLakhs)
 ```
 
-**Real-time Updates**
+**Squad and starting XI**
 ```
-WebSocket /api/lobbies/:id/live
-          Stream of events: match_started, ball_played, 
-          over_complete, match_complete, season_complete
+GET    /api/lobbies/:code/squad?guestId=     One owner's squad (after the auction)
+POST   /api/lobbies/:code/squad/xi          Set the starting XI with captain and vice-captain
+POST   /api/lobbies/:code/squad/substitution  The one free substitution, after the first match
 ```
 
-**Data Retrieval**
+**League and playoffs**
 ```
-GET    /api/players
-       Get all IPL players with ratings
-
-GET    /api/ipl-schedule
-       Get real IPL match schedule template
-
-GET    /api/awards/:lobby_id
-       Get detailed award statistics
+GET    /api/lobbies/:code/league             Fixtures, results and standings
+POST   /api/lobbies/:code/league/advance     Play the next round (league) or match (playoffs)
+GET    /api/lobbies/:code/playoffs           Bracket and results
+GET    /api/lobbies/:code/awards             Season awards, Man of the Match and Fair Play
 ```
+
+The frontend runs on its own origin. The Worker answers preflight requests and sends CORS headers only to the origins listed in `ALLOWED_ORIGINS` in `backend/wrangler.toml`. Before deploying, add the deployed frontend origin there. The frontend selects this API with `NEXT_PUBLIC_API_MODE=http` and `NEXT_PUBLIC_API_URL` set to the Worker's origin.
+
+The auction timer is a Durable Object alarm. Overdue lots are settled before any request reads or changes the lobby, so a read after the deadline shows the settled state.
 
 ### 4. WebSocket Events
 
@@ -468,12 +467,9 @@ usePWA()                      // PWA installation & offline status
 ### Durable Object: LobbyObject
 **Purpose**: Persistent state for one lobby
 
-**Keys Stored**:
-- `lobby:{id}` → Lobby metadata
-- `players:{id}` → Player seed copy, including trouble ratings
-- `standings:{id}` → Current standings
-- `matches:{id}:{round}` → Match results
-- `awards:{id}` → Award tracking
+**Storage**: one key, `lobby`, holding the whole `Lobby` as JSON. It holds members, claims, the auction, squads, the schedule, every match summary, the bracket and the phase. It does not hold ball-by-ball data, and it does not copy the seed files: the Worker embeds `data/seeds/` and the lobby records the `seedVersion` it was created with. Storage stays well under the 2 MiB value limit for a full season. See [ADR 0006](docs/adr/0006-match-summaries-not-balls.md).
+
+**Alarm**: the auction's next lot deadline, so an expired lot closes without a request.
 
 **Lifespan**: Lobby creation → season completion (cleanup after 24h)
 

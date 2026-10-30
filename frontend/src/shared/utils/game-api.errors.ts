@@ -1,7 +1,11 @@
 import { MAX_OWNERS } from "../const/lobby.const";
-import type { BidBlock } from "./auction-rules";
-import type { AdvanceBlock } from "./league-rules";
-import type { SubstitutionBlock, XiBlock } from "./squad-rules";
+import type {
+  AdvanceBlock,
+  AuctionStartBlock,
+  BidBlock,
+  SubstitutionBlock,
+  XiBlock,
+} from "../types/refusal.types";
 
 /**
  * Thrown when no lobby has the requested code. The UI shows this as a clear
@@ -113,12 +117,6 @@ export class AuctionAlreadyStartedError extends Error {
 }
 
 /**
- * Why the auction cannot start yet. `no-owners` means the lobby is empty, and
- * `unclaimed-franchise` means an owner has not picked a franchise.
- */
-export type AuctionStartBlock = "no-owners" | "unclaimed-franchise";
-
-/**
  * Thrown when the auction is asked to start before every owner has a franchise.
  */
 export class AuctionStartBlockedError extends Error {
@@ -221,5 +219,75 @@ export class LeagueAdvanceBlockedError extends Error {
   constructor(readonly reason: AdvanceBlock) {
     super(`The round was not played: ${reason}.`);
     this.name = "LeagueAdvanceBlockedError";
+  }
+}
+
+/**
+ * Thrown when no played league match has the id. An unplayed match counts as
+ * unknown, because its result cannot be read yet.
+ */
+export class MatchNotFoundError extends Error {
+  /**
+   * @param matchId - The id that was looked up.
+   */
+  constructor(matchId: string) {
+    super(`No played match has the id "${matchId}".`);
+    this.name = "MatchNotFoundError";
+  }
+}
+
+/**
+ * Thrown when the lobby is not in the phase the request needs. The backend
+ * sends no reason with it, so the class carries none.
+ */
+export class WrongPhaseError extends Error {
+  constructor() {
+    super("The lobby is not in the phase this request needs.");
+    this.name = "WrongPhaseError";
+  }
+}
+
+/**
+ * Thrown when the backend rejects the request body. The field is the one it
+ * refused, or `null` when it did not say which.
+ */
+export class InvalidInputError extends Error {
+  /**
+   * @param field - The field the backend refused, or `null`.
+   */
+  constructor(readonly field: string | null) {
+    super(`The request was invalid${field ? `: ${field}` : ""}.`);
+    this.name = "InvalidInputError";
+  }
+}
+
+/**
+ * Thrown when a new lobby is created with a code another lobby already uses.
+ */
+export class LobbyCodeTakenError extends Error {
+  constructor() {
+    super("That lobby code is already in use.");
+    this.name = "LobbyCodeTakenError";
+  }
+}
+
+/**
+ * Thrown when the backend cannot issue a lobby code right now, so the caller
+ * should try again.
+ */
+export class LobbyCodeUnavailableError extends Error {
+  constructor() {
+    super("Lobby codes are unavailable right now. Try again shortly.");
+    this.name = "LobbyCodeUnavailableError";
+  }
+}
+
+/**
+ * Thrown when the backend fails on its own side, not because of the request.
+ */
+export class InternalError extends Error {
+  constructor() {
+    super("Something went wrong on the server.");
+    this.name = "InternalError";
   }
 }

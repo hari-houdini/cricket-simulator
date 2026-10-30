@@ -1,0 +1,16 @@
+{
+  "id": "ABC123",
+  "code": "ABC123",
+  "name": "Test",
+  "phase": "auction",
+  "auctionStatus": "waiting",
+  "round": 0,
+  "owners": [
+    {
+      "guestId": "a",
+      "displayName": "a",
+      "franchiseId": "csk"
+    }
+  ],
+  "seedVersion": "1.1.0"
+}

@@ -1,0 +1,12 @@
+{
+  "name": "cricket-backend",
+  "private": true,
+  "description": "Cloudflare Worker tooling for the IPL cricket simulator backend (ARCHITECTURE.md). Exact versions only (AGENTS.md).",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.150.0"
+  }
+}

@@ -16,6 +16,10 @@ _Avoid_: User, player (player means a cricketer)
 The guest who holds one franchise in a lobby and controls its squad and purse.
 _Avoid_: Manager, captain (captain means a player in the squad)
 
+**Removed owner**:
+An owner who could no longer reach a 15-player squad during the auction and was removed from the lobby. Their franchise becomes a system squad.
+_Avoid_: Kicked user, dropout
+
 **Franchise**:
 One of the 10 IPL teams (CSK, MI, RCB, KKR, DC, PBKS, RR, SRH, LSG, GT). In a lobby, each franchise has at most one owner.
 _Avoid_: Team (in the UI, "team" is used loosely, so use franchise in the domain)
@@ -88,6 +92,10 @@ _Avoid_: Sold (in the domain, sold describes the outcome, hammer describes the e
 The players who received no bid in the auction. They are not auctioned again in the season.
 _Avoid_: Leftovers, free agents
 
+**Pass**:
+An owner's choice to sit out the current lot without leaving the auction. The owner can still bid on later lots.
+_Avoid_: Skip, abstain
+
 ## Season
 
 **Season**:
@@ -137,6 +145,26 @@ The winner of Qualifier 1 against the winner of Qualifier 2.
 _Avoid_: Championship
 
 ## Match play
+
+**Match**:
+One contest between two franchises in a round, made of two innings.
+_Avoid_: Game, fixture (fixture is the schedule entry, not the played contest)
+
+**Innings**:
+One franchise's batting turn in a match, ended by ten wickets, the overs running out, or a successful chase.
+_Avoid_: Turn, half
+
+**Over**:
+Six legal deliveries bowled by one bowler.
+_Avoid_: Set
+
+**Ball**:
+One delivery in an over, with its outcome in runs or as a wicket.
+_Avoid_: Delivery (in prose), pitch
+
+**Wicket**:
+The dismissal of a batter, which ends that batter's innings.
+_Avoid_: Out, dismissal (in prose)
 
 **Fantasy points**:
 Points a player earns from one match's performance, which the captain and vice-captain multipliers apply to.

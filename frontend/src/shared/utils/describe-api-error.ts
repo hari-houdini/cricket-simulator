@@ -1,7 +1,12 @@
 import { ZodError } from "zod";
 
 import { MIN_BOWLING_OPTIONS } from "../const/squad.const";
-import type { BidBlock } from "./auction-rules";
+import type {
+  AdvanceBlock,
+  BidBlock,
+  SubstitutionBlock,
+  XiBlock,
+} from "../types/refusal.types";
 import {
   AuctionAlreadyStartedError,
   AuctionNotStartedError,
@@ -20,8 +25,6 @@ import {
   XiBlockedError,
   XiLockedError,
 } from "./game-api.errors";
-import type { AdvanceBlock } from "./league-rules";
-import type { SubstitutionBlock, XiBlock } from "./squad-rules";
 
 /** What to tell the guest for each reason a bid is refused. */
 const BID_BLOCK_MESSAGES = {

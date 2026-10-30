@@ -5,6 +5,7 @@ import {
   XI_SIZE,
 } from "../const/squad.const";
 import type { Player } from "../types/player.types";
+import type { SubstitutionBlock, XiBlock } from "../types/refusal.types";
 import type { StartingXi } from "../types/squad.types";
 
 /**
@@ -16,35 +17,6 @@ export type XiSelection = {
   readonly captainId: string | null;
   readonly viceCaptainId: string | null;
 };
-
-/**
- * Why a starting XI is not legal, checked in this order: size, duplicates,
- * squad membership, captain and vice-captain, then the role rules.
- */
-export type XiBlock =
-  | "wrong-size"
-  | "duplicate"
-  | "not-in-squad"
-  | "captain-not-in-xi"
-  | "vice-captain-not-in-xi"
-  | "same-captain-and-vice-captain"
-  | "no-wicket-keeper"
-  | "too-many-wicket-keepers"
-  | "too-few-bowling-options";
-
-/**
- * Why a substitution is refused. The XI reasons apply when the swap would leave
- * an illegal XI, so the owner sees the same rule that a saved XI must meet.
- */
-export type SubstitutionBlock =
-  | "not-yet-played"
-  | "already-used"
-  | "no-starting-xi"
-  | "out-not-in-xi"
-  | "captain-or-vice-captain"
-  | "in-not-in-squad"
-  | "in-already-in-xi"
-  | XiBlock;
 
 /**
  * Whether a player counts as a bowling option for the XI minimum: a bowler or

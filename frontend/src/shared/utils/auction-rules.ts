@@ -4,27 +4,7 @@ import {
   SQUAD_SIZE,
 } from "../const/auction.const";
 import type { Auction, Lot, SoldRecord } from "../types/auction.types";
-
-/**
- * Why a bid is refused. `null` from {@link bidBlockReason} means the bid is
- * allowed.
- *
- * - `no-open-lot`: the auction is not running, or no player is on a lot.
- * - `lot-closed`: the timer has already run out, so the hammer is due first.
- * - `not-an-owner`: the guest has no purse in this auction.
- * - `squad-full`: the owner already has a full squad.
- * - `already-high-bidder`: the owner holds the lot already, so they cannot raise it.
- * - `not-next-step`: the amount is not the lot's minimum next bid.
- * - `over-purse`: the amount is more than the owner has left.
- */
-export type BidBlock =
-  | "no-open-lot"
-  | "lot-closed"
-  | "not-an-owner"
-  | "squad-full"
-  | "already-high-bidder"
-  | "not-next-step"
-  | "over-purse";
+import type { BidBlock } from "../types/refusal.types";
 
 /**
  * The outcome of a lot when its timer runs out: sold to the highest bidder, or

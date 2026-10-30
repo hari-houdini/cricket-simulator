@@ -4,6 +4,7 @@ import type {
   advanceRoundInputSchema,
   fixtureSchema,
   leagueSchema,
+  matchSchema,
   matchScoreSchema,
   standingSchema,
 } from "./league.schema";
@@ -22,3 +23,6 @@ export type League = z.infer<typeof leagueSchema>;
 
 /** Input for playing the next round, derived from {@link advanceRoundInputSchema}. */
 export type AdvanceRoundInput = z.infer<typeof advanceRoundInputSchema>;
+
+/** One played league match, derived from {@link matchSchema}. */
+export type Match = z.infer<typeof matchSchema>;

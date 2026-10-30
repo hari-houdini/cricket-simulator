@@ -14,12 +14,28 @@ IPL cricket fantasy simulator. Guests own IPL franchises. Owners bid for 15 play
 ## Repository layout
 
 - `frontend/`: Next.js 16 + React 19 app using the App Router (`src/app/`). Package manager: pnpm.
-- `backend/`: Rust service targeting Cloudflare Workers (see `ARCHITECTURE.md`). Currently empty.
+- `backend/`: Rust service targeting Cloudflare Workers (see `ARCHITECTURE.md`). Two crates: `cricket-core` (pure game rules, no I/O) and `cricket-worker` (the Worker adapter: routes, Durable Object, JSON views). Wrangler and `worker-build` build and serve it. The frontend's HTTP client calls it in `http` mode.
 - `docs/`, `research/`: design documents and analysis.
 - `docs/adr/`: accepted architecture decisions. Check them before reversing a design choice.
 - `GLOSSARY.md`: the project's domain vocabulary. Use its terms in code, comments and UI copy, and avoid the synonyms it lists.
 
 ## Commands
+
+From the repo root, `scripts/tasks.mjs` runs the whole stack on macOS and Windows. It needs only Node and pnpm. Run `node scripts/tasks.mjs help` for the full list.
+
+| Task | Command |
+|------|---------|
+| Install everything, plus `worker-build` 0.8.7 if missing | `node scripts/tasks.mjs install` |
+| Frontend and Worker together, live (Ctrl-C stops both) | `node scripts/tasks.mjs dev` |
+| Frontend alone, on mock data | `node scripts/tasks.mjs dev-mock` |
+| Worker alone | `node scripts/tasks.mjs backend-dev` |
+| Frontend alone, pointed at the Worker | `node scripts/tasks.mjs frontend-dev` |
+| Vitest and `cargo test` | `node scripts/tasks.mjs test` |
+| Every check below, stopping at the first failure | `node scripts/tasks.mjs check` |
+| Contract suite against the Worker (reuses a running one) | `node scripts/tasks.mjs test-contract` |
+| Production frontend build | `node scripts/tasks.mjs build` |
+
+`dev`, `dev-mock` and `frontend-dev` need port 3000 free. `dev`, `backend-dev` and `test-contract` need port 8787 free. The script fails with a message rather than choosing another port.
 
 Frontend, run from `frontend/`:
 
@@ -52,8 +68,10 @@ After every change, `pnpm lint` and `pnpm exec tsc --noEmit` must pass in `front
 - **Approval for new packages.** Before adding a dependency, confirm all of the following:
   1. No built-in platform feature or already-approved package covers the need.
   2. The package has a commit in the last 6 months.
-  3. The gzipped size is under 50 KB, and it adds few transitive dependencies, each reviewed.
+  3. The gzipped size is under 50 KB, and it adds few transitive dependencies, each reviewed. This size limit applies to code a browser downloads. Server-side Cloudflare Worker wasm (`worker` and its build tooling) is exempt, because no visitor downloads it. Its dependency count is still reviewed.
   4. It is recorded in the approved list below.
+- **Approved list (backend, Rust, `backend/Cargo.toml`):** `serde`, `serde_json`, `rand_chacha`, `rand_core` (phase 1, `cricket-core`), and `worker` 0.8.7 (Cloudflare Worker SDK, phase 2, `cricket-worker`, wasm target only; size limit exempt, see point 3 above). Build tooling for the Worker: `worker-build` 0.8.7 (run by `wrangler`, not a dependency of any crate).
+- **Approved list (backend, Node tooling, `backend/package.json`):** `wrangler` 4.150.0 (local Worker runs and deployment; dev tool, not shipped).
 - **Approved list (frontend, seeded from `frontend/package.json`):** `next`, `react`, `react-dom`, `@biomejs/biome`, `@types/node`, `@types/react`, `@types/react-dom`, `babel-plugin-react-compiler`, `typescript`, `storybook`, `@storybook/nextjs-vite`, `@chromatic-com/storybook`, `@storybook/addon-vitest`, `@storybook/addon-a11y`, `@storybook/addon-docs`, `@storybook/addon-mcp`, `vite`, `vitest`, `@vitest/browser-playwright`, `@vitest/coverage-v8`, `playwright`, `@stylexjs/stylex` (runtime, about 0.9 KB gzipped, transitive deps `styleq`, `invariant`, `css-mediaquery`), `@stylexjs/babel-plugin` and `@stylexjs/postcss-plugin` (build-time only), `zod` (about 25 KB gzipped with named imports), `@babel/core` 7.29.7 (build-time only; already in the tree through the StyleX plugins, pinned to the 7.x line they require, since 8.x is a separate major).
 - **zod import style:** import the runtime functions by name (`import { object, string } from "zod"`). A namespace import (`import { z } from "zod"`) keeps every export alive and bundles to about 92 KB gzipped, over the 50 KB limit. Get types with a type-only import, `import type { z } from "zod"`, and `z.infer<typeof schema>`.
 - **Audits:** `pnpm audit` and `cargo audit` run on every pull request. Findings at high or critical severity fail the check.
