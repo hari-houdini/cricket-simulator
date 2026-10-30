@@ -56,6 +56,12 @@ export const tokens = stylex.defineVars({
   radiusSm: "8px",
   /** 12px radius for cards and modals. */
   radiusMd: "12px",
+  /** Fully rounded ends for pill-shaped controls such as the tab bar. */
+  radiusPill: "99px",
+  /** 12px inset between the tab bar's edge and its tabs, the bar's padding. */
+  spaceTabInset: "12px",
+  /** 54px tab height. Above the 44px touch-target minimum on every width. */
+  heightTab: "54px",
 
   /** Raised neumorphic shadow for buttons and cards. */
   shadowRaised:
@@ -107,6 +113,13 @@ export const tokens = stylex.defineVars({
   fontSizeHeading: "2rem",
   /** Small text, such as the footer disclaimer. */
   fontSizeSmall: "14px",
+  /**
+   * Tab label size below 768px. At 1.25rem, "Development" overflows a third of a
+   * 320px tab bar, so phones use the smaller size.
+   */
+  fontSizeTab: "1rem",
+  /** Tab label size from 768px up, the tablet breakpoint in `ARCHITECTURE.md`. */
+  fontSizeTabWide: "1.25rem",
   /** Bold weight for headings and the wordmark. */
   fontWeightBold: "700",
   /** Semibold weight for the skip link. */
