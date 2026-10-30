@@ -89,6 +89,8 @@ pub struct SquadEntry {
 pub enum SubstitutionError {
     /// The season has not started, so there is no first match to come after.
     NotYetPlayed,
+    /// The owner has not started a substitution, so there is nothing to confirm.
+    NotInProgress,
     /// The owner has already used the free substitution.
     AlreadyUsed,
     /// The owner has no starting XI to substitute from.
@@ -132,6 +134,8 @@ pub enum LobbyError {
     XiMissing(Vec<String>),
     /// The free substitution was refused.
     Substitution(SubstitutionError),
+    /// A substitution is in progress, so the sim waits until it is confirmed or cancelled.
+    SimPaused,
     /// The auction refused the action.
     Auction(AuctionError),
     /// The league schedule could not be built from the template.
@@ -163,7 +167,12 @@ pub struct Lobby {
     schedule: Vec<Fixture>,
     league: Vec<MatchOutcome>,
     bracket: Option<PlayoffBracket>,
-    next_round: u32,
+    /// Owners whose substitution is in progress. The sim is paused while this is not empty.
+    #[serde(default)]
+    substituting: BTreeSet<String>,
+    /// Owners voting to skip the rest of the league. Votes from disconnected owners do not count.
+    #[serde(default)]
+    skip_votes: BTreeSet<String>,
 }
 
 impl Lobby {
@@ -197,7 +206,8 @@ impl Lobby {
             schedule: Vec::new(),
             league: Vec::new(),
             bracket: None,
-            next_round: 1,
+            substituting: BTreeSet::new(),
+            skip_votes: BTreeSet::new(),
         }
     }
 
@@ -289,7 +299,7 @@ impl Lobby {
     pub fn round(&self) -> u32 {
         match self.phase {
             Phase::Waiting | Phase::Auction => 0,
-            Phase::League => self.next_round - 1,
+            Phase::League => self.league.last().map_or(0, |played| played.round),
             Phase::Playoffs => {
                 LEAGUE_ROUNDS
                     + self
@@ -399,6 +409,9 @@ impl Lobby {
             Ok(Vec::new())
         } else {
             self.connected.remove(guest_id);
+            // A disconnect cancels the owner's open substitution without using it up, so the
+            // sim is not left paused on someone who cannot confirm it.
+            self.substituting.remove(guest_id);
             self.settle_disconnected(0)
         }
     }
@@ -522,9 +535,44 @@ impl Lobby {
         Ok(())
     }
 
+    /// Opens the owner's free substitution and pauses the sim for every guest until it is confirmed
+    /// or cancelled. Allowed once, after the first league match. Opening it again is a no-op.
+    ///
+    /// @param guest_id - The owner.
+    /// @returns `Ok(())` when the sim is paused for this substitution.
+    /// @throws Returns a {@link LobbyError} if the season is not running, the guest is not an owner, or the substitution is already used or cannot be made.
+    pub fn begin_substitution(&mut self, guest_id: &str) -> Result<(), LobbyError> {
+        match self.phase {
+            Phase::League | Phase::Playoffs => {}
+            phase => return Err(LobbyError::WrongPhase { phase }),
+        }
+        let played = !self.league.is_empty();
+        let entry = self.owner_entry_mut(guest_id)?;
+        if !played {
+            return Err(LobbyError::Substitution(SubstitutionError::NotYetPlayed));
+        }
+        if entry.substitution_used {
+            return Err(LobbyError::Substitution(SubstitutionError::AlreadyUsed));
+        }
+        if entry.starting_xi.is_none() {
+            return Err(LobbyError::Substitution(SubstitutionError::NoStartingXi));
+        }
+        self.substituting.insert(guest_id.to_string());
+        Ok(())
+    }
+
+    /// Cancels an open substitution. The substitution is not used up, and the sim resumes once no
+    /// other substitution is open.
+    ///
+    /// @param guest_id - The owner.
+    pub fn cancel_substitution(&mut self, guest_id: &str) {
+        self.substituting.remove(guest_id);
+    }
+
     /// Makes the owner's one free substitution: `out_id` leaves the XI for `in_id`, in the same
-    /// batting place. Allowed once, after the first league match, and never for the captain or
-    /// vice-captain.
+    /// batting place. The owner must have opened it with {@link Self::begin_substitution}. It is
+    /// allowed once, and never for the captain or vice-captain. Confirming it resumes the sim once
+    /// no other substitution is open.
     ///
     /// @param guest_id - The owner.
     /// @param out_id - The XI player leaving.
@@ -537,9 +585,13 @@ impl Lobby {
         out_id: &str,
         in_id: &str,
     ) -> Result<(), LobbyError> {
+        let in_progress = self.substituting.contains(guest_id);
         let played = !self.league.is_empty();
         let entry = self.owner_entry_mut(guest_id)?;
         let refuse = |reason: SubstitutionError| LobbyError::Substitution(reason);
+        if !in_progress {
+            return Err(refuse(SubstitutionError::NotInProgress));
+        }
         if !played {
             return Err(refuse(SubstitutionError::NotYetPlayed));
         }
@@ -577,70 +629,150 @@ impl Lobby {
             vice_captain_id,
         });
         entry.substitution_used = true;
+        self.substituting.remove(guest_id);
         Ok(())
     }
 
-    /// Plays the next step of the season: a whole league round, or the next playoff match.
+    /// Reports whether a substitution is open, which pauses the sim for every guest.
+    ///
+    /// @returns `true` while at least one owner is substituting.
+    pub fn sim_paused(&self) -> bool {
+        !self.substituting.is_empty()
+    }
+
+    /// The owners with a substitution open, in guest-ID order.
+    ///
+    /// @returns The guest IDs.
+    pub fn substituting_guests(&self) -> impl Iterator<Item = &str> {
+        self.substituting.iter().map(String::as_str)
+    }
+
+    /// Records or withdraws an owner's vote to skip the rest of the league. Votes can change until
+    /// the skip happens. The skip is applied by the next {@link Self::advance}.
+    ///
+    /// @param guest_id - The owner.
+    /// @param vote - `true` to vote for the skip, `false` to withdraw the vote.
+    /// @returns `Ok(())` when the vote is recorded.
+    /// @throws Returns a {@link LobbyError} if the league is not running or the guest is not an owner.
+    pub fn set_skip_vote(&mut self, guest_id: &str, vote: bool) -> Result<(), LobbyError> {
+        match self.phase {
+            Phase::League => {}
+            phase => return Err(LobbyError::WrongPhase { phase }),
+        }
+        if !self.is_owner(guest_id) {
+            return Err(LobbyError::NotAnOwner(guest_id.to_string()));
+        }
+        if vote {
+            self.skip_votes.insert(guest_id.to_string());
+        } else {
+            self.skip_votes.remove(guest_id);
+        }
+        Ok(())
+    }
+
+    /// The owners voting to skip, who are connected, in guest-ID order.
+    ///
+    /// @returns The guest IDs of the counted votes.
+    pub fn skip_voters(&self) -> Vec<String> {
+        self.skip_votes
+            .iter()
+            .filter(|guest_id| self.connected.contains(*guest_id))
+            .cloned()
+            .collect()
+    }
+
+    /// The number of connected owners who must vote to skip: strictly more than half of the
+    /// owners in the lobby.
+    ///
+    /// @returns The threshold.
+    pub fn skip_threshold(&self) -> usize {
+        self.claims.len() / 2 + 1
+    }
+
+    /// Reports whether the skip vote has passed.
+    ///
+    /// @returns `true` once enough connected owners have voted to skip.
+    pub fn skip_passed(&self) -> bool {
+        self.skip_voters().len() >= self.skip_threshold()
+    }
+
+    /// Plays the next step of the season: the next league match, every remaining league match when
+    /// the skip vote has passed, or the next playoff match. Refused while a substitution is open.
     ///
     /// @param config - The ball model parameters.
     /// @returns The matches played in this step.
-    /// @throws Returns a {@link LobbyError} if the season is not running or a match cannot be played.
+    /// @throws Returns a {@link LobbyError} if the sim is paused, the season is not running, or a match cannot be played.
     pub fn advance(&mut self, config: &ModifierConfig) -> Result<Vec<MatchOutcome>, LobbyError> {
+        if self.sim_paused() {
+            return Err(LobbyError::SimPaused);
+        }
         match self.phase {
-            Phase::League => self.play_league_round(config),
+            Phase::League if self.skip_passed() => self.play_rest_of_league(config),
+            Phase::League => self
+                .play_next_league_match(config)
+                .map(|played| vec![played]),
             Phase::Playoffs => self.play_playoff_match(config),
             phase => Err(LobbyError::WrongPhase { phase }),
         }
     }
 
-    /// Plays every match in the next league round.
+    /// Plays every league match that is left, which ends the league.
     ///
     /// @param config - The ball model parameters.
-    /// @returns The round's matches.
-    /// @throws Returns a {@link LobbyError} if a side or the bracket cannot be built.
-    fn play_league_round(
+    /// @returns The matches played, in play order.
+    /// @throws Returns a {@link LobbyError} if a match cannot be played.
+    fn play_rest_of_league(
         &mut self,
         config: &ModifierConfig,
     ) -> Result<Vec<MatchOutcome>, LobbyError> {
-        if self.next_round == 1 {
+        let mut played = Vec::new();
+        while self.phase == Phase::League {
+            played.push(self.play_next_league_match(config)?);
+        }
+        Ok(played)
+    }
+
+    /// Plays the next league match in the schedule. The last one builds the playoff bracket.
+    ///
+    /// @param config - The ball model parameters.
+    /// @returns The match played.
+    /// @throws Returns a {@link LobbyError} if a side or the bracket cannot be built.
+    fn play_next_league_match(
+        &mut self,
+        config: &ModifierConfig,
+    ) -> Result<MatchOutcome, LobbyError> {
+        if self.league.is_empty() {
             self.default_missing_xis();
         }
         let sides = self.sides()?;
-        let round = self.next_round;
-        let fixtures: Vec<Fixture> = self
+        let fixture = self
             .schedule
-            .iter()
-            .filter(|fixture| fixture.round == round)
+            .get(self.league.len())
             .cloned()
-            .collect();
+            .ok_or(LobbyError::WrongPhase { phase: self.phase })?;
+        let home = find_side(&sides, &fixture.home_franchise_id)?;
+        let away = find_side(&sides, &fixture.away_franchise_id)?;
+        let match_id = format!(
+            "r{:02}-{}-{}",
+            fixture.round, fixture.home_franchise_id, fixture.away_franchise_id
+        );
+        let outcome = crate::match_simulator::simulate_match(
+            &self.id,
+            &match_id,
+            fixture.round,
+            home,
+            away,
+            crate::match_simulator::MatchKind::League,
+            config,
+        );
+        self.league.push(outcome.clone());
 
-        let mut played = Vec::with_capacity(fixtures.len());
-        for fixture in fixtures {
-            let home = find_side(&sides, &fixture.home_franchise_id)?;
-            let away = find_side(&sides, &fixture.away_franchise_id)?;
-            let match_id = format!(
-                "r{:02}-{}-{}",
-                round, fixture.home_franchise_id, fixture.away_franchise_id
-            );
-            played.push(crate::match_simulator::simulate_match(
-                &self.id,
-                &match_id,
-                round,
-                home,
-                away,
-                crate::match_simulator::MatchKind::League,
-                config,
-            ));
-        }
-        self.league.extend(played.iter().cloned());
-
-        self.next_round += 1;
-        if self.next_round > LEAGUE_ROUNDS {
+        if self.league.len() == self.schedule.len() {
             let table = self.table();
             self.bracket = Some(PlayoffBracket::new(&table).map_err(LobbyError::Playoff)?);
             self.phase = Phase::Playoffs;
         }
-        Ok(played)
+        Ok(outcome)
     }
 
     /// Plays the next playoff match.
@@ -825,7 +957,6 @@ impl Lobby {
         self.squads = squads;
         self.schedule = lobby_schedule(&self.template, &self.id).map_err(LobbyError::Schedule)?;
         self.phase = Phase::League;
-        self.next_round = 1;
         Ok(())
     }
 
@@ -929,29 +1060,40 @@ mod tests {
         lobby.claim_franchise(guest, franchise).expect("claim");
     }
 
-    /// Runs the auction to the end. Each lot is either bid on by `bidder` (if they can afford
-    /// and need it) or left alone, and then the clock is advanced past the deadline.
-    fn run_auction(lobby: &mut Lobby, bidder: Option<&str>) {
+    /// Runs the auction to the end. Each lot is bid on, at base price, by the next of `bidders`
+    /// who can still afford and need players, then the clock is advanced past the deadline. An
+    /// empty list leaves every lot alone.
+    fn run_auction(lobby: &mut Lobby, bidders: &[&str]) {
         let mut now = 0u64;
+        let mut turn = 0usize;
         for _ in 0..1_000 {
             if lobby.phase() != Phase::Auction || lobby.auction().is_some_and(Auction::is_complete)
             {
                 break;
             }
-            if let (Some(guest), Some(lot)) =
-                (bidder, lobby.auction().and_then(Auction::current_lot))
-            {
-                let base = lot.player.base_price;
-                let can_bid = lobby
-                    .auction()
-                    .and_then(|auction| {
-                        auction
-                            .owners()
-                            .iter()
-                            .find(|owner| owner.guest_id == guest)
+            let base = lobby
+                .auction()
+                .and_then(Auction::current_lot)
+                .map(|lot| lot.player.base_price);
+            if let Some(base) = base {
+                let eligible: Vec<&str> = bidders
+                    .iter()
+                    .copied()
+                    .filter(|guest| {
+                        lobby
+                            .auction()
+                            .and_then(|auction| {
+                                auction
+                                    .owners()
+                                    .iter()
+                                    .find(|owner| owner.guest_id == *guest)
+                            })
+                            .is_some_and(|owner| owner.can_bid())
                     })
-                    .is_some_and(|owner| owner.can_bid());
-                if can_bid {
+                    .collect();
+                if !eligible.is_empty() {
+                    let guest = eligible[turn % eligible.len()];
+                    turn += 1;
                     let _ = lobby.place_bid(guest, base, now);
                 }
             }
@@ -1035,7 +1177,7 @@ mod tests {
         let mut lobby = new_lobby(ids, template);
         seat(&mut lobby, "guest-a", "csk");
         lobby.start_auction(players, 0).expect("auction starts");
-        run_auction(&mut lobby, None);
+        run_auction(&mut lobby, &[]);
 
         assert_eq!(lobby.squads().len(), 10);
         assert!(
@@ -1077,7 +1219,7 @@ mod tests {
         let mut lobby = new_lobby(ids, template);
         seat(&mut lobby, "guest-a", "csk");
         lobby.start_auction(players, 0).expect("auction starts");
-        run_auction(&mut lobby, Some("guest-a"));
+        run_auction(&mut lobby, &["guest-a"]);
 
         let owned = lobby
             .squads()
@@ -1101,7 +1243,7 @@ mod tests {
         let mut lobby = new_lobby(ids, template);
         seat(&mut lobby, "guest-a", "csk");
         lobby.start_auction(players, 0).expect("auction starts");
-        run_auction(&mut lobby, Some("guest-a"));
+        run_auction(&mut lobby, &["guest-a"]);
         let result = lobby.set_starting_xi("guest-a", vec!["x".to_string()], "x", "x");
         assert!(matches!(
             result,
@@ -1115,11 +1257,13 @@ mod tests {
         let mut lobby = new_lobby(ids, template);
         seat(&mut lobby, "guest-a", "csk");
         lobby.start_auction(players, 0).expect("auction starts");
-        run_auction(&mut lobby, None);
+        run_auction(&mut lobby, &[]);
 
         let config = ModifierConfig::default();
         for round in 1..=LEAGUE_ROUNDS {
-            assert_eq!(lobby.advance(&config).expect("round plays").len(), 5);
+            for _ in 0..5 {
+                assert_eq!(lobby.advance(&config).expect("match plays").len(), 1);
+            }
             assert_eq!(lobby.round(), round);
         }
         assert_eq!(lobby.league().len(), 70);
@@ -1148,7 +1292,7 @@ mod tests {
         let mut lobby = new_lobby(ids, template);
         seat(&mut lobby, "guest-a", "csk");
         lobby.start_auction(players, 0).expect("auction starts");
-        run_auction(&mut lobby, Some("guest-a"));
+        run_auction(&mut lobby, &["guest-a"]);
         let expected = {
             let owned = lobby
                 .squads()
@@ -1186,7 +1330,7 @@ mod tests {
         let mut lobby = new_lobby(ids, template);
         seat(&mut lobby, "guest-a", "csk");
         lobby.start_auction(players, 0).expect("auction starts");
-        run_auction(&mut lobby, Some("guest-a"));
+        run_auction(&mut lobby, &["guest-a"]);
         let owned = lobby
             .squads
             .iter_mut()
@@ -1264,7 +1408,7 @@ mod tests {
         let mut lobby = new_lobby(ids, template);
         seat(&mut lobby, "guest-a", "csk");
         lobby.start_auction(players, 0).expect("auction starts");
-        run_auction(&mut lobby, Some("guest-a"));
+        run_auction(&mut lobby, &["guest-a"]);
 
         let squad = lobby
             .squads()
@@ -1300,13 +1444,21 @@ mod tests {
             .expect("a bench player shares a role with someone in the XI");
 
         assert_eq!(
-            lobby.substitute("guest-a", &out, &incoming),
+            lobby.begin_substitution("guest-a"),
             Err(LobbyError::Substitution(SubstitutionError::NotYetPlayed))
         );
 
         lobby
             .advance(&ModifierConfig::default())
-            .expect("first round plays");
+            .expect("first match plays");
+        assert_eq!(
+            lobby.substitute("guest-a", &out, &incoming),
+            Err(LobbyError::Substitution(SubstitutionError::NotInProgress)),
+            "a swap needs the substitution opened first"
+        );
+        lobby
+            .begin_substitution("guest-a")
+            .expect("the substitution opens after the first match");
         assert_eq!(
             lobby.substitute("guest-a", &legal[0], &incoming),
             Err(LobbyError::Substitution(
@@ -1317,8 +1469,160 @@ mod tests {
             .substitute("guest-a", &out, &incoming)
             .expect("the free swap is made");
         assert_eq!(
-            lobby.substitute("guest-a", &incoming, &out),
+            lobby.begin_substitution("guest-a"),
             Err(LobbyError::Substitution(SubstitutionError::AlreadyUsed))
         );
+    }
+
+    /// Builds a lobby with `owners` owners who have each saved the strongest legal XI, and runs
+    /// the first league match so substitutions are open.
+    fn lobby_after_first_match(owners: &[(&str, &str)]) -> Lobby {
+        let (ids, players, template) = seed();
+        let mut lobby = new_lobby(ids, template);
+        for (guest, franchise) in owners {
+            seat(&mut lobby, guest, franchise);
+        }
+        lobby.start_auction(players, 0).expect("auction starts");
+        let guests: Vec<&str> = owners.iter().map(|(guest, _)| *guest).collect();
+        run_auction(&mut lobby, &guests);
+        for (guest, _) in owners {
+            let squad = lobby
+                .squads()
+                .iter()
+                .find(|entry| entry.owner_guest_id.as_deref() == Some(*guest))
+                .expect("owner keeps a squad")
+                .clone();
+            let legal = strongest_legal_xi(&squad.players).expect("a legal XI");
+            lobby
+                .set_starting_xi(guest, legal.clone(), &legal[0], &legal[1])
+                .expect("XI saved");
+        }
+        lobby
+            .advance(&ModifierConfig::default())
+            .expect("first match plays");
+        lobby
+    }
+
+    /// Finds a bench player who shares a role with a non-leader in the owner's XI, returning the
+    /// XI player leaving and the bench player coming in.
+    fn a_legal_swap(lobby: &Lobby, guest: &str) -> (String, String) {
+        let entry = lobby
+            .squads()
+            .iter()
+            .find(|entry| entry.owner_guest_id.as_deref() == Some(guest))
+            .expect("owner has a squad");
+        let xi = entry.starting_xi.as_ref().expect("XI saved");
+        xi.player_ids
+            .iter()
+            .skip(2)
+            .find_map(|out| {
+                let role = entry.players.iter().find(|p| &p.id == out)?.role;
+                entry
+                    .players
+                    .iter()
+                    .find(|p| p.role == role && !xi.player_ids.contains(&p.id))
+                    .map(|p| (out.clone(), p.id.clone()))
+            })
+            .expect("a bench player shares a role with someone in the XI")
+    }
+
+    #[test]
+    fn an_open_substitution_pauses_the_sim_until_it_is_confirmed() {
+        let mut lobby = lobby_after_first_match(&[("guest-a", "csk"), ("guest-b", "mi")]);
+        let config = ModifierConfig::default();
+        let (out, incoming) = a_legal_swap(&lobby, "guest-a");
+
+        lobby.begin_substitution("guest-a").expect("opens");
+        assert!(lobby.sim_paused());
+        assert_eq!(lobby.advance(&config), Err(LobbyError::SimPaused));
+
+        lobby
+            .begin_substitution("guest-b")
+            .expect("a second owner queues");
+        lobby
+            .substitute("guest-a", &out, &incoming)
+            .expect("confirmed");
+        assert!(lobby.sim_paused(), "guest-b is still substituting");
+        assert_eq!(lobby.advance(&config), Err(LobbyError::SimPaused));
+
+        lobby.cancel_substitution("guest-b");
+        assert!(!lobby.sim_paused());
+        lobby.advance(&config).expect("the sim resumes");
+    }
+
+    #[test]
+    fn cancelling_a_substitution_resumes_the_sim_without_using_it_up() {
+        let mut lobby = lobby_after_first_match(&[("guest-a", "csk")]);
+        let config = ModifierConfig::default();
+        let (out, incoming) = a_legal_swap(&lobby, "guest-a");
+
+        lobby.begin_substitution("guest-a").expect("opens");
+        lobby.cancel_substitution("guest-a");
+        lobby.advance(&config).expect("the sim resumes");
+        lobby
+            .begin_substitution("guest-a")
+            .expect("still available");
+        lobby
+            .substitute("guest-a", &out, &incoming)
+            .expect("the swap is made");
+    }
+
+    #[test]
+    fn a_disconnect_cancels_an_open_substitution_and_resumes_the_sim() {
+        let mut lobby = lobby_after_first_match(&[("guest-a", "csk"), ("guest-b", "mi")]);
+        lobby.begin_substitution("guest-b").expect("opens");
+        lobby.set_connected("guest-b", false).expect("disconnect");
+        assert!(!lobby.sim_paused());
+        lobby
+            .advance(&ModifierConfig::default())
+            .expect("the sim resumes");
+    }
+
+    #[test]
+    fn the_skip_vote_needs_strictly_more_than_half_of_the_owners() {
+        let mut lobby = lobby_after_first_match(&[("guest-a", "csk"), ("guest-b", "mi")]);
+        assert_eq!(lobby.skip_threshold(), 2);
+
+        lobby.set_skip_vote("guest-a", true).expect("votes");
+        assert!(
+            !lobby.skip_passed(),
+            "one of two is a tie, which is not a majority"
+        );
+
+        lobby.set_skip_vote("guest-b", true).expect("votes");
+        assert!(lobby.skip_passed());
+        lobby
+            .advance(&ModifierConfig::default())
+            .expect("the league is skipped");
+        assert_eq!(lobby.phase(), Phase::Playoffs);
+        assert_eq!(lobby.league().len(), 70);
+    }
+
+    #[test]
+    fn a_disconnected_owner_does_not_count_towards_the_skip_vote() {
+        let mut lobby = lobby_after_first_match(&[("guest-a", "csk"), ("guest-b", "mi")]);
+        lobby.set_skip_vote("guest-a", true).expect("votes");
+        lobby.set_skip_vote("guest-b", true).expect("votes");
+        lobby.set_connected("guest-b", false).expect("disconnect");
+        assert!(!lobby.skip_passed());
+        assert_eq!(lobby.skip_voters(), vec!["guest-a".to_string()]);
+    }
+
+    #[test]
+    fn league_matches_follow_the_schedule_one_at_a_time() {
+        let (ids, players, template) = seed();
+        let mut lobby = new_lobby(ids, template);
+        seat(&mut lobby, "guest-a", "csk");
+        lobby.start_auction(players, 0).expect("auction starts");
+        run_auction(&mut lobby, &[]);
+
+        let config = ModifierConfig::default();
+        for fixture in lobby.schedule().to_vec() {
+            let played = lobby.advance(&config).expect("match plays");
+            assert_eq!(played[0].round, fixture.round);
+            assert_eq!(played[0].home_id, fixture.home_franchise_id);
+            assert_eq!(played[0].away_id, fixture.away_franchise_id);
+        }
+        assert_eq!(lobby.phase(), Phase::Playoffs);
     }
 }

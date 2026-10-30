@@ -76,6 +76,23 @@ pub enum Operation {
         /// The squad player coming in.
         in_player_id: String,
     },
+    /// Opens an owner's free substitution, which pauses the sim for every guest.
+    BeginSubstitution {
+        /// The owner.
+        guest_id: String,
+    },
+    /// Cancels an owner's open substitution, which resumes the sim without using it up.
+    CancelSubstitution {
+        /// The owner.
+        guest_id: String,
+    },
+    /// Records or withdraws an owner's vote to skip the rest of the league.
+    SetSkipVote {
+        /// The owner.
+        guest_id: String,
+        /// `true` to vote for the skip.
+        vote: bool,
+    },
     /// Reads the league.
     GetLeague,
     /// Reads the league table, best first.
@@ -85,7 +102,8 @@ pub enum Operation {
         /// The match ID, such as `r03-csk-mi`.
         match_id: String,
     },
-    /// Plays the next league round, or the next playoff match.
+    /// Plays the next league match, the rest of the league once the skip vote has passed, or the
+    /// next playoff match.
     AdvanceRound {
         /// The owner playing it.
         guest_id: String,

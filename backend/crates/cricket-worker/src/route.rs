@@ -8,7 +8,8 @@ use cricket_core::seed::{GameRng, seed_from};
 use serde::de::DeserializeOwned;
 
 use crate::api::{
-    BidBody, ClaimBody, CreateLobbyBody, GuestBody, JoinBody, SetXiBody, SubstituteBody,
+    BidBody, ClaimBody, CreateLobbyBody, GuestBody, JoinBody, SetXiBody, SkipVoteBody,
+    SubstituteBody,
 };
 use crate::errors::ApiError;
 use crate::operation::Operation;
@@ -148,6 +149,34 @@ pub fn parse(
                     guest_id: guest_id(&input.guest_id)?,
                     out_player_id: player_id(&input.out_player_id)?,
                     in_player_id: player_id(&input.in_player_id)?,
+                },
+            )
+        }
+        ("POST", ["api", "lobbies", code, "squad", "substitution", "begin"]) => {
+            let input: GuestBody = parse_body(body)?;
+            lobby(
+                code,
+                Operation::BeginSubstitution {
+                    guest_id: guest_id(&input.guest_id)?,
+                },
+            )
+        }
+        ("POST", ["api", "lobbies", code, "squad", "substitution", "cancel"]) => {
+            let input: GuestBody = parse_body(body)?;
+            lobby(
+                code,
+                Operation::CancelSubstitution {
+                    guest_id: guest_id(&input.guest_id)?,
+                },
+            )
+        }
+        ("POST", ["api", "lobbies", code, "league", "skip-vote"]) => {
+            let input: SkipVoteBody = parse_body(body)?;
+            lobby(
+                code,
+                Operation::SetSkipVote {
+                    guest_id: guest_id(&input.guest_id)?,
+                    vote: input.vote,
                 },
             )
         }

@@ -218,6 +218,20 @@ pub fn execute(
                 .map_err(substitute_error)?;
             to_json(&views::squad(lobby, &guest_id)?)
         }
+        Operation::BeginSubstitution { guest_id } => {
+            lobby
+                .begin_substitution(&guest_id)
+                .map_err(substitute_error)?;
+            to_json(&views::lobby(lobby))
+        }
+        Operation::CancelSubstitution { guest_id } => {
+            lobby.cancel_substitution(&guest_id);
+            to_json(&views::lobby(lobby))
+        }
+        Operation::SetSkipVote { guest_id, vote } => {
+            lobby.set_skip_vote(&guest_id, vote).map_err(from_lobby)?;
+            to_json(&views::lobby(lobby))
+        }
         Operation::GetLeague => to_json(&views::league(lobby)?),
         Operation::GetStandings => to_json(&views::standings(lobby)?),
         Operation::GetMatch { match_id } => to_json(&views::played_match(lobby, &match_id)?),
@@ -571,8 +585,8 @@ mod tests {
         assert_eq!(lobby.phase(), Phase::League);
         set_strongest_xi(&mut lobby, "a", now);
 
-        // Fourteen league rounds, then four playoff matches.
-        for _ in 0..18 {
+        // Seventy league matches, then four playoff matches.
+        for _ in 0..74 {
             run(
                 &mut lobby,
                 Operation::AdvanceRound {
@@ -608,7 +622,7 @@ mod tests {
         run(&mut lobby, start("a"), 0).expect("starts");
         let now = play_auction(&mut lobby, "a");
         set_strongest_xi(&mut lobby, "a", now);
-        for _ in 0..18 {
+        for _ in 0..74 {
             run(
                 &mut lobby,
                 Operation::AdvanceRound {

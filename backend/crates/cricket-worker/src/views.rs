@@ -57,6 +57,10 @@ pub fn lobby(lobby: &Lobby) -> LobbyDto {
             })
             .collect(),
         seed_version: lobby.seed_version.clone(),
+        sim_paused: lobby.sim_paused(),
+        substituting: lobby.substituting_guests().map(str::to_string).collect(),
+        skip_voters: lobby.skip_voters(),
+        skip_threshold: lobby.skip_threshold() as u32,
     }
 }
 

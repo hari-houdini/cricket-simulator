@@ -78,6 +78,7 @@ pub fn from_lobby(error: LobbyError) -> ApiError {
         LobbyError::Substitution(error) => {
             ApiError::because(409, "SubstitutionBlockedError", substitution_reason(&error))
         }
+        LobbyError::SimPaused => ApiError::because(409, "LeagueAdvanceBlockedError", "sim-paused"),
         LobbyError::Auction(error) => ApiError::because(409, "BidBlockedError", bid_reason(&error)),
         LobbyError::WrongPhase { .. } => ApiError::new(409, "WrongPhaseError"),
         LobbyError::Schedule(_) | LobbyError::SystemSquad(_) | LobbyError::Playoff(_) => {
@@ -113,6 +114,7 @@ pub fn xi_reason(error: &SquadError) -> &'static str {
 pub fn substitution_reason(error: &SubstitutionError) -> &'static str {
     match error {
         SubstitutionError::NotYetPlayed => "not-yet-played",
+        SubstitutionError::NotInProgress => "not-in-progress",
         SubstitutionError::AlreadyUsed => "already-used",
         SubstitutionError::NoStartingXi => "no-starting-xi",
         SubstitutionError::OutNotInXi => "out-not-in-xi",

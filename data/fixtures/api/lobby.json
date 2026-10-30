@@ -12,5 +12,9 @@
       "franchiseId": "csk"
     }
   ],
-  "seedVersion": "1.1.0"
+  "seedVersion": "1.1.0",
+  "simPaused": false,
+  "substituting": [],
+  "skipVoters": [],
+  "skipThreshold": 1
 }

@@ -27,6 +27,14 @@ pub struct LobbyDto {
     pub owners: Vec<OwnerDto>,
     /// The seed data version the lobby was created with.
     pub seed_version: String,
+    /// Whether a substitution is open. The sim waits for it, for every guest.
+    pub sim_paused: bool,
+    /// The guests whose substitution is open, by guest ID.
+    pub substituting: Vec<String>,
+    /// The connected owners voting to skip the rest of the league, by guest ID.
+    pub skip_voters: Vec<String>,
+    /// How many connected owners must vote to skip: strictly more than half of the owners.
+    pub skip_threshold: u32,
 }
 
 /// A guest in a lobby, as `ownerSchema` describes it.
@@ -473,6 +481,16 @@ pub struct ClaimBody {
 pub struct GuestBody {
     /// The guest acting.
     pub guest_id: String,
+}
+
+/// Body of `POST /api/lobbies/{code}/league/skip-vote`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkipVoteBody {
+    /// The owner voting.
+    pub guest_id: String,
+    /// `true` to vote for the skip, `false` to withdraw the vote.
+    pub vote: bool,
 }
 
 /// Body of `POST /api/lobbies/{code}/auction/bids`.
