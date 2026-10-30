@@ -41,7 +41,6 @@ export const styles = stylex.create({
     gap: tokens.spaceSm,
     fontFamily: tokens.fontSans,
     fontWeight: 500,
-    borderRadius: tokens.radiusSm,
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: "transparent",
@@ -94,13 +93,16 @@ export const styles = stylex.create({
     transitionProperty: "transform",
     transitionDuration: tokens.durationDefault,
     transitionTimingFunction: tokens.easingInOut,
+    "@media (prefers-reduced-motion: reduce)": {
+      transitionProperty: "none",
+    },
+  },
+  /** The sweep's hover state, kept apart from `fill` so the reduced-motion rule is not conditioned on hover. */
+  fillHover: {
     "@media (hover: hover)": {
       [stylex.when.ancestor(":hover")]: {
         transform: "scaleX(1)",
       },
-    },
-    "@media (prefers-reduced-motion: reduce)": {
-      transitionProperty: "none",
     },
   },
   /** Primary's sweep colour: the gold accent one step lighter, with dark text kept for contrast. */
@@ -154,6 +156,125 @@ export const styles = stylex.create({
     },
   },
 
+  /**
+   * A full-cover layer that carries the second pair of lines: the snippet's
+   * `span:before` and `span:after`. It sits under the label and ignores the
+   * pointer, so hover still lands on the button.
+   */
+  frame: {
+    position: "absolute",
+    inset: 0,
+    zIndex: 1,
+    pointerEvents: "none",
+  },
+  /**
+   * Secondary's left and top edges, drawn in gold on hover. The lines read the
+   * button's hover through `when.ancestor`, as the fill does.
+   */
+  frameSecondary: {
+    "@media (hover: hover)": {
+      "::before": {
+        [stylex.when.ancestor(":hover")]: {
+          transform: "scaleY(1)",
+        },
+      },
+      "::after": {
+        [stylex.when.ancestor(":hover")]: {
+          transform: "scaleX(1)",
+        },
+      },
+    },
+    "::before": {
+      content: '""',
+      position: "absolute",
+      top: 0,
+      left: 0,
+      bottom: 0,
+      width: tokens.borderWidthLine,
+      backgroundColor: tokens.colorGoldPrimary,
+      transform: "scaleY(0)",
+      transformOrigin: "top",
+      transitionProperty: "transform",
+      transitionDuration: tokens.durationDefault,
+      transitionTimingFunction: tokens.easingInOut,
+      "@media (prefers-reduced-motion: reduce)": {
+        transitionProperty: "none",
+      },
+    },
+    "::after": {
+      content: '""',
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: tokens.borderWidthLine,
+      backgroundColor: tokens.colorGoldPrimary,
+      transform: "scaleX(0)",
+      transformOrigin: "left",
+      transitionProperty: "transform",
+      transitionDuration: tokens.durationDefault,
+      transitionTimingFunction: tokens.easingInOut,
+      "@media (prefers-reduced-motion: reduce)": {
+        transitionProperty: "none",
+      },
+    },
+  },
+  /**
+   * Tertiary's horizontal corner lines: the snippet's btn-6 `span:before` (top
+   * left, grows right) and `span:after` (bottom right, grows left). Half a pixel
+   * thick, as in the snippet. The bottom line is placed one pixel up from the
+   * bottom edge, because Chrome paints a 0.5px box at a fractional offset as
+   * nothing, so `bottom: 0` drew no line.
+   */
+  frameTertiary: {
+    "@media (hover: hover)": {
+      "::before": {
+        [stylex.when.ancestor(":hover")]: {
+          transform: "scaleX(1)",
+        },
+      },
+      "::after": {
+        [stylex.when.ancestor(":hover")]: {
+          transform: "scaleX(1)",
+        },
+      },
+    },
+    "::before": {
+      content: '""',
+      position: "absolute",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: tokens.borderWidthHairlineHalf,
+      backgroundColor: tokens.colorGoldPrimary,
+      transform: "scaleX(0)",
+      transformOrigin: "left",
+      transitionProperty: "transform",
+      transitionDuration: tokens.durationDefault,
+      transitionTimingFunction: tokens.easingInOut,
+      "@media (prefers-reduced-motion: reduce)": {
+        transitionProperty: "none",
+      },
+    },
+    "::after": {
+      content: '""',
+      position: "absolute",
+      top: `calc(100% - ${tokens.borderWidthHairline})`,
+      right: 0,
+      width: "100%",
+      height: tokens.borderWidthHairlineHalf,
+      backgroundColor: tokens.colorGoldPrimary,
+      transform: "scaleX(0)",
+      transformOrigin: "right",
+      transitionProperty: "transform",
+      transitionDuration: tokens.durationDefault,
+      transitionTimingFunction: tokens.easingInOut,
+      "@media (prefers-reduced-motion: reduce)": {
+        transitionProperty: "none",
+      },
+    },
+  },
+
   variantPrimary: {
     backgroundColor: tokens.colorGoldPrimary,
     color: tokens.colorBase,
@@ -175,7 +296,8 @@ export const styles = stylex.create({
     boxShadow: tokens.shadowRaised,
     /**
      * The snippet's btn-7 edge lines. A right edge line grows up from the bottom,
-     * and a bottom edge line grows left from the right.
+     * and a bottom edge line grows left from the right. The left and top edges
+     * come from `frameSecondary`, so all four edges draw in on hover.
      */
     "::before": {
       content: '""',
@@ -232,8 +354,9 @@ export const styles = stylex.create({
   },
   /**
    * Text action with no surface. The snippet's btn-6 corner lines draw in on
-   * hover: a line down the top right edge, and one up the bottom left edge. A
-   * faint navy wash shows the target without adding weight.
+   * hover: a line down the top right edge, and one up the bottom left edge. The
+   * horizontal pair comes from `frameTertiary`. The surface stays transparent,
+   * as the design spec has it, so hover shows only the lines.
    */
   variantTertiary: {
     backgroundColor: "transparent",
@@ -243,7 +366,7 @@ export const styles = stylex.create({
       position: "absolute",
       top: 0,
       right: 0,
-      width: tokens.borderWidthLine,
+      width: tokens.borderWidthHairline,
       height: "100%",
       backgroundColor: tokens.colorGoldPrimary,
       transform: "scaleY(0)",
@@ -261,7 +384,7 @@ export const styles = stylex.create({
       position: "absolute",
       left: 0,
       bottom: 0,
-      width: tokens.borderWidthLine,
+      width: tokens.borderWidthHairline,
       height: "100%",
       backgroundColor: tokens.colorGoldPrimary,
       transform: "scaleY(0)",
@@ -276,7 +399,6 @@ export const styles = stylex.create({
     },
     "@media (hover: hover)": {
       ":hover": {
-        backgroundColor: tokens.colorMid,
         "::before": {
           transform: "scaleY(1)",
         },

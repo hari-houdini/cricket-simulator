@@ -66,6 +66,7 @@ export function Button({
         aria-hidden="true"
         {...stylex.props(
           styles.fill,
+          styles.fillHover,
           variant === "primary" && styles.fillGold,
           variant !== "primary" && disabled && styles.fillMid,
           disabled && styles.fillFull,
@@ -76,6 +77,14 @@ export function Button({
         {...stylex.props(
           styles.sheen,
           pressed && !disabled && styles.sheenPressed,
+        )}
+      />
+      <span
+        aria-hidden="true"
+        {...stylex.props(
+          styles.frame,
+          variant === "secondary" && styles.frameSecondary,
+          variant === "tertiary" && styles.frameTertiary,
         )}
       />
       <span {...stylex.props(styles.label)}>{children}</span>

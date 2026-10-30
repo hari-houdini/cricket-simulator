@@ -128,6 +128,8 @@ export const tokens = stylex.defineVars({
   widthShell: "1024px",
   /** Hairline rule under the app header. */
   borderWidthHairline: "1px",
+  /** Half-pixel line for the tertiary's horizontal corner lines (the snippet's btn-6 `span` lines). */
+  borderWidthHairlineHalf: "0.5px",
   /** The thick edge that marks a match with an owner in it. */
   borderWidthAccent: "4px",
   /** Thickness of the edge lines that draw on a button's hover (the snippet's btn-6 and btn-7). */

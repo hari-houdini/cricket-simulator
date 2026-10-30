@@ -32,24 +32,33 @@ export const Tertiary: Story = {
 };
 
 /**
- * Hover draws the tertiary's corner lines. The play checks the compiled
- * `:hover::before` rule draws its line to `scaleY(1)`. It reads the stylesheet
- * rather than a real hover, because `userEvent.hover` does not set `:hover` in
- * this browser run. StyleX wraps rules in `@layer`, so the match is on the rule text.
+ * Secondary's four gold edge lines, which the snippet's btn-7 draws on hover. The
+ * second pair sits in a frame span, so the play checks all four decorative spans
+ * are present. Hover itself needs a real pointer, which a story cannot send, so
+ * the drawn result is checked in Chromium.
+ */
+export const SecondaryHover: Story = {
+  args: { variant: "secondary", children: "Pass" },
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole("button", { name: "Pass" });
+    await expect(button.querySelectorAll(":scope > span")).toHaveLength(4);
+  },
+};
+
+/**
+ * Tertiary's four corner lines, which the snippet's btn-6 draws on hover, with a
+ * transparent surface. The play checks the frame span and that the surface is
+ * transparent at rest. As with {@link SecondaryHover}, the hover is checked in
+ * Chromium, not here.
  */
 export const TertiaryHover: Story = {
   args: { variant: "tertiary", children: "View details" },
-  play: async () => {
-    const rules = Array.from(document.styleSheets).flatMap((sheet) =>
-      Array.from(sheet.cssRules).map((rule) => rule.cssText),
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole("button", { name: "View details" });
+    await expect(button.querySelectorAll(":scope > span")).toHaveLength(4);
+    await expect(getComputedStyle(button).backgroundColor).toBe(
+      "rgba(0, 0, 0, 0)",
     );
-    await expect(
-      rules.some(
-        (text) =>
-          text.includes(":hover::before") &&
-          text.includes("transform: scaleY(1)"),
-      ),
-    ).toBe(true);
   },
 };
 
