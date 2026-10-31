@@ -21,7 +21,7 @@ export const styles = stylex.create({
     maxWidth: "1000px",
     height: "600px",
     overflow: "hidden",
-    backgroundColor: tokens.colorBase,
+    backgroundColor: tokens.colorMid,
     color: tokens.colorText,
     fontFamily: tokens.fontSans,
     borderRadius: tokens.radiusMd,

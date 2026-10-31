@@ -14,7 +14,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Both forms render side by side from 768px. Entering a name and creating a lobby leaves the forms in place until navigation. */
+/** Opens on create. The overlay invites the guest to join, and both panels are in the DOM. */
 export const Default: Story = {
   play: async ({ canvas }) => {
     await expect(
@@ -26,9 +26,13 @@ export const Default: Story = {
   },
 };
 
-/** A wrong code is reported above the forms, and the typed values stay. */
+/** A wrong code is reported above the form, and the typed values stay. */
 export const UnknownCode: Story = {
   play: async ({ canvas }) => {
+    // The join panel is inert until the overlay switches to it. The overlay's
+    // button is the only button with this name, since the panel's submit is
+    // "Join lobby".
+    await userEvent.click(canvas.getByRole("button", { name: "Join a lobby" }));
     const joinForm = within(canvas.getByRole("form", { name: "Join a lobby" }));
     await userEvent.type(joinForm.getByLabelText("Lobby code"), "ZZZZZZ");
     await userEvent.type(joinForm.getByLabelText("Your name"), "Ravi");

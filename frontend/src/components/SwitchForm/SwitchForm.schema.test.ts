@@ -75,6 +75,13 @@ describe("switchFormSchema", () => {
     expect(switchFormSchema.parse(valid).initialMode).toBe("signUp");
   });
 
+  it("leaves the form enabled unless disabled is set", () => {
+    expect(switchFormSchema.parse(valid).disabled).toBe(false);
+    expect(switchFormSchema.parse({ ...valid, disabled: true }).disabled).toBe(
+      true,
+    );
+  });
+
   it("accepts sign-in as the starting mode", () => {
     expect(
       switchFormSchema.parse({ ...valid, initialMode: "signIn" }).initialMode,

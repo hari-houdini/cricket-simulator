@@ -32,6 +32,7 @@ import type { SwitchFormProps, SwitchMode } from "./SwitchForm.types";
 export function SwitchForm(props: SwitchFormProps) {
   const parsed = switchFormSchema.parse(props);
   const { onSubmit } = props;
+  const disabled = parsed.disabled;
 
   const [mode, setMode] = useState<SwitchMode>(parsed.initialMode);
   const [values, setValues] = useState<
@@ -129,13 +130,15 @@ export function SwitchForm(props: SwitchFormProps) {
                   name={field.name}
                   label={field.label}
                   inputType={field.inputType}
+                  placeholder={field.placeholder}
+                  disabled={disabled}
                   value={values[panelMode][field.name] ?? ""}
                   onChange={change(panelMode, field.name)}
                   error={isActive ? errors[field.name] : undefined}
                 />
               ))}
             </div>
-            <Button type="submit" size="lg">
+            <Button type="submit" size="lg" disabled={disabled}>
               {panel.submitLabel}
             </Button>
           </form>
@@ -154,7 +157,11 @@ export function SwitchForm(props: SwitchFormProps) {
         <p {...stylex.props(styles.description)}>
           {parsed[mode].prompt.description}
         </p>
-        <Button variant="secondary" onClick={() => switchTo(other)}>
+        <Button
+          variant="secondary"
+          disabled={disabled}
+          onClick={() => switchTo(other)}
+        >
           {parsed[mode].prompt.switchLabel}
         </Button>
       </div>

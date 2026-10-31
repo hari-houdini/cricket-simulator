@@ -10,9 +10,9 @@ import * as stylex from "@stylexjs/stylex";
  */
 export const tokens = stylex.defineVars({
   /** Dark navy surface, the base for cards and buttons. */
-  colorBase: "#001d3d",
+  colorMid: "#001d3d",
   /** Medium navy for secondary surfaces and hover states. */
-  colorMid: "#003566",
+  colorBase: "#003566",
   /** Deepest navy, used for neumorphic shadows and depth. */
   colorShadow: "#000814",
   /** Primary gold accent for CTAs, highlights, and focus rings. */

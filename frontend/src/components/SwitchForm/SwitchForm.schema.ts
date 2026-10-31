@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { array, email, object, string, enum as zodEnum } from "zod";
+import { array, boolean, email, object, string, enum as zodEnum } from "zod";
 
 import { inputTypes } from "../Input/Input.schema";
 
@@ -9,11 +9,15 @@ export const switchModes = ["signUp", "signIn"] as const;
 /** Accepts one of {@link switchModes}. Used to read a tab id back as a mode. */
 export const switchModeSchema = zodEnum(switchModes);
 
-/** One field in a form panel: the key its value is stored under, its label, and its native type. */
+/**
+ * One field in a form panel: the key its value is stored under, its label, its
+ * native type, and an optional placeholder example.
+ */
 export const switchFieldSchema = object({
   name: string().min(1),
   label: string().min(1),
   inputType: zodEnum(inputTypes),
+  placeholder: string().min(1).optional(),
 });
 
 /**
@@ -38,11 +42,14 @@ export const switchPanelSchema = object({
 /**
  * Props {@link SwitchForm} owns, validated on every render. `onSubmit` is a
  * function, so it is typed in `SwitchForm.types.ts` instead. `initialMode`
- * defaults to the sign-up panel, which is the one the design opens on.
+ * defaults to the sign-up panel, which is the one the design opens on. When
+ * `disabled` is true, every input and button is disabled, so a pending request
+ * cannot be submitted twice.
  */
 export const switchFormSchema = object({
   "aria-label": string().min(1),
   initialMode: switchModeSchema.default("signUp"),
+  disabled: boolean().default(false),
   signUp: switchPanelSchema,
   signIn: switchPanelSchema,
 });

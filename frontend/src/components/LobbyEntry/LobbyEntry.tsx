@@ -1,33 +1,86 @@
 "use client";
 
-import * as stylex from "@stylexjs/stylex";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { useState } from "react";
 import type { Lobby } from "../../shared/types/lobby.types";
 import { describeApiError } from "../../shared/utils/describe-api-error";
-import { Button } from "../Button/Button";
 import { ErrorBanner } from "../ErrorBanner/ErrorBanner";
 import { useGuestSession } from "../GuestSessionProvider/GuestSessionProvider";
-import { Input } from "../Input/Input";
-import { styles } from "./LobbyEntry.styles";
+import { SwitchForm } from "../SwitchForm/SwitchForm";
+import type { SwitchMode, SwitchPanel } from "../SwitchForm/SwitchForm.types";
 
 /**
- * The home screen's two ways in: create a lobby, or join one by its code. Both
- * lead to the lobby screen, where the owner picks a franchise.
+ * The create panel, shown first. It is the sign-up panel of {@link SwitchForm},
+ * and its submit creates a lobby.
+ */
+const createPanel: SwitchPanel = {
+  title: "Create a lobby",
+  tabLabel: "Create lobby",
+  fields: [
+    {
+      name: "lobbyName",
+      label: "Lobby name",
+      inputType: "text",
+      placeholder: "Sunday League",
+    },
+    {
+      name: "displayName",
+      label: "Your name",
+      inputType: "text",
+      placeholder: "Asha",
+    },
+  ],
+  submitLabel: "Create lobby",
+  prompt: {
+    title: "Have a code?",
+    description: "Join a lobby your friends have already started.",
+    switchLabel: "Join a lobby",
+  },
+};
+
+/**
+ * The join panel. It is the sign-in panel of {@link SwitchForm}, and its submit
+ * joins the lobby with the typed code.
+ */
+const joinPanel: SwitchPanel = {
+  title: "Join a lobby",
+  tabLabel: "Join lobby",
+  fields: [
+    {
+      name: "code",
+      label: "Lobby code",
+      inputType: "text",
+      placeholder: "ABC123",
+    },
+    {
+      name: "displayName",
+      label: "Your name",
+      inputType: "text",
+      placeholder: "Ravi",
+    },
+  ],
+  submitLabel: "Join lobby",
+  prompt: {
+    title: "Starting fresh?",
+    description: "Create a lobby and invite your friends to it.",
+    switchLabel: "Create a lobby",
+  },
+};
+
+/**
+ * The home screen's two ways in, shown as one {@link SwitchForm}: create a lobby,
+ * or join one by its code. Both lead to the lobby screen, where the owner picks
+ * a franchise.
  *
- * Both forms stay disabled until the guest session has an ID, so every request
- * carries one. A failed request shows its message above the forms and keeps the
- * typed values.
+ * The form stays disabled until the guest session has an ID, so every request
+ * carries one, and while a request is pending, so it cannot be sent twice. A
+ * failed request shows its message above the form and keeps the typed values.
  *
- * @returns The create and join forms.
+ * @returns The lobby entry form and any error from the last request.
  */
 export function LobbyEntry() {
   const router = useRouter();
   const { api, guestId } = useGuestSession();
-  const [lobbyName, setLobbyName] = useState("");
-  const [creatorName, setCreatorName] = useState("");
-  const [code, setCode] = useState("");
-  const [joinerName, setJoinerName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -49,27 +102,30 @@ export function LobbyEntry() {
   }
 
   /**
-   * @param event - The create form's submit event.
+   * Sends the visible panel's values to the matching API call. The form has
+   * already checked that every field is filled, so the fallbacks never apply.
+   *
+   * @param mode - The panel that was submitted: `signUp` creates, `signIn` joins.
+   * @param values - The panel's field values, keyed by field name.
    */
-  function handleCreate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function handleSubmit(mode: SwitchMode, values: Record<string, string>) {
     if (!guestId) {
+      return;
+    }
+    const displayName = values.displayName ?? "";
+    if (mode === "signUp") {
+      void run(() =>
+        api.createLobby({
+          name: values.lobbyName ?? "",
+          guestId,
+          displayName,
+        }),
+      );
       return;
     }
     void run(() =>
-      api.createLobby({ name: lobbyName, guestId, displayName: creatorName }),
+      api.joinLobby({ code: values.code ?? "", guestId, displayName }),
     );
-  }
-
-  /**
-   * @param event - The join form's submit event.
-   */
-  function handleJoin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!guestId) {
-      return;
-    }
-    void run(() => api.joinLobby({ code, guestId, displayName: joinerName }));
   }
 
   const disabled = !guestId || pending;
@@ -77,65 +133,13 @@ export function LobbyEntry() {
   return (
     <>
       {error ? <ErrorBanner message={error} /> : null}
-      <div {...stylex.props(styles.grid)}>
-        <form
-          onSubmit={handleCreate}
-          aria-labelledby="create-lobby-heading"
-          {...stylex.props(styles.panel)}
-        >
-          <h2 id="create-lobby-heading" {...stylex.props(styles.title)}>
-            Create a lobby
-          </h2>
-          <Input
-            kind="text"
-            id="create-lobby-name"
-            label="Lobby name"
-            placeholder="Sunday League"
-            value={lobbyName}
-            onChange={(event) => setLobbyName(event.target.value)}
-          />
-          <Input
-            kind="text"
-            id="create-display-name"
-            label="Your name"
-            placeholder="Asha"
-            value={creatorName}
-            onChange={(event) => setCreatorName(event.target.value)}
-          />
-          <Button type="submit" disabled={disabled}>
-            Create lobby
-          </Button>
-        </form>
-
-        <form
-          onSubmit={handleJoin}
-          aria-labelledby="join-lobby-heading"
-          {...stylex.props(styles.panel)}
-        >
-          <h2 id="join-lobby-heading" {...stylex.props(styles.title)}>
-            Join a lobby
-          </h2>
-          <Input
-            kind="text"
-            id="join-lobby-code"
-            label="Lobby code"
-            placeholder="ABC123"
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-          />
-          <Input
-            kind="text"
-            id="join-display-name"
-            label="Your name"
-            placeholder="Ravi"
-            value={joinerName}
-            onChange={(event) => setJoinerName(event.target.value)}
-          />
-          <Button type="submit" disabled={disabled}>
-            Join lobby
-          </Button>
-        </form>
-      </div>
+      <SwitchForm
+        aria-label="Create or join a lobby"
+        signUp={createPanel}
+        signIn={joinPanel}
+        disabled={disabled}
+        onSubmit={handleSubmit}
+      />
     </>
   );
 }
