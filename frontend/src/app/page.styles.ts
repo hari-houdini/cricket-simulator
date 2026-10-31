@@ -9,7 +9,7 @@ export const styles = stylex.create({
   heading: {
     fontFamily: tokens.fontSerif,
     fontSize: tokens.fontSizeHeading,
-    fontWeight: tokens.fontWeightBold,
     marginBlock: `0 ${tokens.spaceLg}`,
+    textAlign: "center",
   },
 });

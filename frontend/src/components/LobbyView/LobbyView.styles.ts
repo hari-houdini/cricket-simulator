@@ -12,7 +12,8 @@ export const styles = stylex.create({
   heading: {
     fontFamily: tokens.fontSerif,
     fontSize: tokens.fontSizeHeading,
-    fontWeight: tokens.fontWeightBold,
+    // fontWeight: tokens.fontWeightBold,
+    textAlign: "center",
     margin: 0,
   },
   subheading: {

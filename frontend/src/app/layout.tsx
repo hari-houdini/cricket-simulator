@@ -4,6 +4,7 @@ import { Bodoni_Moda, DM_Sans } from "next/font/google";
 import Link from "next/link";
 
 import "./globals.css";
+import { CricketBackdrop } from "../components/CricketBackdrop/CricketBackdrop";
 import { focusRing } from "../shared/const/focus-ring.styles";
 import { AppProviders } from "./AppProviders";
 import { styles } from "./layout.styles";
@@ -52,6 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       ].join(" ")}
     >
       <body {...stylex.props(styles.body)}>
+        <CricketBackdrop />
         <AppProviders>
           <a href="#main" {...stylex.props(styles.skipLink)}>
             Skip to content

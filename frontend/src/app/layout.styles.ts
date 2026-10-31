@@ -15,7 +15,7 @@ export const styles = stylex.create({
     height: "100%",
   },
   body: {
-    backgroundColor: tokens.colorBase,
+    backgroundColor: tokens.colorBackdropBase,
     color: tokens.colorText,
     fontFamily: tokens.fontSans,
     minHeight: "100%",

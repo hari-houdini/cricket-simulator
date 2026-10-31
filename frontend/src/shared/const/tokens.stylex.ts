@@ -34,6 +34,17 @@ export const tokens = stylex.defineVars({
    */
   colorStatusError: "#f25f5c",
 
+  /**
+   * Base fill of the wave backdrop behind every view, and the body's fallback
+   * fill. Taken from the supplied wave snippet, not from the design system, which
+   * sets the base navy to `colorMid`.
+   */
+  colorBackdropBase: "#003566",
+  /** The darker wave in the backdrop's left-hand curve. From the wave snippet. */
+  colorBackdropWaveDeep: "#001d3d",
+  /** The lighter wave in the backdrop's right-hand curve. From the wave snippet. */
+  colorBackdropWaveLight: "#001d3d",
+
   /** 4px, micro-spacing. */
   spaceXs: "4px",
   /** 8px, tight gaps. */
