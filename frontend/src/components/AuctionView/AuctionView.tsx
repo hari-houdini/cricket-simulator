@@ -9,7 +9,6 @@ import { formatLakhs } from "../../shared/utils/format-money";
 import { Badge } from "../Badge/Badge";
 import { Button } from "../Button/Button";
 import { EmptyState } from "../EmptyState/EmptyState";
-import { ErrorBanner } from "../ErrorBanner/ErrorBanner";
 import { styles } from "./AuctionView.styles";
 import type { AuctionViewProps } from "./AuctionView.types";
 
@@ -53,7 +52,6 @@ export function AuctionView({
   guestId,
   now,
   pending,
-  error,
   announcement,
   onBid,
 }: AuctionViewProps) {
@@ -95,142 +93,136 @@ export function AuctionView({
   const bidLabel = `Bid ${formatLakhs(lot.minimumBidLakhs)}`;
 
   return (
-    <>
-      {error ? <ErrorBanner message={error} /> : null}
-      <div {...stylex.props(styles.layout)}>
-        <div {...stylex.props(styles.panel)}>
-          <section aria-labelledby={lotHeadingId}>
-            <h2 id={lotHeadingId} {...stylex.props(styles.heading)}>
-              Up for auction
-            </h2>
-            <p {...stylex.props(styles.playerName)}>{lot.player.name}</p>
-            <p {...stylex.props(styles.meta)}>
-              <Badge kind="role" role={ROLE_BADGES[lot.player.role]} />
-              <span>Base price {formatLakhs(lot.player.basePrice)}</span>
-              <span>
-                Trouble rating {lot.player.troubleRating ?? 2} of 10 (fantasy
-                mechanic)
-              </span>
-            </p>
-          </section>
+    <div {...stylex.props(styles.layout)}>
+      <div {...stylex.props(styles.panel)}>
+        <section aria-labelledby={lotHeadingId}>
+          <h2 id={lotHeadingId} {...stylex.props(styles.heading)}>
+            Up for auction
+          </h2>
+          <p {...stylex.props(styles.playerName)}>{lot.player.name}</p>
+          <p {...stylex.props(styles.meta)}>
+            <Badge kind="role" role={ROLE_BADGES[lot.player.role]} />
+            <span>Base price {formatLakhs(lot.player.basePrice)}</span>
+            <span>
+              Trouble rating {lot.player.troubleRating ?? 2} of 10 (fantasy
+              mechanic)
+            </span>
+          </p>
+        </section>
 
-          <section aria-labelledby="bid-heading">
-            <h3 id="bid-heading" {...stylex.props(styles.heading)}>
-              Highest bid
-            </h3>
-            <p {...stylex.props(styles.note)}>
-              {lot.highBid
-                ? `${formatLakhs(lot.highBid.amountLakhs)} by ${lot.highBid.displayName}`
-                : "No bids yet"}
-            </p>
-            <p {...stylex.props(styles.note)} aria-hidden="true">
-              Time left {formatCountdown(timeLeft)}
-            </p>
-            <output {...stylex.props(styles.announcement)} aria-live="polite">
-              {announcement}
-            </output>
-          </section>
+        <section aria-labelledby="bid-heading">
+          <h3 id="bid-heading" {...stylex.props(styles.heading)}>
+            Highest bid
+          </h3>
+          <p {...stylex.props(styles.note)}>
+            {lot.highBid
+              ? `${formatLakhs(lot.highBid.amountLakhs)} by ${lot.highBid.displayName}`
+              : "No bids yet"}
+          </p>
+          <p {...stylex.props(styles.note)} aria-hidden="true">
+            Time left {formatCountdown(timeLeft)}
+          </p>
+          <output {...stylex.props(styles.announcement)} aria-live="polite">
+            {announcement}
+          </output>
+        </section>
 
-          {purse ? (
-            <div>
-              <Button
-                disabled={pending || blockReason !== null}
-                aria-describedby={blockReason ? bidBlockId : undefined}
-                onClick={() => onBid(lot.minimumBidLakhs)}
-              >
-                {bidLabel}
-              </Button>
-              {blockReason ? (
-                <p id={bidBlockId} {...stylex.props(styles.note)}>
-                  {describeBidBlock(blockReason)}
-                </p>
-              ) : null}
-            </div>
-          ) : (
-            <p {...stylex.props(styles.note)}>
-              Join the lobby to bid on players.
-            </p>
-          )}
-        </div>
-
-        <div {...stylex.props(styles.list)}>
-          <section
-            {...stylex.props(styles.panel)}
-            aria-labelledby="progress-heading"
-          >
-            <h2 id="progress-heading" {...stylex.props(styles.heading)}>
-              Progress
-            </h2>
-            <p {...stylex.props(styles.note)}>
-              Sold {auction.sold.length} · Unsold {auction.unsold.length} · Left
-              to come up {auction.remaining}
-            </p>
-            {purse ? (
-              <p {...stylex.props(styles.note)}>
-                Your purse {formatLakhs(purse.purseLakhs)} · Squad{" "}
-                {purse.squad.length} of {SQUAD_SIZE}
+        {purse ? (
+          <div>
+            <Button
+              disabled={pending || blockReason !== null}
+              aria-describedby={blockReason ? bidBlockId : undefined}
+              onClick={() => onBid(lot.minimumBidLakhs)}
+            >
+              {bidLabel}
+            </Button>
+            {blockReason ? (
+              <p id={bidBlockId} {...stylex.props(styles.note)}>
+                {describeBidBlock(blockReason)}
               </p>
             ) : null}
-          </section>
-
-          <section
-            {...stylex.props(styles.panel)}
-            aria-labelledby="owners-purse-heading"
-          >
-            <h2 id="owners-purse-heading" {...stylex.props(styles.heading)}>
-              Purses
-            </h2>
-            <ul {...stylex.props(styles.list)}>
-              {auction.purses.map((item) => (
-                <li key={item.guestId}>
-                  {item.displayName}
-                  {item.guestId === guestId ? " (you)" : ""}:{" "}
-                  {formatLakhs(item.purseLakhs)}, squad {item.squad.length} of{" "}
-                  {SQUAD_SIZE}
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section
-            {...stylex.props(styles.panel)}
-            aria-labelledby="log-heading"
-          >
-            <h2 id="log-heading" {...stylex.props(styles.heading)}>
-              Bid log
-            </h2>
-            {auction.log.length === 0 ? (
-              <p {...stylex.props(styles.note)}>No bids yet on this auction.</p>
-            ) : (
-              <ol {...stylex.props(styles.list)}>
-                {[...auction.log]
-                  .reverse()
-                  .slice(0, LOG_LENGTH)
-                  .map((entry) => (
-                    <li key={entry.sequence}>
-                      {entry.displayName} bid {formatLakhs(entry.amountLakhs)}{" "}
-                      for {entry.playerName}
-                    </li>
-                  ))}
-              </ol>
-            )}
-          </section>
-
-          <section
-            {...stylex.props(styles.panel)}
-            aria-labelledby="unsold-heading"
-          >
-            <h2 id="unsold-heading" {...stylex.props(styles.heading)}>
-              Unsold pool
-            </h2>
-            <p {...stylex.props(styles.note)}>
-              {auction.unsold.length === 0
-                ? "No players unsold so far."
-                : auction.unsold.map((player) => player.name).join(", ")}
-            </p>
-          </section>
-        </div>
+          </div>
+        ) : (
+          <p {...stylex.props(styles.note)}>
+            Join the lobby to bid on players.
+          </p>
+        )}
       </div>
-    </>
+
+      <div {...stylex.props(styles.list)}>
+        <section
+          {...stylex.props(styles.panel)}
+          aria-labelledby="progress-heading"
+        >
+          <h2 id="progress-heading" {...stylex.props(styles.heading)}>
+            Progress
+          </h2>
+          <p {...stylex.props(styles.note)}>
+            Sold {auction.sold.length} · Unsold {auction.unsold.length} · Left
+            to come up {auction.remaining}
+          </p>
+          {purse ? (
+            <p {...stylex.props(styles.note)}>
+              Your purse {formatLakhs(purse.purseLakhs)} · Squad{" "}
+              {purse.squad.length} of {SQUAD_SIZE}
+            </p>
+          ) : null}
+        </section>
+
+        <section
+          {...stylex.props(styles.panel)}
+          aria-labelledby="owners-purse-heading"
+        >
+          <h2 id="owners-purse-heading" {...stylex.props(styles.heading)}>
+            Purses
+          </h2>
+          <ul {...stylex.props(styles.list)}>
+            {auction.purses.map((item) => (
+              <li key={item.guestId}>
+                {item.displayName}
+                {item.guestId === guestId ? " (you)" : ""}:{" "}
+                {formatLakhs(item.purseLakhs)}, squad {item.squad.length} of{" "}
+                {SQUAD_SIZE}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section {...stylex.props(styles.panel)} aria-labelledby="log-heading">
+          <h2 id="log-heading" {...stylex.props(styles.heading)}>
+            Bid log
+          </h2>
+          {auction.log.length === 0 ? (
+            <p {...stylex.props(styles.note)}>No bids yet on this auction.</p>
+          ) : (
+            <ol {...stylex.props(styles.list)}>
+              {[...auction.log]
+                .reverse()
+                .slice(0, LOG_LENGTH)
+                .map((entry) => (
+                  <li key={entry.sequence}>
+                    {entry.displayName} bid {formatLakhs(entry.amountLakhs)} for{" "}
+                    {entry.playerName}
+                  </li>
+                ))}
+            </ol>
+          )}
+        </section>
+
+        <section
+          {...stylex.props(styles.panel)}
+          aria-labelledby="unsold-heading"
+        >
+          <h2 id="unsold-heading" {...stylex.props(styles.heading)}>
+            Unsold pool
+          </h2>
+          <p {...stylex.props(styles.note)}>
+            {auction.unsold.length === 0
+              ? "No players unsold so far."
+              : auction.unsold.map((player) => player.name).join(", ")}
+          </p>
+        </section>
+      </div>
+    </div>
   );
 }

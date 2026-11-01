@@ -7,10 +7,9 @@ import type { Auction } from "../../shared/types/auction.types";
 import { describeApiError } from "../../shared/utils/describe-api-error";
 import { formatLakhs } from "../../shared/utils/format-money";
 import { AuctionView } from "../AuctionView/AuctionView";
-import { ErrorBanner } from "../ErrorBanner/ErrorBanner";
+import { EmptyState } from "../EmptyState/EmptyState";
 import { useGuestSession } from "../GuestSessionProvider/GuestSessionProvider";
-import { Toast } from "../Toast/Toast";
-import type { ToastProps } from "../Toast/Toast.types";
+import { notify, useConnectionNotice } from "../Notifier/Notifier";
 import { styles } from "./AuctionPanel.styles";
 import type { AuctionPanelProps } from "./AuctionPanel.types";
 
@@ -20,9 +19,6 @@ const POLL_MS = 1000;
 /** How often the countdown moves on. A quarter second keeps the display steady. */
 const TICK_MS = 250;
 
-/** How long a toast stays on screen before it clears itself. */
-const TOAST_MS = 4000;
-
 /** The seconds left at which the live region announces the timer. */
 const WARNING_SECONDS = [10, 5] as const;
 
@@ -31,8 +27,10 @@ const WARNING_SECONDS = [10, 5] as const;
  * second, moves the countdown on, and reads it again the moment a lot's timer
  * runs out, so the hammer shows without waiting for the next poll.
  *
- * It also raises a toast when the guest is outbid, or when the lot they held
+ * It also raises a notice when the guest is outbid, or when the lot they held
  * goes to the hammer, and announces new bids and time warnings to screen readers.
+ * A refused bid is a transient notice. A failed read while the auction is on
+ * screen is a persistent one, which clears once the auction is read again.
  *
  * @param props.code - The lobby whose auction is running.
  * @returns The auction screen, or a loading or error state while it loads.
@@ -41,13 +39,8 @@ export function AuctionPanel({ code }: AuctionPanelProps) {
   const { api, guestId } = useGuestSession();
   const [auction, setAuction] = useState<Auction | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [bidError, setBidError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  const [toast, setToast] = useState<Pick<
-    ToastProps,
-    "tone" | "message"
-  > | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const previous = useRef<{
     lotId: string | null;
@@ -87,14 +80,8 @@ export function AuctionPanel({ code }: AuctionPanelProps) {
     }
   }, [auction, now, refresh]);
 
-  // Clear the toast after a moment.
-  useEffect(() => {
-    if (!toast) {
-      return;
-    }
-    const id = window.setTimeout(() => setToast(null), TOAST_MS);
-    return () => window.clearTimeout(id);
-  }, [toast]);
+  // Once the auction is on screen, a failed read stays visible until a read succeeds.
+  useConnectionNotice(auction ? loadError : null);
 
   // Compare with the last read: a lot that changed hands, or a guest who lost the lead.
   useEffect(() => {
@@ -112,7 +99,7 @@ export function AuctionPanel({ code }: AuctionPanelProps) {
     if (before.lotId !== lotId && before.highBidderId === guestId) {
       const sale = auction.sold.at(-1);
       if (sale?.guestId === guestId) {
-        setToast({
+        notify({
           tone: "success",
           message: `You won ${sale.player.name} for ${formatLakhs(sale.amountLakhs)}.`,
         });
@@ -123,7 +110,7 @@ export function AuctionPanel({ code }: AuctionPanelProps) {
       highBidderId !== null &&
       highBidderId !== guestId
     ) {
-      setToast({
+      notify({
         tone: "warning",
         message: `You were outbid on ${auction.lot?.player.name ?? "this player"}.`,
       });
@@ -194,12 +181,11 @@ export function AuctionPanel({ code }: AuctionPanelProps) {
     if (!guestId) {
       return;
     }
-    setBidError(null);
     setPending(true);
     try {
       setAuction(await api.placeBid({ code, guestId, amountLakhs }));
     } catch (caught) {
-      setBidError(describeApiError(caught));
+      notify({ tone: "error", message: describeApiError(caught) });
       await refresh();
     } finally {
       setPending(false);
@@ -208,7 +194,7 @@ export function AuctionPanel({ code }: AuctionPanelProps) {
 
   if (!auction || !guestId) {
     if (loadError) {
-      return <ErrorBanner message={loadError} />;
+      return <EmptyState title="Auction unavailable" description={loadError} />;
     }
     return (
       <output aria-busy="true" {...stylex.props(styles.loading)}>
@@ -218,17 +204,13 @@ export function AuctionPanel({ code }: AuctionPanelProps) {
   }
 
   return (
-    <>
-      {toast ? <Toast tone={toast.tone} message={toast.message} /> : null}
-      <AuctionView
-        auction={auction}
-        guestId={guestId}
-        now={now}
-        pending={pending}
-        error={bidError ?? loadError}
-        announcement={announcement}
-        onBid={(amountLakhs) => void placeBid(amountLakhs)}
-      />
-    </>
+    <AuctionView
+      auction={auction}
+      guestId={guestId}
+      now={now}
+      pending={pending}
+      announcement={announcement}
+      onBid={(amountLakhs) => void placeBid(amountLakhs)}
+    />
   );
 }

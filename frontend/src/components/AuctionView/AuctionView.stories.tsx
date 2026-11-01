@@ -16,7 +16,6 @@ const meta = {
     guestId: "asha",
     now: STORY_NOW,
     pending: false,
-    error: null,
     announcement: "",
     onBid: fn(),
   },
@@ -74,17 +73,5 @@ export const Complete: Story = {
     await expect(
       canvas.getByRole("heading", { name: "Auction complete" }),
     ).toBeInTheDocument();
-  },
-};
-
-/** A refused bid shows its message above the screen, as an alert. */
-export const BidRefused: Story = {
-  args: {
-    error: "That bid is more than your purse has left.",
-  },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByRole("alert")).toHaveTextContent(
-      "That bid is more than your purse has left.",
-    );
   },
 };

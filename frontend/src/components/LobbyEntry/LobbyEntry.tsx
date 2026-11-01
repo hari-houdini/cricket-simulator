@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Lobby } from "../../shared/types/lobby.types";
 import { describeApiError } from "../../shared/utils/describe-api-error";
-import { ErrorBanner } from "../ErrorBanner/ErrorBanner";
 import { useGuestSession } from "../GuestSessionProvider/GuestSessionProvider";
+import { notify } from "../Notifier/Notifier";
 import { SwitchForm } from "../SwitchForm/SwitchForm";
 import type { SwitchMode, SwitchPanel } from "../SwitchForm/SwitchForm.types";
 
@@ -74,14 +74,14 @@ const joinPanel: SwitchPanel = {
  *
  * The form stays disabled until the guest session has an ID, so every request
  * carries one, and while a request is pending, so it cannot be sent twice. A
- * failed request shows its message above the form and keeps the typed values.
+ * failed request raises a notice and keeps the typed values, so the form does
+ * not move when the notice appears.
  *
- * @returns The lobby entry form and any error from the last request.
+ * @returns The lobby entry form.
  */
 export function LobbyEntry() {
   const router = useRouter();
   const { api, guestId } = useGuestSession();
-  const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   /**
@@ -90,13 +90,12 @@ export function LobbyEntry() {
    * @param action - The API call that returns the lobby.
    */
   async function run(action: () => Promise<Lobby>) {
-    setError(null);
     setPending(true);
     try {
       const lobby = await action();
       router.push(`/lobby/${lobby.code}`);
     } catch (caught) {
-      setError(describeApiError(caught));
+      notify({ tone: "error", message: describeApiError(caught) });
       setPending(false);
     }
   }
@@ -131,15 +130,12 @@ export function LobbyEntry() {
   const disabled = !guestId || pending;
 
   return (
-    <>
-      {error ? <ErrorBanner message={error} /> : null}
-      <SwitchForm
-        aria-label="Create or join a lobby"
-        signUp={createPanel}
-        signIn={joinPanel}
-        disabled={disabled}
-        onSubmit={handleSubmit}
-      />
-    </>
+    <SwitchForm
+      aria-label="Create or join a lobby"
+      signUp={createPanel}
+      signIn={joinPanel}
+      disabled={disabled}
+      onSubmit={handleSubmit}
+    />
   );
 }

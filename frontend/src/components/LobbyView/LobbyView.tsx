@@ -1,26 +1,22 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useState } from "react";
 import { focusRing } from "../../shared/const/focus-ring.styles";
 import { LOBBY_PHASE_LABELS, MAX_OWNERS } from "../../shared/const/lobby.const";
 import { TEAMS } from "../../shared/const/teams.const";
 import { AuctionPanel } from "../AuctionPanel/AuctionPanel";
 import { AwardsPanel } from "../AwardsPanel/AwardsPanel";
 import { Button } from "../Button/Button";
-import { ErrorBanner } from "../ErrorBanner/ErrorBanner";
 import { FranchiseGrid } from "../FranchiseGrid/FranchiseGrid";
 import { Input } from "../Input/Input";
+import { notify } from "../Notifier/Notifier";
 import { PlayoffsPanel } from "../PlayoffsPanel/PlayoffsPanel";
 import { SeasonNav } from "../SeasonNav/SeasonNav";
 import { SimView } from "../SimView/SimView";
 import { SquadPanel } from "../SquadPanel/SquadPanel";
-import { Toast } from "../Toast/Toast";
 import { styles } from "./LobbyView.styles";
 import type { LobbyViewProps } from "./LobbyView.types";
-
-/** How long the success toast stays up, in milliseconds. */
-const NOTICE_MS = 4000;
 
 /**
  * Shows one lobby. Before the auction starts it shows the name, phase, code,
@@ -44,7 +40,6 @@ export function LobbyView({
   guestId,
   shareUrl,
   pending,
-  error,
   onClaim,
   onJoin,
   onStart,
@@ -52,7 +47,6 @@ export function LobbyView({
 }: LobbyViewProps) {
   const [displayName, setDisplayName] = useState("");
   const [squadSaved, setSquadSaved] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
   // Set once the viewer has watched the Final to its end. The champion is decided then, so the
   // awards and the nav views wait for it rather than appearing as soon as the server has a result.
   const [finalShown, setFinalShown] = useState(false);
@@ -67,15 +61,6 @@ export function LobbyView({
     lobby.auctionStatus === "complete" && lobby.phase !== "complete";
   const pickingXi = seasonOpen && isOwner && lobby.round === 0 && !squadSaved;
 
-  // The toast clears itself, so a stale confirmation never lingers over the sim.
-  useEffect(() => {
-    if (notice === null) {
-      return;
-    }
-    const timer = window.setTimeout(() => setNotice(null), NOTICE_MS);
-    return () => window.clearTimeout(timer);
-  }, [notice]);
-
   /**
    * @param event - The join form's submit event.
    */
@@ -87,13 +72,14 @@ export function LobbyView({
   /** Called once the XI is saved. The sim starts next, so the owner is moved to it. */
   function handleSquadSaved() {
     setSquadSaved(true);
-    setNotice("Squad saved. The season is starting.");
+    notify({
+      tone: "success",
+      message: "Squad saved. The season is starting.",
+    });
   }
 
   return (
     <div {...stylex.props(styles.stack)}>
-      {error ? <ErrorBanner message={error} /> : null}
-
       <header>
         <h1 {...stylex.props(styles.heading)}>{lobby.name}</h1>
         <p {...stylex.props(styles.meta)}>
@@ -203,8 +189,6 @@ export function LobbyView({
       {pickingXi ? (
         <SquadPanel code={lobby.code} onSaved={handleSquadSaved} />
       ) : null}
-
-      {notice ? <Toast tone="success" message={notice} /> : null}
 
       {seasonOpen && !pickingXi ? (
         <SimView

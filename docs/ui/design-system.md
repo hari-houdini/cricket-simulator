@@ -484,15 +484,18 @@ Use illustration + message + retry button.
 
 ### Error Handling
 
-**Banner Alert** (top of screen):
+**Notice** (top of screen, floating over the page):
 ```
 ⚠️ Connection unstable. Retrying...
 ```
 
-- Amber background, dark text
-- Persistent until resolved
+- Notices stack in one fixed region, so they never push content down
+- Error tone, announced as an alert
+- Persistent until the connection recovers, then it clears
+- A refused action raises a transient error notice that clears after 4 seconds
 - Gracefully pauses auction; all state safe on server
 - Reconnect resumes seamlessly
+- Decision record: `docs/adr/0009-toast-library.md`
 
 ---
 

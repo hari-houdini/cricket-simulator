@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, within } from "storybook/test";
-
 import { LobbyEntry } from "./LobbyEntry";
 
 const meta = {
@@ -26,7 +25,7 @@ export const Default: Story = {
   },
 };
 
-/** A wrong code is reported above the form, and the typed values stay. */
+/** A wrong code is raised as an error notice, and the typed values stay. */
 export const UnknownCode: Story = {
   play: async ({ canvas }) => {
     // The join panel is inert until the overlay switches to it. The overlay's
@@ -37,9 +36,10 @@ export const UnknownCode: Story = {
     await userEvent.type(joinForm.getByLabelText("Lobby code"), "ZZZZZZ");
     await userEvent.type(joinForm.getByLabelText("Your name"), "Ravi");
     await userEvent.click(joinForm.getByRole("button", { name: "Join lobby" }));
-    await expect(await canvas.findByRole("alert")).toHaveTextContent(
-      "No lobby has that code.",
+    const notice = await canvas.findByText(
+      "No lobby has that code. Check the code and try again.",
     );
+    await expect(notice).toHaveAttribute("role", "alert");
     await expect(joinForm.getByLabelText("Lobby code")).toHaveValue("ZZZZZZ");
   },
 };

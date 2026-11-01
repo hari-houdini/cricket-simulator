@@ -732,7 +732,7 @@ Create these reusable components in Figma:
 - Button: "Retry"
 
 **Error State**:
-- Banner at top: Amber background, dark text
+- Notice floating at the top of the screen, not in the page flow: error tone, announced as an alert
 - Icon: Warning symbol
 - Text: "Connection unstable. Retrying..."
 

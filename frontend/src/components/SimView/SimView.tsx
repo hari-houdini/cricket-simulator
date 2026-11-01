@@ -12,9 +12,9 @@ import type { Squad } from "../../shared/types/squad.types";
 import { describeApiError } from "../../shared/utils/describe-api-error";
 import { stackEntries } from "../../shared/utils/sim-stack";
 import { Button } from "../Button/Button";
-import { ErrorBanner } from "../ErrorBanner/ErrorBanner";
 import { useGuestSession } from "../GuestSessionProvider/GuestSessionProvider";
 import { Modal } from "../Modal/Modal";
+import { notify, useConnectionNotice } from "../Notifier/Notifier";
 import { SeasonNav } from "../SeasonNav/SeasonNav";
 import { SimStack } from "../SimStack/SimStack";
 import { SquadPanel } from "../SquadPanel/SquadPanel";
@@ -94,7 +94,6 @@ export function SimView({
   const [league, setLeague] = useState<League | null>(null);
   const [revealed, setRevealed] = useState<number | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [awards, setAwards] = useState<Awards | null>(null);
   const [lineups, setLineups] = useState<Lineup[] | null>(null);
   const [squad, setSquad] = useState<Squad | null>(null);
@@ -107,6 +106,9 @@ export function SimView({
   const shown = revealed ?? 0;
   const substitutionOpen = lobby.substituting.includes(guestId);
   const substitutionCount = lobby.substitutions.length;
+
+  // Once the league is on screen, a failed read stays visible until a read succeeds.
+  useConnectionNotice(league !== null ? loadError : null);
 
   // Reads the league on a timer while the sim is on screen. The first read starts the stack at
   // the point already played, so a late guest does not watch the whole season replay. A failed
@@ -228,7 +230,8 @@ export function SimView({
   );
 
   /**
-   * Runs an action that returns the lobby, and passes the lobby on or shows the error.
+   * Runs an action that returns the lobby, and passes the lobby on. A refusal is
+   * raised as a notice, so the season stays where it is.
    *
    * @param action - The API call that returns the lobby.
    * @returns True when the action succeeded.
@@ -236,13 +239,12 @@ export function SimView({
   async function runLobbyAction(
     action: () => Promise<Lobby>,
   ): Promise<boolean> {
-    setError(null);
     setPending(true);
     try {
       onLobbyUpdated(await action());
       return true;
     } catch (caught) {
-      setError(describeApiError(caught));
+      notify({ tone: "error", message: describeApiError(caught) });
       return false;
     } finally {
       setPending(false);
@@ -340,8 +342,6 @@ export function SimView({
             : `${played} of ${leagueLength} league matches played.`}
           {lobby.simPaused ? " The sim is paused for a substitution." : ""}
         </p>
-        {error ? <ErrorBanner message={error} /> : null}
-
         {isOwner ? (
           <div {...stylex.props(styles.actions)}>
             <Button

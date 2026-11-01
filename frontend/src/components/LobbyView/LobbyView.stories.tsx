@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent } from "storybook/test";
 import { LobbyView } from "./LobbyView";
 import { fullLobby, twoOwnerLobby, unclaimedLobby } from "./LobbyView.mock";
 
@@ -10,7 +10,6 @@ const meta = {
     guestId: "asha",
     shareUrl: "https://example.test/lobby/ABC123",
     pending: false,
-    error: null,
     onClaim: fn(),
     onJoin: fn(),
     onStart: fn(),
@@ -61,20 +60,6 @@ export const FullLobby: Story = {
     await expect(
       canvas.getByText(
         "This lobby is full. Every franchise already has an owner.",
-      ),
-    ).toBeInTheDocument();
-  },
-};
-
-/** A failed action leaves the lobby on screen and shows the message above it. */
-export const ActionFailed: Story = {
-  args: {
-    error: "Another owner already holds that franchise. Pick a free one.",
-  },
-  play: async ({ canvas }) => {
-    await expect(
-      within(canvas.getByRole("alert")).getByText(
-        "Another owner already holds that franchise. Pick a free one.",
       ),
     ).toBeInTheDocument();
   },

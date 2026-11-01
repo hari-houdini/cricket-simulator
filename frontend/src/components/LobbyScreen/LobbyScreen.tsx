@@ -9,9 +9,9 @@ import type { Lobby } from "../../shared/types/lobby.types";
 import { describeApiError } from "../../shared/utils/describe-api-error";
 import { LobbyNotFoundError } from "../../shared/utils/game-api.errors";
 import { EmptyState } from "../EmptyState/EmptyState";
-import { ErrorBanner } from "../ErrorBanner/ErrorBanner";
 import { useGuestSession } from "../GuestSessionProvider/GuestSessionProvider";
 import { LobbyView } from "../LobbyView/LobbyView";
+import { notify } from "../Notifier/Notifier";
 import { Skeleton } from "../Skeleton/Skeleton";
 import { styles } from "./LobbyScreen.styles";
 import type { LobbyScreenProps } from "./LobbyScreen.types";
@@ -47,7 +47,6 @@ type ScreenState =
 export function LobbyScreen({ code }: LobbyScreenProps) {
   const { api, guestId } = useGuestSession();
   const [state, setState] = useState<ScreenState>({ status: "loading" });
-  const [actionError, setActionError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
@@ -110,18 +109,18 @@ export function LobbyScreen({ code }: LobbyScreenProps) {
   }, [api, code, live]);
 
   /**
-   * Runs an action that returns the lobby, and shows the result or the error.
+   * Runs an action that returns the lobby. The result replaces the lobby on
+   * screen; a refusal is raised as a notice, so the lobby stays where it is.
    *
    * @param action - The API call to run.
    */
   async function run(action: () => Promise<Lobby>) {
-    setActionError(null);
     setPending(true);
     try {
       const lobby = await action();
       setState({ status: "ready", lobby });
     } catch (caught) {
-      setActionError(describeApiError(caught));
+      notify({ tone: "error", message: describeApiError(caught) });
     } finally {
       setPending(false);
     }
@@ -142,7 +141,7 @@ export function LobbyScreen({ code }: LobbyScreenProps) {
   }
 
   if (state.status === "failed") {
-    return <ErrorBanner message={state.message} />;
+    return <EmptyState title="Lobby unavailable" description={state.message} />;
   }
 
   if (state.status === "loading" || !guestId) {
@@ -163,7 +162,6 @@ export function LobbyScreen({ code }: LobbyScreenProps) {
       guestId={guestId}
       shareUrl={`${window.location.origin}/lobby/${lobby.code}`}
       pending={pending}
-      error={actionError}
       onClaim={(franchiseId) =>
         void run(() =>
           api.claimFranchise({ code: lobby.code, guestId, franchiseId }),

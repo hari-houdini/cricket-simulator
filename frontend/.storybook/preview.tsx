@@ -5,16 +5,20 @@ import type { Preview } from "@storybook/nextjs-vite";
 import "../src/app/globals.css";
 import { CricketBackdrop } from "../src/components/CricketBackdrop/CricketBackdrop";
 import { GuestSessionProvider } from "../src/components/GuestSessionProvider/GuestSessionProvider";
+import { Notifier } from "../src/components/Notifier/Notifier";
 import { createMockGameApi } from "../src/services/game-api/mock-game-api";
 
 const preview: Preview = {
   // Every story gets a guest session backed by the seeded mock API. This lives
   // here, not in the stories, because components must not import services.
-  // The backdrop is the app's background, so stories render on it too.
+  // The backdrop is the app's background, so stories render on it too. The
+  // toast region is mounted once here, as the app mounts it once in its
+  // providers, so a story never has two regions on screen.
   decorators: [
     (Story) => (
       <GuestSessionProvider api={createMockGameApi({ seed: "story" })}>
         <CricketBackdrop />
+        <Notifier />
         <Story />
       </GuestSessionProvider>
     ),

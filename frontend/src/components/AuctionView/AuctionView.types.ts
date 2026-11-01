@@ -10,8 +10,6 @@ export type AuctionViewProps = {
   readonly now: number;
   /** True while a bid is in flight. Disables the bid button. */
   readonly pending: boolean;
-  /** A message for the last failed bid, or `null`. */
-  readonly error: string | null;
   /**
    * Text for the live region: the latest bid, sale, or time warning. Screen
    * readers announce it. Empty when there is nothing new to say.

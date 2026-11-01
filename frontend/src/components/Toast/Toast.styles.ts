@@ -30,8 +30,12 @@ export const styles = stylex.create({
     backgroundColor: tokens.colorStatusWarning,
     color: tokens.colorBase,
   },
+  /**
+   * The error fill is light, so the text is the deepest navy. `colorBase` gave
+   * 3.86:1 on it, below the 4.5:1 minimum for body text; `colorMid` gives 5.28:1.
+   */
   toneError: {
     backgroundColor: tokens.colorStatusError,
-    color: tokens.colorBase,
+    color: tokens.colorMid,
   },
 });

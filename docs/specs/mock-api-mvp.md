@@ -159,7 +159,7 @@ Accessibility and layout
 - Phase 7: Hardening. Responsive pass at 320/768/1024px, accessibility pass, bundle check (150 KB JS per page), LCP and CLS check.
 
 **Components**
-- Reuse the existing primitives: Button, Card, Input, Modal, Toast, Badge, Skeleton, EmptyState, ErrorBanner.
+- Reuse the existing primitives: Button, Card, Input, Modal, Toast, Badge, Skeleton, EmptyState, and the Notifier region (see `docs/adr/0009-toast-library.md`).
 - New feature components live in their feature folder and compose within it: LobbyEntry, FranchiseGrid, AuctionCard, BidLog, PurseBar, SquadList, StartingXIPicker, Schedule, StandingsTable, MatchResult, PlayoffBracket, AwardsScreen, FairPlayScreen.
 
 **Styling**

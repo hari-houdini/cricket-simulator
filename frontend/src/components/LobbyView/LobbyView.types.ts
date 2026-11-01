@@ -10,8 +10,6 @@ export type LobbyViewProps = {
   readonly shareUrl: string;
   /** True while a join, claim or start is in flight. */
   readonly pending: boolean;
-  /** A message for the last failed action, or `null`. */
-  readonly error: string | null;
   /** Called with the franchise id the guest picked. */
   readonly onClaim: (franchiseId: string) => void;
   /** Called with the display name the guest typed to join. */
