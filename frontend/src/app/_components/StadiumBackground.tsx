@@ -5,7 +5,7 @@ import { DUST } from "./StadiumBackground.const";
 import { styles } from "./StadiumBackground.styles";
 
 /**
- * The prototype's animated background: a turf-night field under two slow
+ * The animated background: a turf-night field under two slow
  * floodlights, pitch-stripe bands at the foot of the screen, fine grain, and a
  * few specks of floodlit dust rising through it.
  *

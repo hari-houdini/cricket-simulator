@@ -1,7 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { prototypeVars } from "../../../shared/const/prototype-theme.stylex";
-import { tokens } from "../../../shared/const/tokens.stylex";
+import { tokens } from "../../shared/const/tokens.stylex";
 
 /**
  * A slow drift for the warm floodlight. It moves and scales with `transform`
@@ -66,7 +65,7 @@ export const styles = stylex.create({
     width: "70vmax",
     height: "70vmax",
     borderRadius: "50%",
-    backgroundImage: `radial-gradient(closest-side, ${prototypeVars.colorFloodlight}, transparent)`,
+    backgroundImage: `radial-gradient(closest-side, ${tokens.colorFloodlight}, transparent)`,
     animationName: driftWarm,
     animationDuration: "36s",
     animationTimingFunction: "ease-in-out",
@@ -83,7 +82,7 @@ export const styles = stylex.create({
     width: "60vmax",
     height: "60vmax",
     borderRadius: "50%",
-    backgroundImage: `radial-gradient(closest-side, ${prototypeVars.colorChalkGlow}, transparent)`,
+    backgroundImage: `radial-gradient(closest-side, ${tokens.colorChalkGlow}, transparent)`,
     animationName: driftChalk,
     animationDuration: "44s",
     animationTimingFunction: "ease-in-out",
@@ -111,7 +110,7 @@ export const styles = stylex.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundImage: `repeating-linear-gradient(90deg, ${prototypeVars.colorStripeLight} 0 60px, ${prototypeVars.colorStripeDark} 60px 120px)`,
+    backgroundImage: `repeating-linear-gradient(90deg, ${tokens.colorStripeLight} 0 60px, ${tokens.colorStripeDark} 60px 120px)`,
     animationName: slideStripes,
     animationDuration: "40s",
     animationTimingFunction: "linear",
@@ -142,7 +141,7 @@ export const styles = stylex.create({
   speck: {
     position: "absolute",
     borderRadius: "50%",
-    backgroundColor: prototypeVars.colorChalkMuted,
+    backgroundColor: tokens.colorChalkMuted,
     opacity: 0,
     animationName: rise,
     animationDuration: "var(--speck-duration)",

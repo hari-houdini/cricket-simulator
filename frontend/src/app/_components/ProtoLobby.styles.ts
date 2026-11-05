@@ -1,7 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { prototypeVars } from "../../../shared/const/prototype-theme.stylex";
-import { tokens } from "../../../shared/const/tokens.stylex";
+import { tokens } from "../../shared/const/tokens.stylex";
 
 /**
  * StyleX rules for {@link ProtoLobby}. The lobby's own sections stack in journey
@@ -41,7 +40,7 @@ export const styles = stylex.create({
     fontWeight: tokens.fontWeightSemibold,
     letterSpacing: tokens.trackingEyebrow,
     textTransform: "uppercase",
-    color: prototypeVars.colorChalkMuted,
+    color: tokens.colorChalkMuted,
   },
   scoreValue: {
     margin: 0,
@@ -74,7 +73,7 @@ export const styles = stylex.create({
   note: {
     margin: 0,
     fontSize: tokens.fontSizeSmall,
-    color: prototypeVars.colorChalkMuted,
+    color: tokens.colorChalkMuted,
   },
   roster: {
     display: "flex",

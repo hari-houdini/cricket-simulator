@@ -1,7 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { prototypeVars } from "../../../shared/const/prototype-theme.stylex";
-import { tokens } from "../../../shared/const/tokens.stylex";
+import { tokens } from "../../shared/const/tokens.stylex";
 
 /**
  * A soft pulse for the live dot. It fades `opacity` only, so it never triggers
@@ -55,6 +54,6 @@ export const styles = stylex.create({
     },
   },
   stage: {
-    color: prototypeVars.colorChalkMuted,
+    color: tokens.colorChalkMuted,
   },
 });

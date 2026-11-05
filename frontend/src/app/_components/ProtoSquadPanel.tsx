@@ -3,10 +3,10 @@
 import * as stylex from "@stylexjs/stylex";
 import { useCallback, useEffect, useState } from "react";
 
-import { useGuestSession } from "../../../components/GuestSessionProvider/GuestSessionProvider";
-import type { StartingXiSelection } from "../../../components/SquadPicker/SquadPicker.types";
-import type { Squad } from "../../../shared/types/squad.types";
-import { describeApiError } from "../../../shared/utils/describe-api-error";
+import { useGuestSession } from "../../components/GuestSessionProvider/GuestSessionProvider";
+import type { StartingXiSelection } from "../../components/SquadPicker/SquadPicker.types";
+import type { Squad } from "../../shared/types/squad.types";
+import { describeApiError } from "../../shared/utils/describe-api-error";
 import { styles } from "./ProtoXi.styles";
 import { ProtoXiPicker } from "./ProtoXiPicker";
 
@@ -19,8 +19,7 @@ type ProtoSquadPanelProps = {
 };
 
 /**
- * Loads the viewer's squad and saves their starting XI, on the prototype's XI
- * picker. The loading and the saving use the same API calls as the production
+ * Loads the viewer's squad and saves their starting XI, using the XI picker. The loading and the saving use the same API calls as the production
  * squad panel, and a refused save keeps the picker in place with the reason shown.
  *
  * @param props.code - The lobby whose squad is being picked.

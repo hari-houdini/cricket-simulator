@@ -12,8 +12,7 @@ type BroadcastFrameProps = {
 };
 
 /**
- * The prototype's broadcast strip. A live dot, the prototype's name and the
- * current stage, set on one bar above the step's content, like a channel's on-air
+ * The broadcast strip. A live dot, the app's name and the current stage, set on one bar above the step's content, like a channel's on-air
  * graphic. The bar is plain text, so it reads the same to a screen reader.
  *
  * The root layout already has the app's header, so the bar does not repeat the
@@ -31,7 +30,7 @@ export function BroadcastFrame({ stage, children }: BroadcastFrameProps) {
           <span aria-hidden="true" {...stylex.props(styles.dot)} />
           On air
         </span>
-        <span {...stylex.props(styles.stage)}>Prototype · {stage}</span>
+        <span {...stylex.props(styles.stage)}>{stage}</span>
       </div>
       {children}
     </>

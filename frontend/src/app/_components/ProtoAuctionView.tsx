@@ -3,15 +3,12 @@
 import * as stylex from "@stylexjs/stylex";
 import type { CSSProperties } from "react";
 
-import { Button } from "../../../components/Button/Button";
-import { SQUAD_SIZE } from "../../../shared/const/auction.const";
-import type { Auction } from "../../../shared/types/auction.types";
-import {
-  bidBlockReason,
-  timeLeftMs,
-} from "../../../shared/utils/auction-rules";
-import { describeBidBlock } from "../../../shared/utils/describe-api-error";
-import { formatLakhs } from "../../../shared/utils/format-money";
+import { Button } from "../../components/Button/Button";
+import { SQUAD_SIZE } from "../../shared/const/auction.const";
+import type { Auction } from "../../shared/types/auction.types";
+import { bidBlockReason, timeLeftMs } from "../../shared/utils/auction-rules";
+import { describeBidBlock } from "../../shared/utils/describe-api-error";
+import { formatLakhs } from "../../shared/utils/format-money";
 import { styles } from "./ProtoAuctionView.styles";
 
 /** The props for {@link ProtoAuctionView}. */

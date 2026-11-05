@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useGuestSession } from "../../../components/GuestSessionProvider/GuestSessionProvider";
+import { useGuestSession } from "../../components/GuestSessionProvider/GuestSessionProvider";
 import {
   notify,
   useConnectionNotice,
-} from "../../../components/Notifier/Notifier";
-import type { Auction } from "../../../shared/types/auction.types";
-import { describeApiError } from "../../../shared/utils/describe-api-error";
-import { formatLakhs } from "../../../shared/utils/format-money";
+} from "../../components/Notifier/Notifier";
+import type { Auction } from "../../shared/types/auction.types";
+import { describeApiError } from "../../shared/utils/describe-api-error";
+import { formatLakhs } from "../../shared/utils/format-money";
 import { ProtoAuctionView } from "./ProtoAuctionView";
 
 /** How often the auction is re-read, so other owners' bids appear without a reload. */
@@ -28,7 +28,7 @@ type ProtoAuctionPanelProps = {
 };
 
 /**
- * The prototype's live auction. It reads the auction every second, moves the
+ * The live auction. It reads the auction every second, moves the
  * countdown on, and re-reads it the moment a lot's timer runs out, so the hammer
  * shows without waiting for the next poll. It raises a notice when the guest is
  * outbid or wins a lot, and announces each bid and the last-five-seconds warning

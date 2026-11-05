@@ -1,49 +1,53 @@
 import * as stylex from "@stylexjs/stylex";
 
 /**
- * Design tokens for the Golden Twilight dark theme, as StyleX variables.
+ * Design tokens for the app's dark "pitch at night" theme, as StyleX variables.
  *
- * Values come from `docs/ui/design-system.md`. Components reference these
- * variables and never hard-code a color, spacing, radius, shadow, or duration.
- * `defineVars` emits CSS custom properties on `:root`, so the same tokens are
- * also reachable from plain CSS.
+ * The palette is the stadium-at-night prototype, which replaced the navy and gold
+ * palette of `docs/ui/design-system.md`. Every colour in the app comes from this
+ * file. Each text colour is contrast-checked against the surface it sits on at
+ * WCAG 2.2 AA (4.5:1 for body text, 3:1 for large text and UI components); the
+ * ratios are in the comment beside each value.
+ *
+ * Components reference these variables and never hard-code a color, spacing,
+ * radius, shadow, or duration. `defineVars` emits CSS custom properties on
+ * `:root`, so the same tokens are also reachable from plain CSS.
  */
 export const tokens = stylex.defineVars({
-  /** Dark navy surface, the base for cards and buttons. */
-  colorMid: "#001d3d",
-  /** Medium navy for secondary surfaces and hover states. */
-  colorBase: "#003566",
-  /** Deepest navy, used for neumorphic shadows and depth. */
-  colorShadow: "#000814",
-  /** Primary gold accent for CTAs, highlights, and focus rings. */
-  colorGoldPrimary: "#ffc300",
-  /** Light gold for hover states and secondary highlights. */
-  colorGoldSecondary: "#ffd60a",
+  /** Turf night, the page and card surface. Chalk text is 15.0:1 on it. */
+  colorMid: "#0b2116",
+  /** Turf deep, the raised surface. Chalk text is 13.2:1 on it. */
+  colorBase: "#0f2d1e",
+  /** The deepest green, used for neumorphic shadows and depth. */
+  colorShadow: "#050f0a",
+  /** Ochre, the accent for CTAs, highlights and focus rings. 7.8:1 on turf night. Primary buttons put ink on it. */
+  colorGoldPrimary: "#e8a33d",
+  /** A lighter ochre for hover states and secondary highlights. */
+  colorGoldSecondary: "#f0b55a",
+  /** Chalk, body text. 15.0:1 on turf night. */
+  colorText: "#f4f1e8",
+  /** Secondary text. 10.3:1 on turf night. */
+  colorChalkMuted: "#c5cdbf",
+  /** Lime, available and success. 10.4:1 on turf night. */
+  colorStatusSuccess: "#9fdc6a",
+  /** Amber, warnings and the connection banner. 8.4:1 on turf night and 7.3:1 on turf deep. */
+  colorStatusWarning: "#f2a65a",
   /**
-   * Body text color. The design system does not name one, so white is used.
-   * It gives about 17:1 contrast on `colorBase`.
+   * The red ball, unavailable or sold. 6.1:1 on turf night and 5.3:1 on turf
+   * deep, so it works for text too.
    */
-  colorText: "#ffffff",
-  /** Available, success state. */
-  colorStatusSuccess: "#10b981",
-  /** Warning state, also used for the connection banner. */
-  colorStatusWarning: "#f59e0b",
-  /**
-   * Unavailable or sold state. Lightened from #ef4444, which gave 4.49:1 on
-   * `colorBase` and missed the 4.5:1 body-text minimum.
-   */
-  colorStatusError: "#f25f5c",
+  colorStatusError: "#ff6b66",
 
-  /**
-   * Base fill of the wave backdrop behind every view, and the body's fallback
-   * fill. Taken from the supplied wave snippet, not from the design system, which
-   * sets the base navy to `colorMid`.
-   */
-  colorBackdropBase: "#003566",
-  /** The darker wave in the backdrop's left-hand curve. From the wave snippet. */
-  colorBackdropWaveDeep: "#001d3d",
-  /** The lighter wave in the backdrop's right-hand curve. From the wave snippet. */
-  colorBackdropWaveLight: "#001d3d",
+  /** The page's fallback fill behind the stadium background. */
+  colorBackdropBase: "#0b2116",
+  /** A warm floodlight glow, drifting in the background. Decorative, so no text sits on it. */
+  colorFloodlight: "rgba(232, 163, 61, 0.22)",
+  /** A cool chalk glow for the second floodlight. Decorative. */
+  colorChalkGlow: "rgba(244, 241, 232, 0.10)",
+  /** A faint light band across the pitch stripes. Decorative. */
+  colorStripeLight: "rgba(244, 241, 232, 0.035)",
+  /** The darker band between the stripes. Decorative. */
+  colorStripeDark: "rgba(0, 0, 0, 0.22)",
 
   /** 4px, micro-spacing. */
   spaceXs: "4px",
@@ -83,9 +87,9 @@ export const tokens = stylex.defineVars({
   /** Focused input: inset shadow plus a faint gold glow (§Forms). */
   shadowInputFocus:
     "0 4px 8px rgba(0,8,20,0.2), inset 0 2px 4px rgba(0,0,0,0.15), 0 0 4px rgba(255,195,0,0.3)",
-  /** Navy-and-gold sphere, the app icon from §Branding, as a background gradient. */
+  /** Ochre-and-turf sphere, the app icon from §Branding, as a background gradient. */
   gradientSphere:
-    "radial-gradient(circle at 32% 28%, #ffd60a 0%, #ffc300 36%, #003566 80%, #001d3d 100%)",
+    "radial-gradient(circle at 32% 28%, #f0b55a 0%, #e8a33d 36%, #0f2d1e 80%, #0b2116 100%)",
   /** Pressed neumorphic shadow for active buttons and focused inputs. */
   shadowPressed:
     "inset 0 4px 8px rgba(0,8,20,0.2), inset 0 -2px 4px rgba(255,255,255,0.1)",
@@ -108,7 +112,7 @@ export const tokens = stylex.defineVars({
   /** One left-to-right pass of the skeleton shimmer, looped. */
   durationShimmer: "1500ms",
   /** Light sheen that sweeps across skeleton placeholders. */
-  colorShimmer: "rgba(255, 255, 255, 0.08)",
+  colorShimmer: "rgba(244, 241, 232, 0.08)",
   /** Ease-out curve, used for entrances and presses. */
   easingOut: "cubic-bezier(0.16, 1, 0.3, 1)",
   /** Ease-in-out curve, used for expansions and swaps. */

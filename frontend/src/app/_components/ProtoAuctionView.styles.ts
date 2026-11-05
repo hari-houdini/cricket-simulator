@@ -1,7 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { prototypeVars } from "../../../shared/const/prototype-theme.stylex";
-import { tokens } from "../../../shared/const/tokens.stylex";
+import { tokens } from "../../shared/const/tokens.stylex";
 
 /**
  * StyleX rules for {@link ProtoAuctionView}. The lot is the hero: it takes the
@@ -35,7 +34,7 @@ export const styles = stylex.create({
     fontWeight: tokens.fontWeightSemibold,
     letterSpacing: tokens.trackingEyebrow,
     textTransform: "uppercase",
-    color: prototypeVars.colorChalkMuted,
+    color: tokens.colorChalkMuted,
   },
   player: {
     margin: 0,
@@ -52,7 +51,7 @@ export const styles = stylex.create({
     padding: 0,
     listStyle: "none",
     fontSize: tokens.fontSizeSmall,
-    color: prototypeVars.colorChalkMuted,
+    color: tokens.colorChalkMuted,
   },
   chip: {
     display: "inline-flex",
@@ -118,7 +117,7 @@ export const styles = stylex.create({
   timerText: {
     margin: 0,
     fontSize: tokens.fontSizeSmall,
-    color: prototypeVars.colorChalkMuted,
+    color: tokens.colorChalkMuted,
   },
   timerUrgent: {
     color: tokens.colorStatusError,
@@ -135,7 +134,7 @@ export const styles = stylex.create({
     fontWeight: tokens.fontWeightSemibold,
     letterSpacing: tokens.trackingEyebrow,
     textTransform: "uppercase",
-    color: prototypeVars.colorChalkMuted,
+    color: tokens.colorChalkMuted,
   },
   readout: {
     margin: 0,
@@ -149,7 +148,7 @@ export const styles = stylex.create({
   note: {
     margin: 0,
     fontSize: tokens.fontSizeSmall,
-    color: prototypeVars.colorChalkMuted,
+    color: tokens.colorChalkMuted,
   },
   announcement: {
     margin: 0,

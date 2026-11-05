@@ -1,7 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { prototypeVars } from "../../../shared/const/prototype-theme.stylex";
-import { tokens } from "../../../shared/const/tokens.stylex";
+import { tokens } from "../../shared/const/tokens.stylex";
 
 /**
  * StyleX rules for {@link ProtoXiPicker}. Players sit in a grid: one column on a
@@ -31,7 +30,7 @@ export const styles = stylex.create({
     fontWeight: tokens.fontWeightSemibold,
     letterSpacing: tokens.trackingEyebrow,
     textTransform: "uppercase",
-    color: prototypeVars.colorChalkMuted,
+    color: tokens.colorChalkMuted,
   },
   count: {
     margin: 0,
@@ -109,7 +108,7 @@ export const styles = stylex.create({
   role: {
     margin: 0,
     fontSize: tokens.fontSizeSmall,
-    color: prototypeVars.colorChalkMuted,
+    color: tokens.colorChalkMuted,
   },
   actions: {
     display: "flex",

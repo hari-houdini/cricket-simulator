@@ -3,13 +3,13 @@
 import * as stylex from "@stylexjs/stylex";
 import { useId, useState } from "react";
 
-import { Button } from "../../../components/Button/Button";
-import { ROLE_LABELS } from "../../../components/SquadPicker/SquadPicker.const";
-import type { StartingXiSelection } from "../../../components/SquadPicker/SquadPicker.types";
-import { XI_SIZE } from "../../../shared/const/squad.const";
-import type { Squad, StartingXi } from "../../../shared/types/squad.types";
-import { describeXiBlock } from "../../../shared/utils/describe-api-error";
-import { startingXiBlock } from "../../../shared/utils/squad-rules";
+import { Button } from "../../components/Button/Button";
+import { ROLE_LABELS } from "../../components/SquadPicker/SquadPicker.const";
+import type { StartingXiSelection } from "../../components/SquadPicker/SquadPicker.types";
+import { XI_SIZE } from "../../shared/const/squad.const";
+import type { Squad, StartingXi } from "../../shared/types/squad.types";
+import { describeXiBlock } from "../../shared/utils/describe-api-error";
+import { startingXiBlock } from "../../shared/utils/squad-rules";
 import { styles } from "./ProtoXi.styles";
 
 /** The draft selection: the players in the XI, and the captain and vice-captain, unset until picked. */

@@ -3,13 +3,13 @@
 import * as stylex from "@stylexjs/stylex";
 import type { CSSProperties } from "react";
 
-import { Button } from "../../../components/Button/Button";
-import { TEAMS } from "../../../shared/const/teams.const";
-import type { Lobby } from "../../../shared/types/lobby.types";
+import { Button } from "../../components/Button/Button";
+import { TEAMS } from "../../shared/const/teams.const";
+import type { Lobby } from "../../shared/types/lobby.types";
 import {
   franchiseClaimBlock,
   franchiseStatus,
-} from "../../../shared/utils/franchise-claim";
+} from "../../shared/utils/franchise-claim";
 import { styles } from "./ProtoFranchiseGrid.styles";
 
 /** The props for {@link ProtoFranchiseGrid}. */

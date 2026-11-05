@@ -1,24 +1,22 @@
 "use client";
 
 import * as stylex from "@stylexjs/stylex";
+import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { ZodError } from "zod";
-import { AwardsPanel } from "../../../components/AwardsPanel/AwardsPanel";
-import { Button } from "../../../components/Button/Button";
-import { useGuestSession } from "../../../components/GuestSessionProvider/GuestSessionProvider";
-import { Input } from "../../../components/Input/Input";
-import { notify } from "../../../components/Notifier/Notifier";
-import { PlayoffsPanel } from "../../../components/PlayoffsPanel/PlayoffsPanel";
-import { SeasonNav } from "../../../components/SeasonNav/SeasonNav";
-import { SimView } from "../../../components/SimView/SimView";
-import {
-  LOBBY_PHASE_LABELS,
-  MAX_OWNERS,
-} from "../../../shared/const/lobby.const";
-import type { Lobby } from "../../../shared/types/lobby.types";
-import { describeApiError } from "../../../shared/utils/describe-api-error";
-import { franchiseName } from "../../../shared/utils/franchise-label";
-import { LobbyNotFoundError } from "../../../shared/utils/game-api.errors";
+import { AwardsPanel } from "../../components/AwardsPanel/AwardsPanel";
+import { Button } from "../../components/Button/Button";
+import { useGuestSession } from "../../components/GuestSessionProvider/GuestSessionProvider";
+import { Input } from "../../components/Input/Input";
+import { notify } from "../../components/Notifier/Notifier";
+import { PlayoffsPanel } from "../../components/PlayoffsPanel/PlayoffsPanel";
+import { SeasonNav } from "../../components/SeasonNav/SeasonNav";
+import { SimView } from "../../components/SimView/SimView";
+import { LOBBY_PHASE_LABELS, MAX_OWNERS } from "../../shared/const/lobby.const";
+import type { Lobby } from "../../shared/types/lobby.types";
+import { describeApiError } from "../../shared/utils/describe-api-error";
+import { franchiseName } from "../../shared/utils/franchise-label";
+import { LobbyNotFoundError } from "../../shared/utils/game-api.errors";
 import { ProtoAuctionPanel } from "./ProtoAuctionPanel";
 import { ProtoFranchiseGrid } from "./ProtoFranchiseGrid";
 import { styles } from "./ProtoLobby.styles";
@@ -44,15 +42,15 @@ type ProtoLobbyProps = {
 };
 
 /**
- * The prototype's lobby. It runs the same loading, polling and actions as the
+ * The lobby. It runs the same loading, polling and actions as the
  * production lobby screen, and lays out the journey on the broadcast theme:
  *
  * - a scorebug with the phase, the code and the share link;
  * - the owners as a roster;
  * - the franchise pick as a responsive grid, then the start checklist;
  * - the auction, the starting XI, the season, the playoffs and the awards in
- *   journey order. The auction is the prototype's own; the later stages still use
- *   the production components, which take the theme but not the new layout yet.
+ *   journey order. The auction is laid out here; the later stages use the
+ *   production components, which take the theme but not the new layout yet.
  *
  * @param props.code - The lobby code from the URL.
  * @returns The lobby, or a loading, missing or failed state.
@@ -154,9 +152,9 @@ export function ProtoLobby({ code }: ProtoLobbyProps) {
         <p {...stylex.props(styles.note)}>
           Check the code and try again, or ask the owner for a new link.
         </p>
-        <a href="/prototype" {...stylex.props(styles.link)}>
+        <Link href="/" {...stylex.props(styles.link)}>
           Back to the start
-        </a>
+        </Link>
       </section>
     );
   }
@@ -193,7 +191,7 @@ export function ProtoLobby({ code }: ProtoLobbyProps) {
   const seasonOpen =
     lobby.auctionStatus === "complete" && lobby.phase !== "complete";
   const pickingXi = seasonOpen && isOwner && lobby.round === 0 && !squadSaved;
-  const shareUrl = `${window.location.origin}/prototype/lobby/${lobby.code}`;
+  const shareUrl = `${window.location.origin}/lobby/${lobby.code}`;
   const ownersWithFranchise = lobby.owners.filter(
     (owner) => owner.franchiseId !== null,
   ).length;

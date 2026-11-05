@@ -77,7 +77,7 @@ const joinPanel: SwitchPanel = {
  * failed request raises a notice and keeps the typed values, so the form does
  * not move when the notice appears.
  *
- * @param props.lobbyHref - The route prefix the lobby opens under. Defaults to `/lobby`; the prototype passes its own, so both can share this form.
+ * @param props.lobbyHref - The route prefix the lobby opens under. Defaults to `/lobby`.
  * @returns The lobby entry form.
  */
 export function LobbyEntry({

@@ -1,7 +1,6 @@
 import * as stylex from "@stylexjs/stylex";
 
-import { prototypeVars } from "../../../shared/const/prototype-theme.stylex";
-import { tokens } from "../../../shared/const/tokens.stylex";
+import { tokens } from "../../shared/const/tokens.stylex";
 
 /**
  * StyleX rules for {@link ProtoFranchiseGrid}. The grid fits as many cards as the
@@ -45,7 +44,7 @@ export const styles = stylex.create({
   name: {
     margin: 0,
     fontSize: tokens.fontSizeSmall,
-    color: prototypeVars.colorChalkMuted,
+    color: tokens.colorChalkMuted,
   },
   footer: {
     display: "flex",
@@ -66,6 +65,6 @@ export const styles = stylex.create({
     color: tokens.colorStatusSuccess,
   },
   statusTaken: {
-    color: prototypeVars.colorChalkMuted,
+    color: tokens.colorChalkMuted,
   },
 });

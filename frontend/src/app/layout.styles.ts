@@ -95,9 +95,14 @@ export const styles = stylex.create({
     padding: tokens.spaceMd,
     textAlign: "center",
   },
+  /**
+   * The page column. Its children are stacked with one gap at every width, so
+   * each step's sections keep the same rhythm.
+   */
   main: {
     display: "flex",
     flexDirection: "column",
+    gap: tokens.spaceXl,
     flex: 1,
     width: "100%",
     maxWidth: tokens.widthShell,

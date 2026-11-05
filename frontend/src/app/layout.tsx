@@ -4,8 +4,8 @@ import { Bodoni_Moda, DM_Sans } from "next/font/google";
 import Link from "next/link";
 
 import "./globals.css";
-import { CricketBackdrop } from "../components/CricketBackdrop/CricketBackdrop";
 import { focusRing } from "../shared/const/focus-ring.styles";
+import { StadiumBackground } from "./_components/StadiumBackground";
 import { AppProviders } from "./AppProviders";
 import { styles } from "./layout.styles";
 
@@ -32,8 +32,9 @@ export const metadata: Metadata = {
 /**
  * Root layout. Applies the dark-only document styles, loads the two
  * design-system fonts (which become CSS variables that the font tokens read),
- * and renders the app shell: a skip link, the header and primary navigation,
- * and the `<main>` landmark that every page fills.
+ * renders the stadium background behind everything, and renders the app shell:
+ * a skip link, the header and primary navigation, and the `<main>` landmark
+ * that every page fills.
  *
  * @param props.children - The page rendered inside `<main>`.
  * @returns The `<html>` document shell.
@@ -53,7 +54,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       ].join(" ")}
     >
       <body {...stylex.props(styles.body)}>
-        <CricketBackdrop />
+        <StadiumBackground />
         <AppProviders>
           <a href="#main" {...stylex.props(styles.skipLink)}>
             Skip to content
