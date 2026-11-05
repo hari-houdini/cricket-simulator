@@ -152,14 +152,14 @@ export const IconOnly: Story = {
 
 /**
  * Proves the shared StyleX tokens loaded. `toBeVisible` passes on unstyled
- * markup, so this asserts the resolved gold background and navy text.
+ * markup, so this asserts the resolved ochre background and turf text.
  */
 export const CssCheck: Story = {
   args: { variant: "primary", children: "Submit" },
   play: async ({ canvas }) => {
     const button = canvas.getByRole("button", { name: "Submit" });
     const computed = getComputedStyle(button);
-    await expect(computed.backgroundColor).toBe("rgb(255, 195, 0)");
-    await expect(computed.color).toBe("rgb(0, 29, 61)");
+    await expect(computed.backgroundColor).toBe("rgb(232, 163, 61)");
+    await expect(computed.color).toBe("rgb(15, 45, 30)");
   },
 };

@@ -1,18 +1,25 @@
 import { Suspense } from "react";
 
-import { LobbyRoute } from "../../../components/LobbyRoute/LobbyRoute";
+import { BroadcastFrame } from "../../_components/BroadcastFrame";
+import { LowerThird } from "../../_components/LowerThird";
+import { ProtoLobbyRoute } from "../../_components/ProtoLobbyRoute";
 
 /**
- * The lobby page, reached from the share link or from the home screen after
- * creating or joining a lobby. The code is read by a client component, which
- * sits under a Suspense boundary so the route still prerenders as a shell.
+ * Steps 2 to 8: the lobby. The lobby screen lays out the
+ * scorebug, the owners, the franchise pick and the auction on the broadcast
+ * layout. The season, the XI and the awards still use the production components
+ * under the same theme. The lobby name is the page's `h1`, so the lower third
+ * carries only its label.
  *
- * @returns The lobby page, with a fallback until the code is read.
+ * @returns The lobby step.
  */
 export default function LobbyPage() {
   return (
-    <Suspense fallback={<p>Loading lobby…</p>}>
-      <LobbyRoute />
-    </Suspense>
+    <BroadcastFrame stage="Lobby">
+      <LowerThird eyebrow="Steps 2 to 8 · Franchise pick to awards" />
+      <Suspense fallback={<p>Loading lobby…</p>}>
+        <ProtoLobbyRoute />
+      </Suspense>
+    </BroadcastFrame>
   );
 }

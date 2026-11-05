@@ -1,19 +1,22 @@
-import * as stylex from "@stylexjs/stylex";
-
 import { LobbyEntry } from "../components/LobbyEntry/LobbyEntry";
-import { styles } from "./page.styles";
+import { BroadcastFrame } from "./_components/BroadcastFrame";
+import { LowerThird } from "./_components/LowerThird";
 
 /**
- * Home page. A new guest creates a lobby or joins one by its code, and both
- * paths open the lobby screen.
+ * Step 1: lobby entry. It reuses the production {@link LobbyEntry} and
+ * its {@link SwitchForm}, so the form keeps its structure and motion. The lobby
+ * opens at `/lobby`.
  *
- * @returns The home page content, rendered inside the layout's `<main>`.
+ * @returns The lobby entry step.
  */
 export default function Home() {
   return (
-    <>
-      <h1 {...stylex.props(styles.heading)}>Your season starts here</h1>
+    <BroadcastFrame stage="Lobby entry">
+      <LowerThird
+        eyebrow="Step 1 of 8 · Lobby entry"
+        title="Your season starts here"
+      />
       <LobbyEntry />
-    </>
+    </BroadcastFrame>
   );
 }

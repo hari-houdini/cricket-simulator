@@ -77,9 +77,14 @@ const joinPanel: SwitchPanel = {
  * failed request raises a notice and keeps the typed values, so the form does
  * not move when the notice appears.
  *
+ * @param props.lobbyHref - The route prefix the lobby opens under. Defaults to `/lobby`.
  * @returns The lobby entry form.
  */
-export function LobbyEntry() {
+export function LobbyEntry({
+  lobbyHref = "/lobby",
+}: {
+  readonly lobbyHref?: string;
+}) {
   const router = useRouter();
   const { api, guestId } = useGuestSession();
   const [pending, setPending] = useState(false);
@@ -93,7 +98,7 @@ export function LobbyEntry() {
     setPending(true);
     try {
       const lobby = await action();
-      router.push(`/lobby/${lobby.code}`);
+      router.push(`${lobbyHref}/${lobby.code}`);
     } catch (caught) {
       notify({ tone: "error", message: describeApiError(caught) });
       setPending(false);
