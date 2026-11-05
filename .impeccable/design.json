@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-05T20:13:44Z",
+  "title": "Design System: IPL Cricket Simulator",
+  "extensions": {
+    "colorMeta": {
+      "turf-night": { "role": "neutral", "displayName": "Turf Night", "canonical": "#0b2116", "tonalRamp": ["#080c0a", "#1c2822", "#34473c", "#50685a", "#71897b", "#96ab9f", "#becdc4", "#eaf0ec"] },
+      "turf-deep": { "role": "neutral", "displayName": "Turf Deep", "canonical": "#0f2d1e", "tonalRamp": ["#070d09", "#1a2920", "#30483b", "#4b6958", "#6c8b79", "#91ad9c", "#bbcfc3", "#e8f1ec"] },
+      "turf-shadow": { "role": "neutral", "displayName": "Turf Shadow", "canonical": "#050f0a", "tonalRamp": ["#090c0b", "#202723", "#3a4540", "#58655e", "#78867f", "#9ca8a2", "#c3ccc7", "#ecefed"] },
+      "floodlight-ochre": { "role": "primary", "displayName": "Floodlight Ochre", "canonical": "#e8a33d", "tonalRamp": ["#130900", "#352000", "#5b3a03", "#845602", "#b07401", "#d1994a", "#eac28f", "#fdebd5"] },
+      "ochre-bright": { "role": "primary", "displayName": "Ochre Bright", "canonical": "#f0b55a", "tonalRamp": ["#130900", "#342100", "#5a3b01", "#825806", "#ad760a", "#cb9c53", "#e5c394", "#fbecd7"] },
+      "chalk": { "role": "neutral", "displayName": "Chalk", "canonical": "#f4f1e8", "tonalRamp": ["#0c0b0a", "#262521", "#44423c", "#64615a", "#85827a", "#a7a59e", "#cbc9c4", "#efeeec"] },
+      "chalk-muted": { "role": "neutral", "displayName": "Chalk Muted", "canonical": "#c5cdbf", "tonalRamp": ["#0a0c09", "#232620", "#3f443a", "#5d6458", "#7e8578", "#a1a79c", "#c6cbc3", "#edefec"] },
+      "lime": { "role": "tertiary", "displayName": "Lime", "canonical": "#9fdc6a", "tonalRamp": ["#050e00", "#162c00", "#2b4d02", "#427008", "#5d951f", "#85b65b", "#b3d698", "#e5f5d9"] },
+      "amber": { "role": "tertiary", "displayName": "Amber", "canonical": "#f2a65a", "tonalRamp": ["#140800", "#391e00", "#603602", "#8b5208", "#b6701e", "#d49659", "#ecc097", "#ffebd9"] },
+      "red-ball": { "role": "secondary", "displayName": "Red Ball", "canonical": "#ff6b66", "tonalRamp": ["#1b0303", "#4c0207", "#800212", "#b02028", "#d84a49", "#f67b74", "#ffb3ac", "#ffe9e6"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Step titles on the broadcast frame. Bodoni Moda, fluid 40px to 64px." },
+      "headline": { "displayName": "Headline", "purpose": "Page headings. Section headings use a fluid 24px to 32px." },
+      "title": { "displayName": "Title", "purpose": "Card and modal titles. Bodoni Moda at the regular weight." },
+      "body": { "displayName": "Body", "purpose": "Running copy in DM Sans, 16px, 1.5 line height, 65 to 75 characters per line." },
+      "label": { "displayName": "Label", "purpose": "Uppercase eyebrow above a broadcast heading. Under review." }
+    },
+    "shadows": [
+      { "name": "raised", "value": "0 8px 16px rgba(0,8,20,0.2), inset 0 2px 4px rgba(255,255,255,0.1)", "purpose": "Buttons, cards, modals and the tab track at rest." },
+      { "name": "raised-hover", "value": "0 12px 24px rgba(0,8,20,0.28), inset 0 2px 4px rgba(255,255,255,0.1)", "purpose": "Primary button hover, under a fine pointer only." },
+      { "name": "pressed", "value": "inset 0 4px 8px rgba(0,8,20,0.2), inset 0 -2px 4px rgba(255,255,255,0.1)", "purpose": "Active buttons and the resting input inset." },
+      { "name": "input-focus", "value": "0 4px 8px rgba(0,8,20,0.2), inset 0 2px 4px rgba(0,0,0,0.15), 0 0 4px rgba(255,195,0,0.3)", "purpose": "Focused input, with a faint ochre glow." },
+      { "name": "subtle", "value": "0 4px 12px rgba(0,8,20,0.15)", "purpose": "Secondary elements that need less lift." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Entrances and presses." },
+      { "name": "ease-in-out", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Expansions, swaps and default state transitions." },
+      { "name": "duration-micro", "value": "150ms", "purpose": "Button press." },
+      { "name": "duration-default", "value": "300ms", "purpose": "Hover, focus and colour changes." },
+      { "name": "duration-page", "value": "400ms", "purpose": "Screen transitions." },
+      { "name": "duration-shimmer", "value": "1500ms", "purpose": "Live dot pulse and skeleton sweep, looped." },
+      { "name": "duration-reveal", "value": "1200ms", "purpose": "Match reveal and score animation." },
+      { "name": "stadium-drift-warm", "value": "36s", "purpose": "Warm floodlight glow drift, alternating." },
+      { "name": "stadium-drift-chalk", "value": "44s", "purpose": "Chalk glow drift, alternating." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "320px" },
+      { "name": "tablet", "value": "768px" },
+      { "name": "desktop", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main action of a screen: Floodlight Ochre fill, Turf Deep text, raised shadow.",
+      "html": "<button class=\"ds-btn-primary\">Confirm bid</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;font:500 16px/1 \"DM Sans\",sans-serif;color:#0f2d1e;background:#e8a33d;border:1px solid transparent;border-radius:8px;box-shadow:0 8px 16px rgba(0,8,20,0.2),inset 0 2px 4px rgba(255,255,255,0.1);cursor:pointer;transition:transform 150ms cubic-bezier(0.16,1,0.3,1),background-color 300ms cubic-bezier(0.4,0,0.2,1),box-shadow 300ms cubic-bezier(0.4,0,0.2,1)}.ds-btn-primary:hover{background:#f0b55a}@media (hover:hover){.ds-btn-primary:hover{box-shadow:0 12px 24px rgba(0,8,20,0.28),inset 0 2px 4px rgba(255,255,255,0.1)}}.ds-btn-primary:active{transform:scale(0.98);box-shadow:inset 0 4px 8px rgba(0,8,20,0.2),inset 0 -2px 4px rgba(255,255,255,0.1)}.ds-btn-primary:focus-visible{outline:2px solid #e8a33d;outline-offset:2px}.ds-btn-primary:disabled{opacity:0.5;pointer-events:none}@media (prefers-reduced-motion:reduce){.ds-btn-primary{transition:none}.ds-btn-primary:active{transform:none}}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A supporting action: Turf Deep surface, ochre text and a 1px ochre border.",
+      "html": "<button class=\"ds-btn-secondary\">View standings</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;font:500 16px/1 \"DM Sans\",sans-serif;color:#e8a33d;background:#0f2d1e;border:1px solid #e8a33d;border-radius:8px;box-shadow:0 8px 16px rgba(0,8,20,0.2),inset 0 2px 4px rgba(255,255,255,0.1);cursor:pointer;transition:transform 150ms cubic-bezier(0.16,1,0.3,1),background-color 300ms cubic-bezier(0.4,0,0.2,1),box-shadow 300ms cubic-bezier(0.4,0,0.2,1)}@media (hover:hover){.ds-btn-secondary:hover{box-shadow:0 12px 24px rgba(0,8,20,0.28),inset 0 2px 4px rgba(255,255,255,0.1)}}.ds-btn-secondary:active{transform:scale(0.98);box-shadow:inset 0 4px 8px rgba(0,8,20,0.2),inset 0 -2px 4px rgba(255,255,255,0.1)}.ds-btn-secondary:focus-visible{outline:2px solid #e8a33d;outline-offset:2px}.ds-btn-secondary:disabled{opacity:0.5;pointer-events:none}@media (prefers-reduced-motion:reduce){.ds-btn-secondary{transition:none}.ds-btn-secondary:active{transform:none}}"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "A text field on turf: pressed inset at rest, ochre focus, red border when invalid.",
+      "html": "<label class=\"ds-field\"><span>Lobby name</span><input class=\"ds-input\" type=\"text\" placeholder=\"Sunday League\"></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:4px;font:400 14px/1.5 \"DM Sans\",sans-serif;color:#f4f1e8}.ds-input{width:100%;min-height:44px;padding:12px 16px;background:#0b2116;color:#f4f1e8;font:400 16px/1.5 \"DM Sans\",sans-serif;border:1px solid transparent;border-radius:8px;box-shadow:inset 0 4px 8px rgba(0,8,20,0.2),inset 0 -2px 4px rgba(255,255,255,0.1);transition:border-color 300ms cubic-bezier(0.4,0,0.2,1),box-shadow 300ms cubic-bezier(0.4,0,0.2,1)}.ds-input::placeholder{color:#c5cdbf;opacity:1}.ds-input:focus{outline:none;border-color:#e8a33d;box-shadow:0 4px 8px rgba(0,8,20,0.2),inset 0 2px 4px rgba(0,0,0,0.15),0 0 4px rgba(255,195,0,0.3)}.ds-input[aria-invalid=\"true\"]{border-color:#ff6b66}.ds-input:disabled{opacity:0.5;cursor:not-allowed}@media (prefers-reduced-motion:reduce){.ds-input{transition:none}}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "A raised panel on turf for a franchise, squad entry or standings block.",
+      "html": "<section class=\"ds-card\"><h3 class=\"ds-card-title\">Chennai Super Kings</h3><p class=\"ds-card-body\">Purse remaining: 42.5 cr</p></section>",
+      "css": ".ds-card{background:#0b2116;color:#f4f1e8;border-radius:12px;padding:16px;box-shadow:0 8px 16px rgba(0,8,20,0.2),inset 0 2px 4px rgba(255,255,255,0.1)}.ds-card-title{margin:0 0 8px;font:400 24px/1.1 \"Bodoni Moda\",serif;color:#f4f1e8}.ds-card-body{margin:0;font:400 16px/1.5 \"DM Sans\",sans-serif;color:#c5cdbf}"
+    },
+    {
+      "name": "Tab Bar",
+      "kind": "nav",
+      "refersTo": "tab-bar",
+      "description": "Pill-shaped section tabs on a raised Turf Deep track; the active tab sits on Turf Night in ochre.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\">Auction</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">Season</button></div>",
+      "css": ".ds-tabs{display:inline-flex;gap:4px;padding:12px;background:#0f2d1e;border-radius:99px;box-shadow:0 8px 16px rgba(0,8,20,0.2),inset 0 2px 4px rgba(255,255,255,0.1)}.ds-tab{min-height:54px;padding:0 16px;border:0;border-radius:99px;background:transparent;color:#f4f1e8;font:500 16px/1 \"DM Sans\",sans-serif;cursor:pointer;transition:color 300ms cubic-bezier(0.4,0,0.2,1),background-color 300ms cubic-bezier(0.4,0,0.2,1)}.ds-tab[aria-selected=\"true\"]{background:#0b2116;color:#e8a33d}.ds-tab:focus-visible{outline:2px solid #e8a33d;outline-offset:2px}@media (min-width:768px){.ds-tab{font-size:20px}}@media (prefers-reduced-motion:reduce){.ds-tab{transition:none}}"
+    },
+    {
+      "name": "Role Badge",
+      "kind": "chip",
+      "refersTo": "badge-role",
+      "description": "A compact role or status label: ochre for roles, lime for available, red ball for sold.",
+      "html": "<span class=\"ds-badge ds-badge-role\">Wicket-keeper</span> <span class=\"ds-badge ds-badge-available\">Available</span>",
+      "css": ".ds-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:8px;font:600 12px/1 \"DM Sans\",sans-serif}.ds-badge-role{background:#e8a33d;color:#0f2d1e}.ds-badge-available{background:#9fdc6a;color:#0f2d1e}.ds-badge-sold{background:#ff6b66;color:#0f2d1e}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Floodlit Pitch",
+    "overview": "The screen is a stadium after dark. Deep turf fills the page, the pitch stripes run faintly beneath it, and warm floodlight drifts across the top of the field. Everything a player needs sits on that dark ground: a card, a bid, a standings row, each one a raised surface lit by ochre. The product's own words, given when the system was reviewed, set the ambition: \"one of a kind, very unique, animation-intensive and novel.\" The look should feel like no other fantasy-sports screen, and the motion is part of that identity rather than an afterthought.\n\nThe system is dark-only. The palette was replaced by this stadium-at-night direction; the navy and gold palette in docs/ui/design-system.md is retired. Controls are tactile: raised at rest, pressed when active, lit by an ochre focus. Decoration (floodlight, chalk glow, stripes) lives behind content and never behind text. Density stays moderate, because a season is read over several sessions rather than in one glance.",
+    "keyCharacteristics": [
+      "Dark turf surfaces with ochre as the single warm accent.",
+      "Tactile, raised controls that press in on use.",
+      "Animation-led identity: a slow-drifting stadium background, a sheen sweep on buttons, and a live pulse on the broadcast frame. Each is off under reduced motion.",
+      "Bodoni headings with DM Sans body copy, for a broadcast-grade contrast between display and text."
+    ],
+    "rules": [
+      { "name": "The Behind-The-Play Rule", "body": "Decorative light and stripes sit behind content and never behind text. The stadium is scenery, and the scoreboard stays in front of it.", "section": "colors" },
+      { "name": "The Ink-On-Ochre Rule", "body": "Ochre is a fill, so text on it is Turf Deep, never chalk. Primary buttons follow this rule.", "section": "colors" },
+      { "name": "The Two-Voice Rule", "body": "Bodoni speaks only in headings and readouts. DM Sans carries everything a player reads to act on.", "section": "typography" },
+      { "name": "The Lit-From-Within Rule", "body": "Depth is a response to state. A control is raised at rest, deepens on hover, and presses in when active. Nothing else gets a shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "Take every colour, space, radius, shadow and duration from the tokens.stylex.ts variables; never hard-code them in a component.",
+      "Keep text at 4.5:1 or better on its surface, and use Chalk Muted for secondary text on Turf Night.",
+      "Make every animation respect prefers-reduced-motion, with a static final state.",
+      "Limit animated properties to transform, opacity, color, background-color, border-color and box-shadow.",
+      "Gate hover effects to @media (hover: hover) so touch taps do not leave a stuck state."
+    ],
+    "donts": [
+      "Don't put chalk text on Floodlight Ochre. Use ink (Turf Deep) on ochre.",
+      "Don't place text on the glow, stripe or floodlight layers.",
+      "Don't reintroduce the retired navy and gold palette from docs/ui/design-system.md.",
+      "Don't animate layout properties (width, height, top, left, margin).",
+      "Don't remove the reduced-motion switches from the stadium, the sheen or the live pulse."
+    ]
+  }
+}
