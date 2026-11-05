@@ -11,6 +11,10 @@ const apiOrigin = process.env.NEXT_PUBLIC_API_URL
   ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
   : undefined;
 
+// Dev-only allowance so impeccable live mode can load. Guarded by NODE_ENV.
+const __impeccableLiveDev =
+  process.env.NODE_ENV === "development" ? " http://localhost:8400" : "";
+
 /**
  * Content-Security-Policy applied to every response.
  *
@@ -21,11 +25,11 @@ const apiOrigin = process.env.NEXT_PUBLIC_API_URL
  */
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"}`,
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"}${__impeccableLiveDev}`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",
   "img-src 'self' data: blob:",
-  `connect-src 'self'${apiOrigin ? ` ${apiOrigin}` : ""}`,
+  `connect-src 'self'${apiOrigin ? ` ${apiOrigin}` : ""}${__impeccableLiveDev}`,
   "object-src 'none'",
   "frame-src 'none'",
   "base-uri 'self'",
