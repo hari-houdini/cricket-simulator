@@ -131,6 +131,50 @@ export const tokens = stylex.defineVars({
   fontSizeTab: "1rem",
   /** Tab label size from 768px up, the tablet breakpoint in `ARCHITECTURE.md`. */
   fontSizeTabWide: "1.25rem",
+  /** 12px, the uppercase eyebrow label above a heading on the broadcast frame. */
+  fontSizeEyebrow: "0.75rem",
+  /** Display size for a step's title on the broadcast frame: a fluid 40px to 64px. */
+  fontSizeDisplay: "clamp(2.5rem, 1.6rem + 3.6vw, 4rem)",
+  /** Letter spacing for an uppercase eyebrow label. */
+  trackingEyebrow: "0.16em",
+  /** 8px, the live dot on the broadcast bar. */
+  sizeDot: "8px",
+  /** The narrowest a franchise card may be before it wraps to the next column. */
+  widthCard: "14rem",
+  /** 12px, the gap between cards in a grid. */
+  spaceGrid: "12px",
+  /** 4px, a team-colour stripe on a card's edge. */
+  widthStripe: "4px",
+  /** 24px card title, design system Heading 2. */
+  fontSizeTitle: "1.5rem",
+  /** 20px lead line. */
+  fontSizeLead: "1.25rem",
+  /** The large numeric readout, such as the live bid. */
+  fontSizeReadout: "clamp(2.25rem, 1.8rem + 2.4vw, 3.25rem)",
+  /** The WCAG 2.5.5 touch-target minimum. */
+  sizeTouch: "44px",
+  /** The large button for a screen's main action. */
+  sizeLarge: "56px",
+  /** A progress meter's track height. */
+  heightMeter: "8px",
+  /** Line height for headings. */
+  lineHeightTight: "1.1",
+  /** Line height for body copy. */
+  lineHeightBody: "1.5",
+  /** Medium weight for buttons and labels. */
+  fontWeightMedium: "500",
+  /** 96px, the auction's countdown ring. */
+  sizeRing: "96px",
+  /** 16px radius for hero panels, one step above a card. */
+  radiusLg: "16px",
+  /** A compact control, padded to the touch minimum where it sits in a row. */
+  sizeCompact: "32px",
+  /** A hairline divider between rows. Structure only, not text. */
+  colorLine: "rgba(180, 197, 221, 0.16)",
+  /** Section heading size: a fluid 24px to 32px. */
+  fontSizeSection: "clamp(1.5rem, 1.25rem + 1vw, 2rem)",
+  /** Maximum width of a narrow panel, such as the join form. */
+  widthNarrow: "24rem",
   /** Bold weight for headings and the wordmark. */
   fontWeightBold: "700",
   /** Semibold weight for the skip link. */

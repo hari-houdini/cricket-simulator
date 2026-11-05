@@ -2,7 +2,10 @@ import type { Preview } from "@storybook/nextjs-vite";
 
 // Same global styles as the app, so stories render with the StyleX output and
 // the design tokens the components depend on.
+import * as stylex from "@stylexjs/stylex";
+
 import "../src/app/globals.css";
+import { styles as appStyles } from "../src/app/layout.styles";
 import { CricketBackdrop } from "../src/components/CricketBackdrop/CricketBackdrop";
 import { GuestSessionProvider } from "../src/components/GuestSessionProvider/GuestSessionProvider";
 import { Notifier } from "../src/components/Notifier/Notifier";
@@ -19,7 +22,11 @@ const preview: Preview = {
       <GuestSessionProvider api={createMockGameApi({ seed: "story" })}>
         <CricketBackdrop />
         <Notifier />
-        <Story />
+        {/* The app's <body> sets the text colour and font. Stories sit in a
+            plain wrapper instead, so they take the same base from the same rules. */}
+        <div {...stylex.props(appStyles.body)}>
+          <Story />
+        </div>
       </GuestSessionProvider>
     ),
   ],
