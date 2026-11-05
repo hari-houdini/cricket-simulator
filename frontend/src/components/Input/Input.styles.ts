@@ -52,6 +52,14 @@ export const styles = stylex.create({
       opacity: 0.5,
       cursor: "not-allowed",
     },
+    /*
+     * The browser's default placeholder grey is 3.7:1 on the field, below the
+     * 4.5:1 body-text minimum. Chalk muted is 10.3:1 on the same surface.
+     */
+    "::placeholder": {
+      color: tokens.colorChalkMuted,
+      opacity: 1,
+    },
     "@media (prefers-reduced-motion: reduce)": {
       transitionProperty: "none",
     },
