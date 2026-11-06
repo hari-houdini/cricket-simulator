@@ -212,7 +212,10 @@ Controls feel physical and confident: they rise at rest, press in on use, and li
 ### Broadcast Frame and Stadium
 - **Stadium background:** Two floodlight glows (ochre and chalk) drift over 36s and 44s on alternating cycles, with the pitch stripes sliding and faint dust rising. All of it is decorative and off under reduced motion.
 - **Live indicator:** A pulse on the live dot over 1.5s, stopped under reduced motion.
-- **Lower third:** The step title sits on the frame; the eyebrow above it is under review (see below).
+- **Lower third:** The step title sits on the frame. The lobby entry page has no eyebrow above it.
+- **Lobby entry intro:** On load the floodlights rise over 1.2s, the title lifts 24px over 0.8s, and the form card rises 32px and scales from 98% over 0.9s. All of it is off under reduced motion, and the page shows its final state at once.
+- **Lobby entry dissolve:** A successful create or join fades the form card up and out over 0.3s while a floodlight wash rises beneath it over 0.45s, then the lobby opens. Under reduced motion the route opens at once, with no wash.
+- **Lobby entry panel grid:** With a fine pointer, an 8×6 grid of hairline cells fades in around the pointer, brightest nearest it, and fades out when the pointer leaves the window. The grid is hidden until the pointer moves, and it is off under reduced motion and on touch devices.
 
 ## Do's and Don'ts
 
@@ -228,10 +231,9 @@ Controls feel physical and confident: they rise at rest, press in on use, and li
 - **Don't** place text on the glow, stripe, or floodlight layers.
 - **Don't** reintroduce the retired navy and gold palette from `docs/ui/design-system.md`.
 - **Don't** animate layout properties (width, height, top, left, margin).
-- **Don't** remove the reduced-motion switches from the stadium, the sheen, or the live pulse.
+- **Don't** remove the reduced-motion switches from the stadium, the sheen, the live pulse, or the lobby entry motion.
 
 ### Under review:
-- **The eyebrow above the broadcast heading** ("Step 1 of 8 · Lobby entry") is flagged by the design detector as a kicker above a heading, which the craft floor bans. It may carry real wayfinding, so it is kept until the owner decides whether to keep it as a progress indicator.
 - **The radial floodlight glow** on the stadium background is flagged as a decorative spotlight. It is a deliberate effect from the stadium prototype and is kept until the owner decides.
 - **The repeating turf stripes on the page body** are flagged as an advisory decorative gradient. They are intentional texture and are kept until the owner confirms.
 - **The 4px team-colour stripe on franchise cards** is a coloured edge accent, which the craft floor refuses on cards. It is the incumbent franchise marker in the prototype grid and is kept until the owner decides whether franchises should be marked another way.

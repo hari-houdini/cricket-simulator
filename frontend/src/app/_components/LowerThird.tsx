@@ -4,8 +4,11 @@ import { styles } from "./LowerThird.styles";
 
 /** The props for {@link LowerThird}. */
 type LowerThirdProps = {
-  /** The small uppercase label above the title, such as "Step 2 of 8". */
-  readonly eyebrow: string;
+  /**
+   * The small uppercase label above the title, such as "Steps 2 to 8". Optional:
+   * the lobby entry page omits it, since the heading carries that page alone.
+   */
+  readonly eyebrow?: string;
   /**
    * The page's one `h1`, such as "Your season starts here". Omit it on a page that
    * already has its own heading, so the page keeps a single `h1`.
@@ -25,7 +28,7 @@ type LowerThirdProps = {
 export function LowerThird({ eyebrow, title }: LowerThirdProps) {
   return (
     <div {...stylex.props(styles.block)}>
-      <p {...stylex.props(styles.eyebrow)}>{eyebrow}</p>
+      {eyebrow ? <p {...stylex.props(styles.eyebrow)}>{eyebrow}</p> : null}
       {title ? <h1 {...stylex.props(styles.title)}>{title}</h1> : null}
     </div>
   );

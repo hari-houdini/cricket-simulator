@@ -12,10 +12,7 @@ import { LowerThird } from "./_components/LowerThird";
 export default function Home() {
   return (
     <BroadcastFrame stage="Lobby entry">
-      <LowerThird
-        eyebrow="Step 1 of 8 · Lobby entry"
-        title="Your season starts here"
-      />
+      <LowerThird title="Your season starts here" />
       <LobbyEntry />
     </BroadcastFrame>
   );

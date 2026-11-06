@@ -21,8 +21,9 @@ import { styles } from "./StadiumBackground.styles";
 export function StadiumBackground() {
   return (
     <div aria-hidden="true" {...stylex.props(styles.root)}>
-      <div {...stylex.props(styles.glowWarm)} />
-      <div {...stylex.props(styles.glowChalk)} />
+      {/* The floodlights carry a data attribute so the lobby entry intro can fade them in. */}
+      <div data-floodlight {...stylex.props(styles.glowWarm)} />
+      <div data-floodlight {...stylex.props(styles.glowChalk)} />
       <div {...stylex.props(styles.stripesFrame)}>
         <div {...stylex.props(styles.stripes)} />
       </div>

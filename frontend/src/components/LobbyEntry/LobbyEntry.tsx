@@ -1,13 +1,19 @@
 "use client";
 
+import * as stylex from "@stylexjs/stylex";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Lobby } from "../../shared/types/lobby.types";
 import { describeApiError } from "../../shared/utils/describe-api-error";
 import { useGuestSession } from "../GuestSessionProvider/GuestSessionProvider";
 import { notify } from "../Notifier/Notifier";
 import { SwitchForm } from "../SwitchForm/SwitchForm";
 import type { SwitchMode, SwitchPanel } from "../SwitchForm/SwitchForm.types";
+import { useLobbyEntryMotion } from "./LobbyEntry.motion";
+import { styles } from "./LobbyEntry.styles";
+
+/** The number of panel-grid cells: eight columns by six rows. */
+const PANEL_CELL_COUNT = 48;
 
 /**
  * The create panel, shown first. It is the sign-up panel of {@link SwitchForm},
@@ -77,6 +83,10 @@ const joinPanel: SwitchPanel = {
  * failed request raises a notice and keeps the typed values, so the form does
  * not move when the notice appears.
  *
+ * A successful request plays the submit dissolve, then opens the lobby. The
+ * panel grid lights up with a fine pointer, and all motion is off under reduced
+ * motion (see {@link useLobbyEntryMotion}).
+ *
  * @param props.lobbyHref - The route prefix the lobby opens under. Defaults to `/lobby`.
  * @returns The lobby entry form.
  */
@@ -88,9 +98,13 @@ export function LobbyEntry({
   const router = useRouter();
   const { api, guestId } = useGuestSession();
   const [pending, setPending] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const { cursorOn, playSubmitTransition } = useLobbyEntryMotion(root);
 
   /**
-   * Runs a create or join, then opens the lobby it returns.
+   * Runs a create or join. On success it plays the dissolve, then opens the lobby
+   * it returns. The form stays disabled through the dissolve, so it cannot be
+   * sent twice.
    *
    * @param action - The API call that returns the lobby.
    */
@@ -98,7 +112,9 @@ export function LobbyEntry({
     setPending(true);
     try {
       const lobby = await action();
-      router.push(`${lobbyHref}/${lobby.code}`);
+      playSubmitTransition(() => {
+        router.push(`${lobbyHref}/${lobby.code}`);
+      });
     } catch (caught) {
       notify({ tone: "error", message: describeApiError(caught) });
       setPending(false);
@@ -135,12 +151,30 @@ export function LobbyEntry({
   const disabled = !guestId || pending;
 
   return (
-    <SwitchForm
-      aria-label="Create or join a lobby"
-      signUp={createPanel}
-      signIn={joinPanel}
-      disabled={disabled}
-      onSubmit={handleSubmit}
-    />
+    <div ref={root} {...stylex.props(styles.root)}>
+      {cursorOn ? (
+        <div aria-hidden="true" data-entry-grid {...stylex.props(styles.grid)}>
+          {Array.from({ length: PANEL_CELL_COUNT }, (_, index) => (
+            <div
+              // The grid never reorders, so the index is a stable key.
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed, never-reordered grid
+              key={index}
+              data-entry-cell
+              {...stylex.props(styles.cell)}
+            />
+          ))}
+        </div>
+      ) : null}
+      <div data-entry-card {...stylex.props(styles.card)}>
+        <SwitchForm
+          aria-label="Create or join a lobby"
+          signUp={createPanel}
+          signIn={joinPanel}
+          disabled={disabled}
+          onSubmit={handleSubmit}
+        />
+      </div>
+      <div aria-hidden="true" data-entry-wash {...stylex.props(styles.wash)} />
+    </div>
   );
 }
